@@ -1,0 +1,207 @@
+#include "EWEngine/EWEngine.h"
+
+#include "EightWinds/Backend/DeviceSpecialization/Extensions.h"
+#include "EightWinds/Backend/DeviceSpecialization/DeviceSpecialization.h"
+#include "EightWinds/Backend/DeviceSpecialization/FeatureProperty.h"
+
+#include "EWEngine/Global.h"
+
+namespace EWE{
+    constexpr ConstEvalStr swapchainExt{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    //https://docs.vulkan.org/refpages/latest/refpages/source/VK_EXT_extended_dynamic_state3.html
+    constexpr ConstEvalStr dynState3Ext{ VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME };
+    constexpr ConstEvalStr meshShaderExt{ VK_EXT_MESH_SHADER_EXTENSION_NAME };
+    constexpr ConstEvalStr deviceFaultExt{ VK_EXT_DEVICE_FAULT_EXTENSION_NAME };
+    //this requires the instance extension VK_EXT_debug_utils. i don't know how to make that association cleanly
+    constexpr ConstEvalStr dabReportExt{ VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME }; 
+
+    using Example_ExtensionManager = ExtensionManager<application_wide_vk_version,
+        ExtensionEntry<swapchainExt, true, 0>,
+        ExtensionEntry<dynState3Ext, true, 0>,
+        ExtensionEntry<meshShaderExt, false, 100000>,
+        ExtensionEntry<deviceFaultExt, false, 0>,
+        ExtensionEntry<dabReportExt, false, 0>
+    >;
+
+
+    using Example_FeatureManager = EWE::Backend::FeatureManager<rounded_down_vulkan_version,
+        VkPhysicalDeviceExtendedDynamicState3FeaturesEXT,
+        VkPhysicalDeviceMeshShaderFeaturesEXT,
+        VkPhysicalDeviceFaultFeaturesEXT,
+        VkPhysicalDeviceAddressBindingReportFeaturesEXT
+    >;
+
+    using Example_PropertyManager = EWE::Backend::PropertyManager<rounded_down_vulkan_version,
+        VkPhysicalDeviceMeshShaderPropertiesEXT
+    >;
+
+    using DeviceSpec = EWE::DeviceSpecializer<
+        rounded_down_vulkan_version,
+        Example_ExtensionManager,
+        Example_FeatureManager,
+        Example_PropertyManager
+    >;
+
+    struct SwapChainSupportDetails {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentModes;
+
+        [[nodiscard]] explicit SwapChainSupportDetails(VkPhysicalDevice device, VkSurfaceKHR surface) noexcept {
+            EWE::EWE_VK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR, device, surface, &capabilities);
+            uint32_t formatCount;
+            EWE::EWE_VK(vkGetPhysicalDeviceSurfaceFormatsKHR, device, surface, &formatCount, nullptr);
+
+            if (formatCount != 0) {
+                formats.resize(formatCount);
+                EWE::EWE_VK(vkGetPhysicalDeviceSurfaceFormatsKHR, device, surface, &formatCount, formats.data());
+            }
+
+            uint32_t presentModeCount;
+            EWE::EWE_VK(vkGetPhysicalDeviceSurfacePresentModesKHR, device, surface, &presentModeCount, nullptr);
+
+            if (presentModeCount != 0) {
+                presentModes.resize(presentModeCount);
+                EWE::EWE_VK(vkGetPhysicalDeviceSurfacePresentModesKHR, device, surface, &presentModeCount, presentModes.data());
+            }
+        }
+
+
+        [[nodiscard]] bool Adequate() const { return !formats.empty() && !presentModes.empty(); }
+    };
+
+    std::vector<const char*> GetGLFWExtensions(){
+
+        std::vector<const char*> requiredExtensions{
+    #if EWE_DEBUG_BOOL
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+
+    #endif
+            VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME
+        };
+        if (!glfwInit()) {
+    #if EWE_DEBUG_BOOL
+            printf("failed to glfw init\n");
+    #endif
+            throw std::runtime_error("failed to init glfw");
+        }
+        uint32_t glfwExtensionCount = 0;
+        const char** glfwExtensions;
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        assert(glfwExtensionCount > 0 && "not supporting headless");
+        assert(glfwExtensions != nullptr);
+
+        for (uint32_t i = 0; i < glfwExtensionCount; ++i) {
+            requiredExtensions.push_back(glfwExtensions[i]);
+        }
+
+        return requiredExtensions;
+    }
+
+    LogicalDevice CreateLogicalDevice(Instance& instance, Window& window){
+        DeviceSpec specDev{};
+
+        auto& dynState3 = specDev.GetFeature<VkPhysicalDeviceExtendedDynamicState3FeaturesEXT>();
+        dynState3.extendedDynamicState3ColorBlendEnable = VK_TRUE;
+        dynState3.extendedDynamicState3ColorBlendEquation = VK_TRUE;
+        dynState3.extendedDynamicState3ColorWriteMask = VK_TRUE;
+
+        auto& meshShaderFeatures = specDev.GetFeature<VkPhysicalDeviceMeshShaderFeaturesEXT>();
+        meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+        meshShaderFeatures.meshShader = VK_TRUE;
+        meshShaderFeatures.taskShader = VK_TRUE;
+
+        auto& features2 = specDev.GetFeature<VkPhysicalDeviceFeatures2>();
+        features2.features.samplerAnisotropy = VK_TRUE;
+        features2.features.wideLines = VK_TRUE;
+        features2.features.shaderInt64 = VK_TRUE;
+        
+        auto& features12 = specDev.GetFeature<VkPhysicalDeviceVulkan12Features>();
+        features12.scalarBlockLayout = VK_TRUE;
+        features12.bufferDeviceAddress = VK_TRUE;
+        features12.descriptorBindingPartiallyBound = VK_TRUE;
+        features12.runtimeDescriptorArray = VK_TRUE;
+        features12.descriptorBindingVariableDescriptorCount = VK_TRUE;
+        features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+        features12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+
+        auto& features13 = specDev.GetFeature<VkPhysicalDeviceVulkan13Features>();
+        features13.dynamicRendering = VK_TRUE;
+        features13.synchronization2 = VK_TRUE;
+
+        auto& devFaultFeatures = specDev.GetFeature<VkPhysicalDeviceFaultFeaturesEXT>();
+        devFaultFeatures.deviceFault = VK_TRUE;
+        devFaultFeatures.deviceFaultVendorBinary = VK_TRUE;
+
+        auto& dabReportFeatures = specDev.GetFeature<VkPhysicalDeviceAddressBindingReportFeaturesEXT>();
+        dabReportFeatures.reportAddressBinding = VK_TRUE;
+
+        auto evaluatedDevices = specDev.ScorePhysicalDevices(instance);
+
+        if (!evaluatedDevices[0].passedRequirements) {
+    #if EWE_DEBUG_BOOL
+            printf("highest score device failed requirements, exiting\n");
+            printf("device count - %zu\n", evaluatedDevices.size());
+            for(uint8_t i = 0; i < evaluatedDevices.size(); i++) {
+                auto& evDev = evaluatedDevices[i];
+                printf("results[%d] - %s --- %d - %zu\n", i, evDev.name.c_str(), evDev.passedRequirements, evDev.score);
+                const uint32_t variant_version = evDev.api_version >> 29;
+                const uint32_t major_version = (evDev.api_version - (variant_version << 29)) >> 22;
+                const uint32_t minor_version = (evDev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
+                const uint32_t patch_version = (evDev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
+
+                printf("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
+
+                for(auto& fp : evDev.failureReport){
+                    printf("\t\tfp - %s\n", fp.c_str());
+                }
+            }
+    #endif
+            throw std::runtime_error("failed to find an appropriate device for the engine");
+        }
+    #if EWE_DEBUG_BOOL
+        else{
+            auto& evDev = evaluatedDevices[0];
+            const uint32_t variant_version = evDev.api_version >> 29;
+            const uint32_t major_version = (evDev.api_version - (variant_version << 29)) >> 22;
+            const uint32_t minor_version = (evDev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
+            const uint32_t patch_version = (evDev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
+
+            printf("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
+        }
+    #endif
+
+        EWE::PhysicalDevice physicalDevice{ instance, evaluatedDevices[0].device, window.surface };
+        VkBaseInStructure* pNextChain = reinterpret_cast<VkBaseInStructure*>(&specDev.features.base);
+
+        return specDev.ConstructDevice(
+            evaluatedDevices[0],
+            std::forward<EWE::PhysicalDevice>(physicalDevice),
+            pNextChain,
+            application_wide_vk_version,
+            VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT
+        );
+    }
+
+    Queue& GetPresentQueue(LogicalDevice& logicalDevice){    
+        for (auto& queue : logicalDevice.queues) {
+            if (queue.family.SupportsSurfacePresent() && queue.family.SupportsGraphics()) {
+                return queue;
+            }
+        }
+        throw std::runtime_error("failed to find a present queue");
+    }
+
+    std::unordered_map<std::string, bool> optionalExtensions{};
+
+    EWEngine::EWEngine(std::string_view application_name)
+        : instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
+        window{instance, 800, 600, application_name},
+        logicalDevice{CreateLogicalDevice(instance, window)},
+        swapchain{logicalDevice, window, GetPresentQueue(logicalDevice)},
+        renderGraph{logicalDevice, swapchain}
+    {
+        Global::Create(logicalDevice, window);
+    }
+
+}//namespace EWE

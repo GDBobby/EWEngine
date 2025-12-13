@@ -1,0 +1,174 @@
+{
+  "version": 9,
+  "cmakeMinimumRequired": { "major": 3, "minor": 24, "patch": 0 },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "workingDirectory": "${sourceDir}",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_EXTENSIONS": "OFF"
+      }
+    },
+
+    {
+      "name": "msvc-base",
+      "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64"
+    },
+    {
+      "name": "msvc-debug",
+      "inherits": "msvc-base",
+      "cacheVariables": { 
+        "OUTPUT_POSTFIX": "-d",
+        "CMAKE_CXX_FLAGS": "/DEWE_DEBUG"
+      }
+    },
+    {
+      "name": "msvc-relwithdeb",
+      "inherits": "msvc-base",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "/DEWE_DEBUG",
+        "OUTPUT_POSTFIX": "-rd"
+      }
+    },
+    {
+      "name": "msvc-release",
+      "inherits": "msvc-base"
+    },
+    {
+      "name": "msvc-debug-asan",
+      "inherits": "msvc-debug",
+      "cacheVariables": {
+        "USING_ASAN":  true,
+        "OUTPUT_POSTFIX": "-da"
+      }
+    },
+    {
+      "name": "msvc-relwithdeb-asan",
+      "inherits": "msvc-relwithdeb",
+      "cacheVariables": {
+        "USING_ASAN":  true,
+        "OUTPUT_POSTFIX": "-rda" 
+      }
+    },
+
+    {
+      "name": "ninja-msvc-base",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl"
+      }
+    },
+
+    {
+      "name": "ninja-msvc-debug",
+      "inherits": "ninja-msvc-base",
+      "cacheVariables": {
+        "OUTPUT_POSTFIX": "-d",
+        "CMAKE_CXX_FLAGS": "/DEWE_DEBUG"
+      }
+    },
+    {
+      "name": "ninja-msvc-relwithdeb",
+      "inherits": "ninja-msvc-base",
+      "cacheVariables": {
+        "OUTPUT_POSTFIX": "-rd",
+        "CMAKE_CXX_FLAGS": "/DEWE_DEBUG"
+      }
+    },
+    {
+      "name": "ninja-msvc-release",
+      "inherits": "ninja-msvc-base",
+    },
+
+    {
+      "name": "ninja-msvc-debug-asan",
+      "inherits": "ninja-msvc-base",
+      "cacheVariables": {
+        "USING_ASAN":  true,
+        "OUTPUT_POSTFIX": "-da"
+      }
+    },
+    {
+      "name": "ninja-msvc-relwithdeb-asan",
+      "inherits": "ninja-msvc-debug-asan",
+      "cacheVariables": {
+        "OUTPUT_POSTFIX": "-rda" 
+      }
+    },
+
+    {
+      "name": "ninja-clang-base",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "ninja-clang-debug",
+      "inherits": "ninja-clang-base",
+      "cacheVariables": {
+        "OUTPUT_POSTFIX": "-d",
+        "CMAKE_CXX_FLAGS": "-DEWE_DEBUG"
+      }
+    },
+    {
+      "name": "ninja-clang-relwithdeb",
+      "inherits": "ninja-clang-base",
+      "cacheVariables": {
+        "OUTPUT_POSTFIX": "-rd",
+        "CMAKE_CXX_FLAGS": "-DEWE_DEBUG"
+      }
+    },
+    {
+      "name": "ninja-clang-release",
+      "inherits": "ninja-clang-base"
+    },
+
+    {
+      "name": "ninja-clang-debug-asan",
+      "inherits": "ninja-clang-base",
+      "cacheVariables": {
+        "USING_ASAN":  true,
+        "OUTPUT_POSTFIX": "-da"
+      }
+    },
+    {
+      "name": "ninja-clang-relwithdeb-asan",
+      "inherits": "ninja-clang-debug-asan",
+      "cacheVariables": {
+        "USING_ASAN":  true,
+        "OUTPUT_POSTFIX": "-rda" 
+      }
+    }
+  ],
+
+  "buildPresets": [
+    { "name": "msvc-debug",                 "configurePreset": "msvc-debug" },
+    { "name": "msvc-relwithdeb",            "configurePreset": "msvc-relwithdeb" },
+    { "name": "msvc-release",               "configurePreset": "msvc-release" },
+    { "name": "msvc-debug-asan",            "configurePreset": "msvc-debug-asan" },
+    { "name": "msvc-relwithdeb-asan",       "configurePreset": "msvc-relwithdeb-asan" },
+
+    { "name": "ninja-msvc-debug",           "configurePreset": "ninja-msvc-debug" },
+    { "name": "ninja-msvc-relwithdeb",      "configurePreset": "ninja-msvc-relwithdeb" },
+    { "name": "ninja-msvc-release",         "configurePreset": "ninja-msvc-release" },
+    { "name": "ninja-msvc-debug-asan",      "configurePreset": "ninja-msvc-debug-asan" },
+    { "name": "ninja-msvc-relwithdeb-asan", "configurePreset": "ninja-msvc-relwithdeb-asan" },
+
+    { "name": "ninja-clang-debug",          "configurePreset": "ninja-clang-debug" },
+    { "name": "ninja-clang-relwithdeb",     "configurePreset": "ninja-clang-relwithdeb" },
+    { "name": "ninja-clang-release",        "configurePreset": "ninja-clang-release" },
+    { "name": "ninja-clang-debug-asan",     "configurePreset": "ninja-clang-debug-asan" },
+    { "name": "ninja-clang-relwithdeb-asan","configurePreset": "ninja-clang-relwithdeb-asan" }
+  ]
+}
