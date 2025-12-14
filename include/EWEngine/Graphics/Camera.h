@@ -54,7 +54,7 @@ namespace EWE {
 			const lab::vec3 forward = lab::Normalized(target - position);
 			ViewDirection<CoordinateSystem>(position, forward, cameraUp);
 			memcpy(buffers[Global::frameIndex].mapped, &data, sizeof(CameraBufferObject));
-			data[Global::frameIndex].Flush();
+			buffers[Global::frameIndex].Flush();
 		}
 
 		lab::mat4 const& GetProjection() const { return data.proj; }

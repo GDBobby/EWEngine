@@ -33,6 +33,7 @@
 #include <filesystem>
 #include <chrono>
 #include <array>
+#include <thread>
 
 #if EWE_DEBUG_BOOL
 void PrintAllExtensions(VkPhysicalDevice physicalDevice) {
@@ -523,8 +524,6 @@ int main() {
         std::vector<EWE::SubmissionTask*>{&imgui_submission, &world_render_submission},
         std::vector<EWE::SubmissionTask*>{&attachment_blit_submission}
     };
-
-    renderGraph.GenerateSubmissionsBridges();
 
 
 

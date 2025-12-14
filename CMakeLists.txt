@@ -65,12 +65,17 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyobj)
 
-if(DEFINED EWGRAPHICS_PATH AND EXISTS "${EWGRAPHICS_PATH}/CMakeLists.txt")
-    message(STATUS "~~~~FOUND~~~~ Using local EWGraphics from ${EWGRAPHICS_PATH}")
-    add_subdirectory(${EWGRAPHICS_PATH} ${EWGRAPHICS_PATH})
-    set(EWGraphics_LIB EWGraphics)
+if(DEFINED EWGRAPHICS_PATH)
+	if(EXISTS "${EWGRAPHICS_PATH}/CMakeLists.txt")
+		message(STATUS "~~~~FOUND~~~~ Using local EWGraphics from ${EWGRAPHICS_PATH}")
+		add_subdirectory(${EWGRAPHICS_PATH} ${EWGRAPHICS_PATH})
+		set(EWGraphics_LIB EWGraphics)
+	else()
+		message(STATUS "${EWGRAPHICS_PATH} does not contain CMakeLists.txt")
+	endif()
 else()
-  Message(STATUS "!!!!FAILED!!!! to find ewe_framework_path in .env.cmake, using FetchContent")
+	message(STATUS "EWGRAPHICS_PATH - ${EWGRAPHICS_PATH}")
+  	message(STATUS "!!!!FAILED!!!! to find ewe_framework_path in .env.cmake, using FetchContent")
 	FetchContent_Declare(
 		EWGraphics
 		GIT_REPOSITORY https://github.com/GDBobby/VulkanFramework
@@ -155,13 +160,14 @@ if(USING_ASAN)
 endif()
 
 message(STATUS "including directories")
+message(STATUS "framework source dir - ${EWGraphics_SOURCE_DIR}")
 target_include_directories(${PROJECT_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${Vulkan_INCLUDE_DIR}
 	${rapidjson_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/external/include
 	${LinearAlgebra_SOURCE_DIR}
-    ${EWGraphics_SOURCE_DIR}
+    ${EWGraphics_SOURCE_DIR}/include
 	${imgui_SOURCE_DIR}
 )
 
@@ -174,7 +180,7 @@ target_link_directories(${PROJECT_NAME} PUBLIC
 )
 message(STATUS "linking libs - ${EWGraphics_LIB}")
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME} PUBLIC
 	glfw
 	${Vulkan_LIBRARY}
 	${GLSLANG_LIBS}
