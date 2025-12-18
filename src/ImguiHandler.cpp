@@ -5,6 +5,8 @@
 #include "EightWinds/Command/CommandPool.h"
 #include "EightWinds/Backend/Fence.h"
 
+#include "EightWinds/RenderGraph/TaskBridge.h"
+
 #include "EWEngine/Global.h"
 
 
@@ -28,7 +30,7 @@ namespace EWE{
 			cai.tiling = VK_IMAGE_TILING_OPTIMAL;
 			cai.type = VK_IMAGE_TYPE_2D;
 			cai.format = colorFormats[0];
-			cai.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			cai.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			cai.Create(vmaAllocCreateInfo);
 		}
@@ -39,25 +41,6 @@ namespace EWE{
 		return ret;
 	}
 
-	PerFlight<CommandBuffer> CreateCommandBuffers(CommandPool& cmdPool) {
-		VkCommandBufferAllocateInfo cmdBufAllocInfo{};
-		cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		cmdBufAllocInfo.pNext = nullptr;
-		cmdBufAllocInfo.commandBufferCount = max_frames_in_flight;
-		cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		cmdBufAllocInfo.commandPool = cmdPool.commandPool;
-
-		VkCommandBuffer cmdBufTemp[max_frames_in_flight];
-		EWE::EWE_VK(vkAllocateCommandBuffers, cmdPool.logicalDevice.device, &cmdBufAllocInfo, cmdBufTemp);
-		cmdPool.allocatedBuffers += max_frames_in_flight;
-
-		PerFlight<CommandBuffer> cmdBufs{ cmdPool, VK_NULL_HANDLE };
-		for (uint8_t i = 0; i < max_frames_in_flight; i++) {
-			cmdBufs[i].cmdBuf = cmdBufTemp[i];
-		}
-		return cmdBufs;
-	}
-
 	ImguiHandler::ImguiHandler(
 		Queue& queue,
 		uint32_t imageCount, VkSampleCountFlagBits sampleCount
@@ -66,9 +49,16 @@ namespace EWE{
 		colorAttachmentImages{CreateColorAttachmentImages(queue, sampleCount)},
 		colorAttachmentViews{ colorAttachmentImages },
 		cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
-		cmdBuffers{CreateCommandBuffers(cmdPool)},
+		cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
 		semaphores{ *Global::logicalDevice, false}
     {
+#if EWE_DEBUG_NAMING
+		for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
+			std::string debugName = std::string("imgui [") + std::to_string(i) + ']';
+			semaphores[i].SetName(debugName);
+			cmdBuffers[i].SetDebugName(debugName);
+		}
+#endif
 		renderTracker.compact.color_attachments.resize(1);
 		renderTracker.compact.color_attachments[0].imageView[0] = &colorAttachmentViews[0];
 		renderTracker.compact.color_attachments[0].imageView[1] = &colorAttachmentViews[1];
@@ -145,11 +135,12 @@ namespace EWE{
 		stc_cmdPool.allocatedBuffers++;
 
 		EWE::CommandBuffer transition_stc(stc_cmdPool, temp_stc_cmdBuf);
-		VkCommandBufferBeginInfo beginSTCInfo{};
-		beginSTCInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginSTCInfo.pNext = nullptr;
-		beginSTCInfo.pInheritanceInfo = nullptr;
-		beginSTCInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		VkCommandBufferBeginInfo beginSTCInfo{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.pInheritanceInfo = nullptr
+		};
 		transition_stc.Begin(beginSTCInfo);
 
 
@@ -174,36 +165,40 @@ namespace EWE{
 			current_barrier_index++;
 		}
 
-
-		VkDependencyInfo transition_dependency{};
-		transition_dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-		transition_dependency.pNext = nullptr;
-		transition_dependency.dependencyFlags = 0;
-		transition_dependency.bufferMemoryBarrierCount = 0;
-		transition_dependency.memoryBarrierCount = 0;
-		transition_dependency.imageMemoryBarrierCount = static_cast<uint32_t>(transition_barriers.size());
-		transition_dependency.pImageMemoryBarriers = transition_barriers.data();
+		VkDependencyInfo transition_dependency{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.pNext = nullptr,
+			.dependencyFlags = 0,
+			.memoryBarrierCount = 0,
+			.bufferMemoryBarrierCount = 0,
+			.imageMemoryBarrierCount = static_cast<uint32_t>(transition_barriers.size()),
+			.pImageMemoryBarriers = transition_barriers.data()
+		};
 
 		vkCmdPipelineBarrier2(transition_stc, &transition_dependency);
 
 		transition_stc.End();
 
-		VkFenceCreateInfo fenceCreateInfo{};
-		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceCreateInfo.pNext = nullptr;
-		fenceCreateInfo.flags = 0;
+		VkFenceCreateInfo fenceCreateInfo{
+			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0
+		};
 		EWE::Fence stc_fence{ *Global::logicalDevice, fenceCreateInfo };
 
-		VkSubmitInfo stc_submit_info{};
-		stc_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		stc_submit_info.pNext = nullptr;
-		stc_submit_info.commandBufferCount = 1;
-		stc_submit_info.pCommandBuffers = &temp_stc_cmdBuf;
-		stc_submit_info.signalSemaphoreCount = 0;
-		stc_submit_info.waitSemaphoreCount = 0;
-		stc_submit_info.pWaitDstStageMask = nullptr;
+		VkSubmitInfo stc_submit_info{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = 0,
+			.pWaitDstStageMask = nullptr,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &temp_stc_cmdBuf,
+			.signalSemaphoreCount = 0
+		};
 
 		queue.Submit(1, &stc_submit_info, stc_fence);
+
+		transition_stc.state = CommandBuffer::State::Pending;
 
 		EWE_VK(vkWaitForFences, Global::logicalDevice->device, 1, &stc_fence.vkFence, VK_TRUE, 5 * static_cast<uint64_t>(1.0e9));
 
@@ -214,16 +209,48 @@ namespace EWE{
 	}
 
 	void ImguiHandler::BeginRender() {
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.pNext = nullptr;
-		beginInfo.pInheritanceInfo = nullptr;
-		beginInfo.flags = 0;
+		VkCommandBufferBeginInfo beginInfo{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.pInheritanceInfo = nullptr
+		};
 
 		auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
 		currentCmdBuf.Reset();
 		currentCmdBuf.Begin(beginInfo);
 
+#if EWE_DEBUG_NAMING
+		VkDebugUtilsLabelEXT labelUtil{
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+			.pNext = nullptr,
+			.pLabelName = "imgui",
+			.color = {0.f, 0.f, 0.f, 1.f}
+		};
+		Global::logicalDevice->BeginLabel(cmdBuffers[Global::frameIndex], &labelUtil);
+#endif
+
+		if (colorAttachmentImages[Global::frameIndex].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+			std::vector<Resource<Buffer>*> explicitBuffers{};
+			Resource<Image> attachmentResource{
+				.image = &colorAttachmentImages[Global::frameIndex],
+				.usage = ImageUsageData{
+					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+				}
+			};
+			std::vector<Resource<Image>*> explicitImages{
+				&attachmentResource
+			};
+
+			TaskBridge taskBridge{ *Global::logicalDevice,
+				explicitBuffers, explicitImages,
+				queue
+			};
+
+			taskBridge.Execute(currentCmdBuf);
+		}
 
 		renderTracker.compact.Update(&renderTracker.vk_data, Global::frameIndex);
 
@@ -241,25 +268,26 @@ namespace EWE{
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), currentCmdBuf);
 		isRendering = false;
 		vkCmdEndRendering(currentCmdBuf);
+#if EWE_DEBUG_NAMING
+		Global::logicalDevice->EndLabel(currentCmdBuf);
+#endif
 		currentCmdBuf.End();
 		currentCmdBuf.state = CommandBuffer::State::Pending;
 	}
 
 	void ImguiHandler::SetSubmissionData(PerFlight<Backend::SubmitInfo>& subInfo) {
-		uint8_t cmdBufIndex = 0;
-		for (auto& sub : subInfo) {
-			sub.AddCommandBuffer(&cmdBuffers[cmdBufIndex]);
+		for (uint8_t i = 0; i < max_frames_in_flight; i++) {
+			subInfo[i].AddCommandBuffer(cmdBuffers[i]);
 
 			VkSemaphoreSubmitInfo semSubmitInfo{
 				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
 				.pNext = nullptr,
-				.semaphore = semaphores[cmdBufIndex].vkSemaphore,
+				.semaphore = semaphores[i].vkSemaphore,
 				.value = 0,
 				.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				.deviceIndex = 0
 			};
-			sub.signalSemaphores.push_back(semSubmitInfo);
-			cmdBufIndex++;
+			subInfo[i].signalSemaphores.push_back(semSubmitInfo);
 		}
 	}
 }

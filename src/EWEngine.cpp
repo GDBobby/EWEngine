@@ -6,6 +6,12 @@
 
 #include "EWEngine/Global.h"
 
+#ifdef EWE_IMGUI
+#include "imgui.h"
+#endif
+
+#include "magic_enum/magic_enum.hpp"
+
 namespace EWE{
     constexpr ConstEvalStr swapchainExt{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     //https://docs.vulkan.org/refpages/latest/refpages/source/VK_EXT_extended_dynamic_state3.html
@@ -119,6 +125,7 @@ namespace EWE{
         auto& features12 = specDev.GetFeature<VkPhysicalDeviceVulkan12Features>();
         features12.scalarBlockLayout = VK_TRUE;
         features12.bufferDeviceAddress = VK_TRUE;
+        features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
         features12.descriptorBindingPartiallyBound = VK_TRUE;
         features12.runtimeDescriptorArray = VK_TRUE;
         features12.descriptorBindingVariableDescriptorCount = VK_TRUE;
@@ -171,7 +178,7 @@ namespace EWE{
         }
     #endif
 
-        EWE::PhysicalDevice physicalDevice{ instance, evaluatedDevices[0].device, window.surface };
+        EWE::PhysicalDevice physicalDevice{ instance, evaluatedDevices[1].device, window.surface };
         VkBaseInStructure* pNextChain = reinterpret_cast<VkBaseInStructure*>(&specDev.features.base);
 
         return specDev.ConstructDevice(
@@ -196,12 +203,93 @@ namespace EWE{
 
     EWEngine::EWEngine(std::string_view application_name)
         : instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
-        window{instance, 800, 600, application_name},
+        window{instance, 1280, 720, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
         swapchain{logicalDevice, window, GetPresentQueue(logicalDevice)},
         renderGraph{logicalDevice, swapchain}
     {
         Global::Create(logicalDevice, window);
     }
+
+#if EWE_IMGUI
+
+    bool DrawPresentModes(Swapchain& swapchain) {
+
+        std::string_view currentName = magic_enum::enum_name(swapchain.swapCreateInfo.presentMode);
+
+        static std::vector<const char*> available_presents{};
+        if (available_presents.size() == 0) {
+            for (auto& present : swapchain.available_presentModes) {
+                available_presents.push_back(magic_enum::enum_name(present).data());
+            }
+        }
+
+        int index = 0;
+        for (; index < swapchain.available_presentModes.size(); index++) {
+            if (swapchain.swapCreateInfo.presentMode == swapchain.available_presentModes[index]) {
+                break;
+            }
+        }
+
+        if (ImGui::Combo("present mode", &index, available_presents.data(), available_presents.size())) {
+            printf("present mode changed\n");
+
+            swapchain.swapCreateInfo.presentMode = swapchain.available_presentModes[index];
+            swapchain.wantsToRecreate = true;
+
+            return true;
+        }
+        return false;
+    }
+
+    bool DrawSurfaceFormats(Swapchain& swapchain) {
+
+        int index = 0;
+        static std::vector<std::string> available_surfaces{};
+        static std::vector<const char*> available_surfaces_c_str{};
+        if (available_surfaces.size() == 0) {
+            for (auto& surface_format : swapchain.available_surface_formats) {
+                available_surfaces.push_back(
+                    std::string(magic_enum::enum_name(surface_format.format).data()) + " : " +
+                    magic_enum::enum_name(surface_format.colorSpace).data()
+                );
+            }
+            for (auto const& cstr : available_surfaces) {
+                available_surfaces_c_str.push_back(cstr.c_str());
+            }
+        }
+
+        for (; index < swapchain.available_surface_formats.size(); index++) {
+            if (swapchain.surface_format.format == swapchain.available_surface_formats[index].format
+                && swapchain.surface_format.colorSpace == swapchain.available_surface_formats[index].colorSpace
+                ) {
+                break;
+            }
+        }
+        if (ImGui::Combo("surface formats", &index, available_surfaces_c_str.data(), available_surfaces_c_str.size())) {
+
+            swapchain.surface_format = swapchain.available_surface_formats[index];
+            swapchain.swapCreateInfo.imageColorSpace = swapchain.available_surface_formats[index].colorSpace;
+            swapchain.swapCreateInfo.imageFormat = swapchain.available_surface_formats[index].format;
+            swapchain.wantsToRecreate = true;
+            return true;
+        }
+        return false;
+    }
+
+    void EWEngine::Imgui() {
+        if (ImGui::Begin("engine")) {
+
+            ImGui::Text(logicalDevice.physicalDevice.name.c_str());
+            
+            if (DrawPresentModes(swapchain) || DrawSurfaceFormats(swapchain))
+            {
+                printf("recreating swap at frame : %zu\n", totalFramesSubmitted);
+            }
+
+            ImGui::End();
+        }
+    }
+#endif
 
 }//namespace EWE

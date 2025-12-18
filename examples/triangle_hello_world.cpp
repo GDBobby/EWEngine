@@ -10,6 +10,7 @@
 #include "EightWinds/Pipeline/PipelineBase.h"
 #include "EightWinds/Pipeline/Graphics.h"
 #include "EightWinds/Shader.h"
+#include "EightWinds/DescriptorImageInfo.h"
 
 #include "EightWinds/RenderGraph/Command/Record.h"
 #include "EightWinds/RenderGraph/Command/Execute.h"
@@ -48,36 +49,11 @@ void PrintAllExtensions(VkPhysicalDevice physicalDevice) {
 }
 #endif
 
-
-struct SwapChainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-
-    [[nodiscard]] explicit SwapChainSupportDetails(VkPhysicalDevice device, VkSurfaceKHR surface) noexcept {
-        EWE::EWE_VK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR, device, surface, &capabilities);
-        uint32_t formatCount;
-        EWE::EWE_VK(vkGetPhysicalDeviceSurfaceFormatsKHR, device, surface, &formatCount, nullptr);
-
-        if (formatCount != 0) {
-            formats.resize(formatCount);
-            EWE::EWE_VK(vkGetPhysicalDeviceSurfaceFormatsKHR, device, surface, &formatCount, formats.data());
-        }
-
-        uint32_t presentModeCount;
-        EWE::EWE_VK(vkGetPhysicalDeviceSurfacePresentModesKHR, device, surface, &presentModeCount, nullptr);
-
-        if (presentModeCount != 0) {
-            presentModes.resize(presentModeCount);
-            EWE::EWE_VK(vkGetPhysicalDeviceSurfacePresentModesKHR, device, surface, &presentModeCount, presentModes.data());
-        }
-    }
-
-
-    [[nodiscard]] bool Adequate() const { return !formats.empty() && !presentModes.empty(); }
-};
-
 int main() {
+
+#if defined(__SANITIZE_ADDRESS__)
+    printf("compiled with asan\n");
+#endif
 
     EWE::EWEngine engine{ "triangle hello world" };
     EWE::LogicalDevice& logicalDevice = engine.logicalDevice;
@@ -96,6 +72,9 @@ int main() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return -1;
     }
+#if EWE_DEBUG_NAMING
+    renderQueue->SetName("render queue");
+#endif
 
 #if EWE_DEBUG_BOOL
     printf("current dir - %s\n", std::filesystem::current_path().string().c_str());
@@ -103,12 +82,14 @@ int main() {
 
     //need to fix htis. its something with my windows debugger
     auto current_working_directory = std::filesystem::current_path();
-    auto parentStem = current_working_directory.parent_path().parent_path().stem();
-    if (parentStem == "build") {
+    if (current_working_directory.parent_path().parent_path().stem() == "build") {
         current_working_directory = current_working_directory.parent_path().parent_path().parent_path();
 #if EWE_DEBUG_BOOL
         printf("build redacted working dir - %s\n", current_working_directory.string().c_str());
 #endif
+    }
+    else if (current_working_directory.parent_path().stem() == "build") {
+        current_working_directory = current_working_directory.parent_path().parent_path();
     }
     std::filesystem::current_path(current_working_directory);
 #if EWE_DEBUG_BOOL
@@ -153,12 +134,12 @@ int main() {
     //}
     for (auto& cai : colorAttachmentImages) {
         cai.format = colorFormat;
-        cai.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        cai.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         cai.Create(vmaAllocCreateInfo);
     }
     for (auto& dai : depthAttachmentImages) {
         dai.format = depthFormat;
-        dai.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        dai.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         dai.Create(vmaAllocCreateInfo);
     }
 #if EWE_DEBUG_NAMING
@@ -167,6 +148,9 @@ int main() {
     depthAttachmentImages[0].SetName("dai 0");
     depthAttachmentImages[1].SetName("dai 1");
 #endif
+
+
+    EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //before getting into the render, the layouts of the attachments need to be transitioned
     {
@@ -258,6 +242,8 @@ int main() {
 
         renderQueue->Submit(1, &stc_submit_info, stc_fence);
 
+        transition_stc.state = EWE::CommandBuffer::State::Pending;
+
         EWE::EWE_VK(vkWaitForFences, logicalDevice.device, 1, &stc_fence.vkFence, VK_TRUE, 5 * static_cast<uint64_t>(1.0e9));
 
         for (auto& cai : colorAttachmentImages) {
@@ -289,6 +275,7 @@ int main() {
     objectConfig.cullMode = VK_CULL_MODE_NONE;
     objectConfig.depthClamp = false;
     objectConfig.rasterizerDiscard = false;
+    objectConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
     std::vector<VkDynamicState> dynamicState{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     EWE::GraphicsPipeline triangle_pipeline{ logicalDevice, 0, &triangle_layout, passConfig, objectConfig, dynamicState };
@@ -304,7 +291,7 @@ int main() {
     auto* def_push = renderRecord.Push();
     auto* def_draw = renderRecord.Draw();
     nodeGraph.Record(renderRecord);
-#
+
     renderRecord.EndRender();
 
     EWE::RenderGraph& renderGraph = engine.renderGraph;
@@ -341,6 +328,7 @@ int main() {
     def_vp_scissor->GetRef().viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
     def_vp_scissor->GetRef().viewport.minDepth = 0.0f;
     def_vp_scissor->GetRef().viewport.maxDepth = 1.f;
+
 
     VmaAllocationCreateInfo vmaAllocInfo{};
     vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
@@ -398,87 +386,73 @@ int main() {
         vertex_buffer.Unmap();
     }
     def_push->GetRef().buffer_addr[0] = vertex_buffer.deviceAddress;
+    def_draw->GetRef().firstInstance = 0;
+    def_draw->GetRef().firstVertex = 0;
+    def_draw->GetRef().instanceCount = 1;
+    def_draw->GetRef().vertexCount = 3;
+    
+
+    EWE::CommandRecord mergeRecord{};
+    mergeRecord.BeginRender();
+    auto* deferred_merge_pipe = mergeRecord.BindPipeline();
+    auto* def_merge_vp_scissor = mergeRecord.SetViewportScissor();
+    mergeRecord.BindDescriptor();
+    auto* deferred_merge_push = mergeRecord.Push();
+    auto deferred_merge_draw = mergeRecord.Draw();
+    mergeRecord.EndRender();
+    EWE::GPUTask& mergeTask = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, mergeRecord, "merge");
+
+    def_merge_vp_scissor->GetRef().scissor = EWE::Global::window->screenDimensions;
+    def_merge_vp_scissor->GetRef().viewport.x = 0.f;
+    def_merge_vp_scissor->GetRef().viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
+    def_merge_vp_scissor->GetRef().viewport.width = static_cast<float>(EWE::Global::window->screenDimensions.width);
+    def_merge_vp_scissor->GetRef().viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
+    def_merge_vp_scissor->GetRef().viewport.minDepth = 0.0f;
+    def_merge_vp_scissor->GetRef().viewport.maxDepth = 1.f;
+
+    auto* merge_vert = framework.shaderFactory.GetShader("examples/common/shaders/merge.vert.spv");
+    auto* merge_frag = framework.shaderFactory.GetShader("examples/common/shaders/merge.frag.spv");
+    EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
+    //passconfig should be using a full rendergraph setup
+    //just a coincidence that object and passconfig are identical to the earlier pipe
+    passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
+
+    std::vector<EWE::GraphicsPipeline*> mergePipelines{};
+    mergePipelines.reserve(engine.swapchain.available_surface_formats.size());
     {
-        def_draw->GetRef().firstInstance = 0;
-        def_draw->GetRef().firstVertex = 0;
-        def_draw->GetRef().instanceCount = 1;
-        def_draw->GetRef().vertexCount = 3;
+        uint8_t whichMerge = 0;
+        for (auto& format : engine.swapchain.available_surface_formats) {
+            passConfig.colorAttachmentFormats[0] = format.format;
+            mergePipelines.emplace_back(new EWE::GraphicsPipeline(logicalDevice, 0, &triangle_layout, passConfig, objectConfig, dynamicState));
+
+#if EWE_DEBUG_NAMING
+            std::string debugName = "merge" + std::to_string(whichMerge);
+            mergePipelines[whichMerge]->SetDebugName("merge");
+            whichMerge++;
+#endif
+        }
     }
-    EWE::CommandRecord blitRecord{};
-    auto* deferredBlit = blitRecord.Blit();
 
-    //i think the rendergraph creates and defines the present task
-    uint32_t swapchainImageIndex = 0;
-    EWE::GPUTask& blitTask = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, blitRecord, "present blit");
+    VkFormat currentSwapchainFormat = engine.swapchain.surface_format.format;
+    {
+        uint8_t swapchainFormatIndex = 0;
+        for (uint8_t i = 0; i < engine.swapchain.available_surface_formats.size(); i++) {
+            if (currentSwapchainFormat == engine.swapchain.available_surface_formats[i].format) {
+                swapchainFormatIndex = i;
+                break;
+            }
+        }
+        deferred_merge_pipe->GetRef().pipe = mergePipelines[swapchainFormatIndex]->vkPipe;
+    }
+    deferred_merge_pipe->GetRef().bindPoint = merge_layout.bindPoint;
+    deferred_merge_pipe->GetRef().layout = merge_layout.vkLayout;
 
+    deferred_merge_push->GetRef().Reset();
 
-    VkSubmitInfo submitInfo{};
-    submitInfo.commandBufferCount = 1;
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.pNext = nullptr;
-    submitInfo.pSignalSemaphores = nullptr;
-    submitInfo.signalSemaphoreCount = 0;
-    submitInfo.waitSemaphoreCount = 1;
-    VkPipelineStageFlags waitDstStageMask[2] = {
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-    };
-    submitInfo.pWaitDstStageMask = waitDstStageMask;
-
-    //VkImageBlit imageBlit{};
-    //imageBlit.srcSubresource
-
-    VkCommandBufferBeginInfo cmdBeginInfo{};
-    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmdBeginInfo.pNext = nullptr;
-    cmdBeginInfo.pInheritanceInfo = nullptr;
-    cmdBeginInfo.flags = 0;
-
-    deferredBlit->GetRef().filter = VK_FILTER_LINEAR;
-    VkImageBlit& blitParams = deferredBlit->GetRef().blitParams;
-    blitParams.srcOffsets[0].x = 0;
-    blitParams.srcOffsets[0].y = 0;
-    blitParams.srcOffsets[0].z = 0;
-
-    blitParams.dstOffsets[0].x = 0;
-    blitParams.dstOffsets[0].y = 0;
-    blitParams.dstOffsets[0].z = 0;
-
-    blitParams.srcOffsets[1].x = colorAttViews[0].image.extent.width;
-    blitParams.srcOffsets[1].y = colorAttViews[0].image.extent.height;
-    blitParams.srcOffsets[1].z = colorAttViews[0].image.extent.depth;
-
-    blitParams.dstOffsets[1].x = engine.swapchain.swapCreateInfo.imageExtent.width;
-    blitParams.dstOffsets[1].y = engine.swapchain.swapCreateInfo.imageExtent.height;
-    blitParams.dstOffsets[1].z = 1;
-
-    blitParams.srcSubresource.aspectMask = colorAttViews[0].subresource.aspectMask;
-    blitParams.srcSubresource.baseArrayLayer = 0;
-    blitParams.srcSubresource.layerCount = colorAttViews[0].subresource.layerCount;
-    blitParams.srcSubresource.mipLevel = 0;
-
-    blitParams.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blitParams.dstSubresource.baseArrayLayer = 0;
-    blitParams.dstSubresource.layerCount = 1;
-    blitParams.dstSubresource.mipLevel = 0;
-
-    //, VkCommandPoolCreateFlags createFlag
-    EWE::CommandPool renderCmdPool{ logicalDevice, *renderQueue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT};
-    std::vector<VkCommandBuffer> cmdBufVector(2, VK_NULL_HANDLE);
-
-    VkCommandBufferAllocateInfo cmdBufAllocInfo{};
-    cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmdBufAllocInfo.pNext = nullptr;
-    cmdBufAllocInfo.commandBufferCount = 2;
-    cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmdBufAllocInfo.commandPool = renderCmdPool.commandPool;
-
-    EWE::EWE_VK(vkAllocateCommandBuffers, logicalDevice.device, &cmdBufAllocInfo, cmdBufVector.data());
-    renderCmdPool.allocatedBuffers += 2;
-
-    std::vector<EWE::CommandBuffer> commandBuffers{};
-    commandBuffers.emplace_back(renderCmdPool, cmdBufVector[0]);
-    commandBuffers.emplace_back(renderCmdPool, cmdBufVector[1]);
+    deferred_merge_draw->GetRef().firstInstance = 0;
+    deferred_merge_draw->GetRef().firstVertex = 0;
+    deferred_merge_draw->GetRef().vertexCount = 4;
+    deferred_merge_draw->GetRef().instanceCount = 1;
 
     auto& first_node = nodeGraph.AddNode("First Node");
     first_node.buffer->position = lab::vec2(0.f);
@@ -496,8 +470,10 @@ int main() {
     mouseData.TakeCallbackControl();
 
     int colorAttOutputPin = renderTask.AddImagePin(nullptr, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    int blitSrcPin = blitTask.AddImagePin(&colorAttachmentImages[EWE::Global::frameIndex], VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    int blitDstPin = blitTask.AddImagePin(nullptr, VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    int merge_worldSrcPin = mergeTask.AddImagePin(&colorAttachmentImages[EWE::Global::frameIndex], VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    int merge_DstPin = mergeTask.AddImagePin(nullptr, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    int merge_imguiSrcPin = mergeTask.AddImagePin(&imguiHandler.colorAttachmentImages[EWE::Global::frameIndex], VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     renderGraph.presentBridge.SetSubresource(
         VkImageSubresourceRange{
@@ -508,27 +484,210 @@ int main() {
             .layerCount = 1
         }
     );
-    EWE::ImguiHandler imguiHandler{*renderQueue, 3, VK_SAMPLE_COUNT_1_BIT};
 
-    EWE::SubmissionTask world_render_submission{ *EWE::Global::logicalDevice, *renderQueue, true };
-    EWE::SubmissionTask imgui_submission{ *EWE::Global::logicalDevice, *renderQueue, true };
-    EWE::TaskSubmissionWorkload render_workload{};
-    render_workload.ordered_gpuTasks.push_back(&renderTask);
-    world_render_submission.full_workload = render_workload.PackIntoTask();
+    EWE::SubmissionTask world_render_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "world render"};
+    EWE::SubmissionTask imgui_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "imgui"};
+    world_render_submission.full_workload = [&](EWE::CommandBuffer& cmdBuf) {
+        EWE::TaskBridge renderPrefix(renderTask);
+        renderPrefix.GenerateRightHandBarriers(renderTask.explicitBufferState, renderTask.explicitImageState, renderTask.queue);
+        renderPrefix.Execute(cmdBuf);
+        renderTask.Execute(cmdBuf);
+        return true;
+    };
     imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
-    EWE::SubmissionTask attachment_blit_submission{ *EWE::Global::logicalDevice, *renderQueue, true };
-    EWE::TaskSubmissionWorkload blit_workload{};
-    blit_workload.ordered_gpuTasks.push_back(&blitTask);
-    attachment_blit_submission.full_workload = blit_workload.PackIntoTask();
+    imgui_submission.external_workload = [](EWE::Backend::SubmitInfo&, uint8_t frameIndex) {
+        return true;
+    };
+    EWE::SubmissionTask attachment_blit_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "attachment blit"};
+
+    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
+        world_render_submission.submitInfo[i].signalSemaphores.push_back(
+            VkSemaphoreSubmitInfo{
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .pNext = nullptr,
+                .semaphore = world_render_submission.signal_semaphores[i],
+                .value = 0,
+                .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .deviceIndex = 0
+            }
+        );
+        attachment_blit_submission.submitInfo[i].signalSemaphores.push_back(
+            VkSemaphoreSubmitInfo{
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .pNext = nullptr,
+                .semaphore = engine.swapchain.GetCurrentPresentSemaphore(),
+                .value = 0,
+                .stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                .deviceIndex = 0
+            }
+        );
+
+        world_render_submission.submitInfo[i].AddCommandBuffer(world_render_submission.cmdBuffers[i]);
+        attachment_blit_submission.submitInfo[i].AddCommandBuffer(attachment_blit_submission.cmdBuffers[i]);
+    }
+
+    VkSamplerCreateInfo samplerCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .mipLodBias = 0.f,
+        .anisotropyEnable = VK_FALSE,
+        .maxAnisotropy = 0.f,
+        .compareEnable = VK_FALSE,
+        .compareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+        .minLod = 0.f,
+        .maxLod = 1.f,
+        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
+        .unnormalizedCoordinates = VK_FALSE
+    };
+
+    EWE::Sampler attachmentSampler{ logicalDevice, samplerCreateInfo };
+
+    EWE::PerFlight<EWE::DescriptorImageInfo> world_attachment_descriptor(
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, colorAttViews[0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, colorAttViews[1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+    );
+    EWE::PerFlight<EWE::DescriptorImageInfo> imgui_attachment_descriptor(
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.colorAttachmentViews[0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.colorAttachmentViews[1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+    );
+
+
+    attachment_blit_submission.full_workload = [&](EWE::CommandBuffer& cmdBuf) {
+        //i dont really know how to bridge tasks in different submisisons yet
+        //fully explicit right now
+        EWE::Image& presentImage = engine.swapchain.GetCurrentImage();
+        mergeTask.SetResource(merge_DstPin, presentImage);
+
+        EWE::TaskBridge renderBridge{ renderTask, mergeTask };
+        renderBridge.RecreateBarriers();
+
+        std::vector<EWE::Resource<EWE::Buffer>*> bufferResources{}; //fake, its a reference
+
+        EWE::Resource<EWE::Image> imgui_attachment{
+            .image = &imguiHandler.colorAttachmentImages[EWE::Global::frameIndex],
+            .usage = EWE::ImageUsageData{
+                .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            }
+        };
+        std::vector<EWE::Resource<EWE::Image>*> imguiResources{
+            &imgui_attachment
+        };
+        EWE::TaskBridge imguiBridge{
+            logicalDevice, mergeTask.queue,
+            bufferResources, bufferResources,
+            imguiResources, mergeTask.explicitImageState,
+            imguiHandler.queue, mergeTask.queue
+        };
+
+        EWE::Resource<EWE::Image> lh_resourceImage{
+            .image = &presentImage,
+            .usage = EWE::ImageUsageData{
+                .stage = VK_PIPELINE_STAGE_2_NONE,
+                .accessMask = VK_ACCESS_2_NONE,
+                .layout = VK_IMAGE_LAYOUT_UNDEFINED
+            }
+        };
+        EWE::Resource<EWE::Image> rh_resourceImage{
+            .image = &presentImage,
+            .usage = EWE::ImageUsageData{
+                .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            }
+        };
+
+        deferred_merge_push->GetRef().texture_indices[0] = world_attachment_descriptor[EWE::Global::frameIndex].index;
+        deferred_merge_push->GetRef().texture_indices[1] = imgui_attachment_descriptor[EWE::Global::frameIndex].index;
+
+        std::vector<EWE::Resource<EWE::Image>*> lh_presentation_image{
+            &lh_resourceImage
+        };
+        std::vector<EWE::Resource<EWE::Image>*> rh_presentation_image{
+            &rh_resourceImage
+        };
+
+        EWE::TaskBridge mergePrefix{
+            logicalDevice, mergeTask.queue,
+            bufferResources, bufferResources,
+            lh_presentation_image, rh_presentation_image,
+            *renderQueue, *renderQueue
+        };
+
+        renderBridge.Execute(cmdBuf);
+        imguiBridge.Execute(cmdBuf);
+
+        mergePrefix.Execute(cmdBuf);
+
+        EWE::ImageView present_view{ presentImage };
+        mergeTask.renderTracker->compact.color_attachments.clear();
+        mergeTask.renderTracker->vk_data.colorAttachmentInfo.clear();
+        mergeTask.renderTracker->compact.color_attachments.push_back(
+            EWE::SimplifiedAttachment{
+                .imageView = {&present_view, &present_view},
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .clearValue = {0.f, 0.f, 0.f, 0.f}
+            }
+        );
+        mergeTask.renderTracker->compact.depth_attachment.imageView[EWE::Global::frameIndex] = nullptr;
+        mergeTask.SetRenderInfo();
+        mergeTask.UpdateFrameIndex(EWE::Global::frameIndex);
+
+        
+        if (currentSwapchainFormat != engine.swapchain.surface_format.format) {
+            uint8_t swapchainFormatIndex = 0;
+            currentSwapchainFormat = engine.swapchain.surface_format.format;
+            for (uint8_t i = 0; i < engine.swapchain.available_surface_formats.size(); i++) {
+                if (currentSwapchainFormat == engine.swapchain.available_surface_formats[i].format) {
+                    swapchainFormatIndex = i;
+                    break;
+                }
+            }
+            deferred_merge_pipe->GetRef().pipe = mergePipelines[swapchainFormatIndex]->vkPipe;
+        }
+
+        mergeTask.Execute(cmdBuf);
+        renderGraph.presentBridge.UpdateSrcData(&mergeTask.queue, mergeTask.explicitImageState[merge_DstPin]);
+        renderGraph.presentBridge.Execute(cmdBuf);
+        return true;
+    };
+
+
     renderGraph.execution_order = {
         std::vector<EWE::SubmissionTask*>{&imgui_submission, &world_render_submission},
         std::vector<EWE::SubmissionTask*>{&attachment_blit_submission}
     };
 
+    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
+        renderGraph.presentSubmission.incomingSemaphores[i].push_back(engine.swapchain.GetCurrentPresentSemaphore());
+        attachment_blit_submission.submitInfo[i].WaitOnPrevious(imgui_submission.submitInfo[i]);
+        attachment_blit_submission.submitInfo[i].WaitOnPrevious(world_render_submission.submitInfo[i]);
+
+        attachment_blit_submission.submitInfo[i].waitSemaphores.push_back(
+            VkSemaphoreSubmitInfo{
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .pNext = nullptr,
+                //just an initial value, this is overwritten every frame
+                .semaphore = engine.swapchain.acquire_semaphores[0].vkSemaphore,
+                .value = 0,
+                .stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,//theres prob a better option
+                .deviceIndex = 0
+            }
+
+        );
+    }
 
 
     try { //beginning of render loop
-        uint64_t totalFrames = 0;
         auto timeBegin = std::chrono::high_resolution_clock::now();
         VkDescriptorImageInfo descImg;
         std::chrono::nanoseconds elapsedTime = std::chrono::nanoseconds(0);
@@ -542,71 +701,40 @@ int main() {
                 glfwPollEvents();
 
                 if (renderGraph.Acquire(EWE::Global::frameIndex)) {
-                    auto& swapPackage = engine.swapchain.GetImagePackage();
-                    EWE::Image swapImage{ logicalDevice };
-                    swapImage.image = swapPackage.image;
-                    swapImage.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-                    swapImage.owningQueue = renderQueue;//i dont know how to logically set this, but this will work
-                    swapImage.mipLevels = 1;
-                    swapImage.arrayLayers = 1;
-#if EWE_DEBUG_BOOL
-                    swapImage.SetName("swap chain image");
-#endif
-
-                    deferredBlit->GetRef().srcImage = colorAttachmentImages[EWE::Global::frameIndex].image;
-                    deferredBlit->GetRef().srcLayout = colorAttachmentImages[EWE::Global::frameIndex].layout;
-                    deferredBlit->GetRef().dstImage = swapPackage.image;
-                    deferredBlit->GetRef().dstLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    auto swapImage = engine.swapchain.GetCurrentImage();
 
                     renderTask.SetResource(colorAttOutputPin, colorAttachmentImages[EWE::Global::frameIndex]);
-                    blitTask.SetResource(blitSrcPin, colorAttachmentImages[EWE::Global::frameIndex]);
-                    blitTask.SetResource(blitDstPin, swapImage);
+                    mergeTask.SetResource(merge_worldSrcPin, colorAttachmentImages[EWE::Global::frameIndex]);
+                    mergeTask.SetResource(merge_imguiSrcPin, imguiHandler.colorAttachmentImages[EWE::Global::frameIndex]);
+
+                    auto& waitSemInfos = attachment_blit_submission.submitInfo[EWE::Global::frameIndex].waitSemaphores;
+                    waitSemInfos.back().semaphore = engine.swapchain.GetAcquireSemaphore(EWE::Global::frameIndex);
+                    auto& signalSemInfos = attachment_blit_submission.submitInfo[EWE::Global::frameIndex].signalSemaphores;
+                    signalSemInfos.back().semaphore = engine.swapchain.GetCurrentPresentSemaphore();
+
+                    renderGraph.presentSubmission.incomingSemaphores[EWE::Global::frameIndex].back() = engine.swapchain.GetCurrentPresentSemaphore();
+
+                    //i think i also want the previous frame's submit signal to be waited on here, but idk
+                    //auto& secondBackSemInfo = waitSemInfos[waitSemInfos.size() - 2].semaphore = engine.swapchain.GetCurrentSemaphores().present
 
                     nodeGraph.UpdateRender(mouseData);
 
                     renderTask.UpdateFrameIndex(EWE::Global::frameIndex);
-
-                    renderGraph.presentBridge.UpdateSrcData(&blitTask.queue, blitTask.explicitImageState[blitDstPin]);
-
-                    EWE::CommandBuffer& currentCmdBuf = commandBuffers[EWE::Global::frameIndex];
-                    currentCmdBuf.Reset();
-                    currentCmdBuf.Begin(cmdBeginInfo);
 #ifdef EWE_IMGUI
-                    printf("ewe imgui\n");
                     imguiHandler.BeginRender();
-                    nodeGraph.Imgui();
+                    //nodeGraph.Imgui();
+                    //engine.Imgui();
+                    //ImGui::ShowDemoWindow();
                     imguiHandler.EndRender();
 #endif
-                    renderGraph.Execute(currentCmdBuf, EWE::Global::frameIndex);
-                    renderGraph.PresentBridge(currentCmdBuf);
-                    currentCmdBuf.End();
-                    submitInfo.pCommandBuffers = &currentCmdBuf.cmdBuf;
-                    //EWE::EWE_VK(vkQueueSubmit, *renderQueue, 1, &submitInfo, VK_NULL_HANDLE);
-                    submitInfo.signalSemaphoreCount = 1;
-                    std::vector<VkSemaphore> waitSemaphores{
-                        swapPackage.acquire_semaphore.vkSemaphore,
-#ifdef EWE_IMGUI
-                        imguiHandler.semaphores[EWE::Global::frameIndex].vkSemaphore
-#endif
-                    };
-                    submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
-                    submitInfo.pWaitSemaphores = waitSemaphores.data();
-                    submitInfo.pSignalSemaphores = &swapPackage.present_semaphore.vkSemaphore;
-                    renderQueue->Submit(1, &submitInfo, engine.swapchain.inFlightFences[EWE::Global::frameIndex].vkFence);
-#if EWE_DEBUG_BOOL
-                    currentCmdBuf.state = EWE::CommandBuffer::State::Pending;
-#endif
-                    renderGraph.Present();
+                    renderGraph.Execute(EWE::Global::frameIndex);
+                    renderGraph.presentSubmission.Present(EWE::Global::frameIndex);
+
 
                     EWE::Global::frameIndex = (EWE::Global::frameIndex + 1) % EWE::max_frames_in_flight;
-                    totalFrames++;
+                    engine.totalFramesSubmitted++;
                 }
                 else {
-                    //need to recreate swapchain, thats handled internally
-                    //any other Swapchain::Recreate 'callbacks' will be put here
-                    blitParams.dstOffsets[1].x = engine.swapchain.swapCreateInfo.imageExtent.width;
-                    blitParams.dstOffsets[1].y = engine.swapchain.swapCreateInfo.imageExtent.height;
-                    blitParams.dstOffsets[1].z = 1;
                 }
                 elapsedTime = std::chrono::nanoseconds(0);
             }
@@ -614,6 +742,9 @@ int main() {
     }
     catch (EWE::EWEException& except) {
         framework.HandleVulkanException(except);
+#if EWE_DEBUG_BOOL
+        assert(false && "caught exception");
+#endif
     }
 
 

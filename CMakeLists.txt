@@ -30,6 +30,27 @@ option(EWE_PROJECTS "Build projects" ${is_project_root})
 
 Message(STATUS "Cmake Generator : ${CMAKE_GENERATOR}")
 
+
+option(USING_ASAN "address sanitizer" OFF)
+if(USING_ASAN)
+	message(STATUS "using asan")
+	if(MSVC)
+		add_compile_options(/fsanitize=address)
+    	add_link_options(/fsanitize=address)
+
+        # REQUIRED incompatibility fixes
+        add_compile_options(/Zi)
+
+        add_link_options(/INCREMENTAL:NO)
+
+        # Required CRT for ASan
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
+	else()
+		add_compile_options(-fsanitize=address)
+    	add_link_options(-fsanitize=address)
+    endif()
+endif()
+
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.c)
 
 file(GLOB_RECURSE HEADER_FILES ${PROJECT_SOURCE_DIR}/include/*.h ${PROJECT_SOURCE_DIR}/include/*.hpp)
@@ -105,6 +126,14 @@ if(NOT TARGET LinearAlgebra)
 endif()
 
 FetchContent_Declare(
+	magicenum
+	GIT_REPOSITORY https://github.com/Neargye/magic_enum
+	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/magicenum"
+	GIT_TAG 2e6e8bf
+)
+FetchContent_MakeAvailable(magicenum)
+
+FetchContent_Declare(
     imguizmo
     GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imguizmo"
@@ -133,10 +162,9 @@ set(IMGUI_SOURCES
 	${imgui_SOURCE_DIR}/imgui_demo.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-
 )
 else()
-set(IMGUI_SOURCES)
+	set(IMGUI_SOURCES)
 endif()
 
 
@@ -148,19 +176,9 @@ if(EWE_IMGUI)
     target_compile_definitions(${PROJECT_NAME} PUBLIC EWE_IMGUI)
 endif()
 
-option(USING_ASAN "address sanitizer" OFF)
-if(USING_ASAN)
-	if(MSVC)
-        target_compile_options(${PROJECT_NAME} PUBLIC /fsanitize=address)
-        target_link_options(${PROJECT_NAME} PUBLIC /fsanitize=address)
-	else()
-        target_compile_options(${PROJECT_NAME} PUBLIC -fsanitize=address)
-        target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=address)
-    endif()
-endif()
 
 message(STATUS "including directories")
-message(STATUS "framework source dir - ${EWGraphics_SOURCE_DIR}")
+message(STATUS "magicenum source dir - ${magicenum_SOURCE_DIR}")
 target_include_directories(${PROJECT_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${Vulkan_INCLUDE_DIR}
@@ -169,6 +187,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 	${LinearAlgebra_SOURCE_DIR}
     ${EWGraphics_SOURCE_DIR}/include
 	${imgui_SOURCE_DIR}
+	${magicenum_SOURCE_DIR}/include
 )
 
 message(STATUS "linking directories")

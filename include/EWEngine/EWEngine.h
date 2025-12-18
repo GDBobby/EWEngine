@@ -19,7 +19,12 @@ namespace EWE{
         Swapchain swapchain;
         RenderGraph renderGraph;
 
+        uint64_t totalFramesSubmitted = 0;
+
         [[nodiscard]] explicit EWEngine(std::string_view application_name);
 
+#if EWE_IMGUI
+        void Imgui();
+#endif
     };
 } //namespace EWE

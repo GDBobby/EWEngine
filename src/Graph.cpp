@@ -60,7 +60,7 @@ namespace EWE{
             objectConfig.cullMode = VK_CULL_MODE_NONE;
             objectConfig.depthClamp = false;
             objectConfig.rasterizerDiscard = false;
-            objectConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            objectConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
             pipe = new GraphicsPipeline(*Global::logicalDevice, 1, pipeLayout, passConfig, objectConfig, { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR });
 
             auto& pipeParams = def_pipe->GetRef();
