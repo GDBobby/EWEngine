@@ -26,10 +26,10 @@ namespace EWE {
 
 	void Camera::SetPerspectiveProjection(float fovy, float aspect, float near, float far) {
 		//inverting aspect, to make it height / width instead of width / height
-		data.proj = lab::ProjectionMatrix<lab::Perspective::Vulkan>(fovy, aspect, near, far);
+		data.proj = lab::ProjectionMatrix(fovy, aspect, near, far);
 		//projection = lab::CreateProjectionMatrix(fovy * 1.1f, aspect * 1.1f, near * 1.1f, far * 1.1f);
 		//projection = glm::perspective(fovy, aspect, near, far);
-		conservativeProjection = lab::ProjectionMatrix<lab::Perspective::Vulkan>(fovy * 1.1f, aspect * 1.1f, near * 1.1f, far * 1.1f);
+		conservativeProjection = lab::ProjectionMatrix(fovy * 1.1f, aspect * 1.1f, near * 1.1f, far * 1.1f);
 	}
 
 

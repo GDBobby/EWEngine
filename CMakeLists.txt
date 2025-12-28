@@ -33,7 +33,7 @@ Message(STATUS "Cmake Generator : ${CMAKE_GENERATOR}")
 
 option(USING_ASAN "address sanitizer" OFF)
 if(USING_ASAN)
-	message(STATUS "using asan")
+	message(STATUS "using asan ${PROJECT_NAME}")
 	if(MSVC)
 		add_compile_options(/fsanitize=address)
     	add_link_options(/fsanitize=address)
