@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EightWinds/Command/CommandBuffer.h"
+#include "EightWinds/CommandBuffer.h"
 
 #include "EWEngine/NodeGraph/Pin.h"
 #include "EWEngine/NodeGraph/Link.h"

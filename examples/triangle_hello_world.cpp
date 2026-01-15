@@ -26,6 +26,8 @@
 
 #include "EWEngine/Tools/ImguiHandler.h"
 
+#include "EightWinds/RenderGraph/RasterTask.h"
+
 #include <cstdint>
 #if EWE_DEBUG_BOOL
 #include <cstdio>
@@ -225,20 +227,22 @@ int main() {
 
         transition_stc.End();
 
-        VkFenceCreateInfo fenceCreateInfo{};
-        fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceCreateInfo.pNext = nullptr;
-        fenceCreateInfo.flags = 0;
+        VkFenceCreateInfo fenceCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0
+        };
         EWE::Fence stc_fence{ logicalDevice, fenceCreateInfo };
 
-        VkSubmitInfo stc_submit_info{};
-        stc_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        stc_submit_info.pNext = nullptr;
-        stc_submit_info.commandBufferCount = 1;
-        stc_submit_info.pCommandBuffers = &temp_stc_cmdBuf;
-        stc_submit_info.signalSemaphoreCount = 0;
-        stc_submit_info.waitSemaphoreCount = 0;
-        stc_submit_info.pWaitDstStageMask = nullptr;
+        VkSubmitInfo stc_submit_info{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .pNext = nullptr,
+            .waitSemaphoreCount = 0,
+            .pWaitDstStageMask = nullptr,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &temp_stc_cmdBuf,
+            .signalSemaphoreCount = 0
+        };
 
         renderQueue->Submit(1, &stc_submit_info, stc_fence);
 
@@ -263,43 +267,48 @@ int main() {
 
     EWE::PipeLayout triangle_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ triangle_vert, triangle_frag });
     //passconfig should be using a full rendergraph setup
-    EWE::PipelinePassConfig passConfig;
+    EWE::TaskRasterConfig passConfig;
     passConfig.SetDefaults();
     passConfig.depthStencilInfo.depthTestEnable = VK_FALSE;
     passConfig.depthStencilInfo.depthWriteEnable = VK_FALSE;
     passConfig.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
     passConfig.depthStencilInfo.stencilTestEnable = VK_FALSE;
 
-    EWE::PipelineObjectConfig objectConfig;
+    EWE::RasterTask triangle_raster_task{"triangle raster task", logicalDevice, *renderQueue, passConfig, true};
+
+    EWE::ObjectRasterData triangle_rasterObj;
+    EWE::ObjectRasterConfig& objectConfig = triangle_rasterObj.config;
     objectConfig.SetDefaults();
     objectConfig.cullMode = VK_CULL_MODE_NONE;
     objectConfig.depthClamp = false;
     objectConfig.rasterizerDiscard = false;
     objectConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-    std::vector<VkDynamicState> dynamicState{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    EWE::GraphicsPipeline triangle_pipeline{ logicalDevice, 0, &triangle_layout, passConfig, objectConfig, dynamicState };
+    //std::vector<VkDynamicState> dynamicState{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+     
+    //VertexDrawData has a copy of a deferred<VertexParamPack> that will be automatically adjusted
+    //also has a push constant, which will be automatically applied
+    EWE::VertexDrawData triangle_drawData{};
+    triangle_raster_task.AddDraw(triangle_rasterObj, triangle_drawData);
 
+    EWE::CommandRecord triangleRecord{};
+    triangle_raster_task.Record(triangleRecord);
 
     EWE::Node::Graph nodeGraph{};
-
-    EWE::CommandRecord renderRecord{};
-    renderRecord.BeginRender();
-    auto* def_pipe = renderRecord.BindPipeline();
-    auto* def_vp_scissor = renderRecord.SetViewportScissor();
-    //auto* def_desc = cmdRecord.BindDescriptor();
-    auto* def_push = renderRecord.Push();
-    auto* def_draw = renderRecord.Draw();
-    nodeGraph.Record(renderRecord);
-
-    renderRecord.EndRender();
+    nodeGraph.Record(triangleRecord);
 
     EWE::RenderGraph& renderGraph = engine.renderGraph;
-    EWE::GPUTask& renderTask = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, renderRecord, "render");
+    EWE::GPUTask& renderTask = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, triangleRecord, "render");
 
-    def_pipe->GetRef().pipe = triangle_pipeline.vkPipe;
-    def_pipe->GetRef().layout = triangle_pipeline.pipeLayout->vkLayout;
-    def_pipe->GetRef().bindPoint = triangle_pipeline.pipeLayout->bindPoint;
+
+    triangle_raster_task.scissor = EWE::Global::window->screenDimensions;
+    triangle_raster_task.viewport.x = 0.f;
+    triangle_raster_task.viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
+    triangle_raster_task.viewport.width = static_cast<float>(EWE::Global::window->screenDimensions.width);
+    triangle_raster_task.viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
+    triangle_raster_task.viewport.minDepth = 0.0f;
+    triangle_raster_task.viewport.maxDepth = 1.f;
+    triangle_raster_task.AdjustPipelines();
 
     auto& color_att = renderTask.renderTracker->compact.color_attachments.emplace_back();
     color_att.imageView[0] = &colorAttViews[0];
@@ -318,27 +327,20 @@ int main() {
     depth_att.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depth_att.clearValue.depthStencil.depth = 0.f;
     depth_att.clearValue.depthStencil.stencil = 0; //idk what to set this to tbh
-
+    
     renderTask.SetRenderInfo();
 
-    def_vp_scissor->GetRef().scissor = EWE::Global::window->screenDimensions;
-    def_vp_scissor->GetRef().viewport.x = 0.f;
-    def_vp_scissor->GetRef().viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
-    def_vp_scissor->GetRef().viewport.width = static_cast<float>(EWE::Global::window->screenDimensions.width);
-    def_vp_scissor->GetRef().viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
-    def_vp_scissor->GetRef().viewport.minDepth = 0.0f;
-    def_vp_scissor->GetRef().viewport.maxDepth = 1.f;
 
-
-    VmaAllocationCreateInfo vmaAllocInfo{};
-    vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-    vmaAllocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    vmaAllocInfo.memoryTypeBits = 0;
-    vmaAllocInfo.pool = VK_NULL_HANDLE;
-    vmaAllocInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    vmaAllocInfo.requiredFlags = 0;
-    vmaAllocInfo.priority = 1.f;
-    vmaAllocInfo.pUserData = nullptr;
+    VmaAllocationCreateInfo vmaAllocInfo{
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+        .requiredFlags = 0,
+        .preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        .memoryTypeBits = 0,
+        .pool = VK_NULL_HANDLE,
+        .pUserData = nullptr,
+        .priority = 1.f
+    };
 
     struct alignas(16) TriangleVertex {
         float pos[2]; //xy
@@ -572,7 +574,7 @@ int main() {
 
         EWE::Resource<EWE::Image> imgui_attachment{
             .image = &imguiHandler.colorAttachmentImages[EWE::Global::frameIndex],
-            .usage = EWE::ImageUsageData{
+            .usage = EWE::UsageData<EWE::Image>{
                 .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                 .accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
@@ -590,7 +592,7 @@ int main() {
 
         EWE::Resource<EWE::Image> lh_resourceImage{
             .image = &presentImage,
-            .usage = EWE::ImageUsageData{
+            .usage = EWE::UsageData<EWE::Image>{
                 .stage = VK_PIPELINE_STAGE_2_NONE,
                 .accessMask = VK_ACCESS_2_NONE,
                 .layout = VK_IMAGE_LAYOUT_UNDEFINED
@@ -598,7 +600,7 @@ int main() {
         };
         EWE::Resource<EWE::Image> rh_resourceImage{
             .image = &presentImage,
-            .usage = EWE::ImageUsageData{
+            .usage = EWE::UsageData<EWE::Image>{
                 .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                 .accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
@@ -660,7 +662,7 @@ int main() {
         renderGraph.presentBridge.Execute(cmdBuf);
         return true;
     };
-
+    
 
     renderGraph.execution_order = {
         std::vector<EWE::SubmissionTask*>{&imgui_submission, &world_render_submission},

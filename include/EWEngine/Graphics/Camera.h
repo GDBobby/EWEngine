@@ -1,7 +1,7 @@
 #pragma once
 
 #include "EightWinds/Buffer.h"
-#include "EightWinds/PerFlight.h"
+#include "EightWinds/Data/PerFlight.h"
 
 #include "EWEngine/Global.h"
 

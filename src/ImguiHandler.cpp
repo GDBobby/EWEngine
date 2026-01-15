@@ -1,8 +1,8 @@
 #include "EWEngine/Tools/ImguiHandler.h"
 
 #include "EightWinds/ImageView.h"
-#include "EightWinds/Command/CommandBuffer.h"
-#include "EightWinds/Command/CommandPool.h"
+#include "EightWinds/CommandBuffer.h"
+#include "EightWinds/CommandPool.h"
 #include "EightWinds/Backend/Fence.h"
 
 #include "EightWinds/RenderGraph/TaskBridge.h"
@@ -234,7 +234,7 @@ namespace EWE{
 			std::vector<Resource<Buffer>*> explicitBuffers{};
 			Resource<Image> attachmentResource{
 				.image = &colorAttachmentImages[Global::frameIndex],
-				.usage = ImageUsageData{
+				.usage = UsageData<Image>{
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 					.accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
@@ -243,13 +243,6 @@ namespace EWE{
 			std::vector<Resource<Image>*> explicitImages{
 				&attachmentResource
 			};
-
-			TaskBridge taskBridge{ *Global::logicalDevice,
-				explicitBuffers, explicitImages,
-				queue
-			};
-
-			taskBridge.Execute(currentCmdBuf);
 		}
 
 		renderTracker.compact.Update(&renderTracker.vk_data, Global::frameIndex);

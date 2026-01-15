@@ -33,29 +33,19 @@ namespace EWE{
 
         void Graph::InitializeRender() {
            // printf("label addr - %zu\n"), def_label->data;
-            def_push->GetRef().buffer_addr[0] = gp_buffer.deviceAddress;
-            auto& vertParamPack = def_vertParamPack->GetRef();
-            vertParamPack.firstInstance = 0;
-            vertParamPack.firstVertex = 0;
-            vertParamPack.vertexCount = 4;
-            auto& labelPack = def_label->GetRef();
-            labelPack.name = "node graph";
-            labelPack.red = 1.f;
-            labelPack.green = 0.f;
-            labelPack.blue = 0.f;
 
             vert_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/node.vert.spv");
             frag_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/node.frag.spv");
 
             pipeLayout = new PipeLayout(*Global::logicalDevice, { vert_shader, frag_shader });
-            EWE::PipelinePassConfig passConfig;
+            EWE::TaskRasterConfig passConfig;
             passConfig.SetDefaults();
             passConfig.depthStencilInfo.depthTestEnable = VK_FALSE;
             passConfig.depthStencilInfo.depthWriteEnable = VK_FALSE;
             passConfig.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
             passConfig.depthStencilInfo.stencilTestEnable = VK_FALSE;
 
-            EWE::PipelineObjectConfig objectConfig;
+            EWE::ObjectRasterConfig objectConfig;
             objectConfig.SetDefaults();
             objectConfig.cullMode = VK_CULL_MODE_NONE;
             objectConfig.depthClamp = false;
@@ -63,17 +53,29 @@ namespace EWE{
             objectConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
             pipe = new GraphicsPipeline(*Global::logicalDevice, 1, pipeLayout, passConfig, objectConfig, { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR });
 
-            auto& pipeParams = def_pipe->GetRef();
-            pipeParams.pipe = pipe->vkPipe;
-            pipeParams.layout = pipe->pipeLayout->vkLayout;
-            pipeParams.bindPoint = pipe->pipeLayout->bindPoint;
+
+            for (uint8_t i = 0; i < max_frames_in_flight; i++) {
+                def_push.buffers[0] = &gp_buffer;
+                auto& vertParamPack = def_vertParamPack->GetRef(i);
+                vertParamPack.firstInstance = 0;
+                vertParamPack.firstVertex = 0;
+                vertParamPack.vertexCount = 4;
+                auto& labelPack = def_label->GetRef(i);
+                labelPack.name = "node graph";
+                labelPack.red = 1.f;
+                labelPack.green = 0.f;
+                labelPack.blue = 0.f;
+                pipe->WriteToParamPack(def_pipe->GetRef(i));
+            }
+
+            //task raster config isn't gonna pla ynicely with labels, unless I allow the user to input arbitrary commands
         }
 
-        void Graph::UpdateRender(Input::Mouse const& mouseData) {
+        void Graph::UpdateRender(Input::Mouse const& mouseData, uint8_t frameIndex) {
             for (auto& node : nodes) {
                 node.Update(mouseData);
             }
-            def_vertParamPack->GetRef().instanceCount = nodes.size();
+            def_vertParamPack->GetRef(frameIndex).instanceCount = nodes.size();
         }
 
         Node& Graph::AddNode() {

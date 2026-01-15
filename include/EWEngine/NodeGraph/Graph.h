@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EightWinds/PerFlight.h"
+#include "EightWinds/Data/PerFlight.h"
 #include "EightWinds/Buffer.h"
 
 #include "EWEngine/NodeGraph/Node.h"
@@ -27,7 +27,7 @@ namespace EWE{
             Node& AddNode(std::string_view name);
             Node& AddNode();
 
-            DeferredReference<GlobalPushConstant>* def_push = nullptr;
+            GlobalPushConstant_Abstract def_push{};
             DeferredReference<VertexDrawParamPack>* def_vertParamPack = nullptr;
             DeferredReference<LabelParamPack>* def_label = nullptr;
             DeferredReference<PipelineParamPack>* def_pipe = nullptr;
@@ -41,7 +41,7 @@ namespace EWE{
             void Record(CommandRecord& record);
 
             void InitializeRender();
-            void UpdateRender(Input::Mouse const& mouseData);
+            void UpdateRender(Input::Mouse const& mouseData, uint8_t frameIndex);
 
 #ifdef EWE_IMGUI
             void Imgui();
