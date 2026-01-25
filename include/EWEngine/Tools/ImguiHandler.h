@@ -30,9 +30,8 @@ namespace EWE{
         Queue& queue; //graphics queue, doesnt need to be present
         CommandPool cmdPool;
 
-        PerFlight<Image> colorAttachmentImages;
-        PerFlight<ImageView> colorAttachmentViews;
         PerFlight<CommandBuffer> cmdBuffers;
+        RenderInfo renderingInfo;
         RenderTracker renderTracker;
         PerFlight<Semaphore> semaphores;
 

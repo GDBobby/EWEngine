@@ -10,6 +10,8 @@
 #include "EWEngine/Global.h"
 
 
+#include "EightWinds/Backend/STC_Helper.h"
+
 namespace EWE{
 
 	std::array<VkFormat, 1> colorFormats{ VK_FORMAT_R8G8B8A8_UNORM };
@@ -17,10 +19,10 @@ namespace EWE{
 	PerFlight<Image> CreateColorAttachmentImages(Queue& queue, VkSampleCountFlagBits sampleCount) {
 		PerFlight<Image> ret{ *Global::logicalDevice };
 
-		VmaAllocationCreateInfo vmaAllocCreateInfo{};
-		vmaAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-		vmaAllocCreateInfo.flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) | static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT);
-
+		VmaAllocationCreateInfo vmaAllocCreateInfo{
+			.flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) | static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT),
+			.usage = VMA_MEMORY_USAGE_AUTO
+		};
 		for (auto& cai : ret) {
 			cai.arrayLayers = 1;
 			cai.extent = { EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height, 1 };
@@ -46,10 +48,19 @@ namespace EWE{
 		uint32_t imageCount, VkSampleCountFlagBits sampleCount
 	)
 		: queue{ queue },
-		colorAttachmentImages{CreateColorAttachmentImages(queue, sampleCount)},
-		colorAttachmentViews{ colorAttachmentImages },
 		cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
 		cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
+		renderTracker{
+			.full{
+				RenderInfo3{"imgui render info",
+					*Global::logicalDevice,
+					queue,
+					Global::window->screenDimensions.width, Global::window->screenDimensions.height,
+					{VK_FORMAT_R8G8B8A8_UNORM},
+					VK_FORMAT_D16_UNORM
+				}
+			}
+		},
 		semaphores{ *Global::logicalDevice, false}
     {
 #if EWE_DEBUG_NAMING
@@ -59,15 +70,17 @@ namespace EWE{
 			cmdBuffers[i].SetDebugName(debugName);
 		}
 #endif
+		
+
 		renderTracker.compact.color_attachments.resize(1);
-		renderTracker.compact.color_attachments[0].imageView[0] = &colorAttachmentViews[0];
-		renderTracker.compact.color_attachments[0].imageView[1] = &colorAttachmentViews[1];
-		renderTracker.compact.color_attachments[0].clearValue.color.float32[0] = 0.f;
-		renderTracker.compact.color_attachments[0].clearValue.color.float32[1] = 0.f;
-		renderTracker.compact.color_attachments[0].clearValue.color.float32[2] = 0.f;
-		renderTracker.compact.color_attachments[0].clearValue.color.float32[3] = 0.f;
-		renderTracker.compact.color_attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		renderTracker.compact.color_attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		renderTracker.compact.color_attachments[0].imageView[0] = &renderTracker.full.color_views[0][0];
+		renderTracker.compact.color_attachments[0].imageView[1] = &renderTracker.full.color_views[1][0];
+		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[0] = 0.f;
+		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[1] = 0.f;
+		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[2] = 0.f;
+		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[3] = 0.f;
+		renderTracker.compact.color_attachments[0].info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		renderTracker.compact.color_attachments[0].info.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 		renderTracker.compact.depth_attachment.imageView[0] = nullptr;
 		renderTracker.compact.depth_attachment.imageView[1] = nullptr;
@@ -85,28 +98,34 @@ namespace EWE{
 		ImGui::StyleColorsDark();
         
 		ImGui_ImplGlfw_InitForVulkan(Global::window->window, true);
-		ImGui_ImplVulkan_InitInfo init_info{};
-		init_info.Instance = Global::logicalDevice->instance;
-		init_info.PhysicalDevice = Global::logicalDevice->physicalDevice.device;
-		init_info.Device = Global::logicalDevice->device;
-		init_info.QueueFamily = queue.family.index;
-		init_info.Queue = queue;
-		init_info.PipelineCache = nullptr;
-		init_info.Allocator = nullptr;
-		init_info.MinImageCount = imageCount;
-		init_info.ImageCount = imageCount;
-		init_info.CheckVkResultFn = EWE_VK_RESULT;
-		init_info.DescriptorPoolSize = 1024;
-		init_info.UseDynamicRendering = true;
-		init_info.PipelineInfoMain.RenderPass = VK_NULL_HANDLE;
-		init_info.PipelineInfoMain.MSAASamples = sampleCount;
-		init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-		init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pNext = nullptr;
-		init_info.PipelineInfoMain.PipelineRenderingCreateInfo.viewMask = 0;
-		init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-		init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = colorFormats.data();
-		init_info.PipelineInfoMain.PipelineRenderingCreateInfo.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
-		init_info.PipelineInfoMain.PipelineRenderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+		ImGui_ImplVulkan_InitInfo init_info{
+			.ApiVersion = Global::instance->api_version,
+			.Instance = Global::logicalDevice->instance,
+			.PhysicalDevice = Global::logicalDevice->physicalDevice.device,
+			.Device = Global::logicalDevice->device,
+			.QueueFamily = queue.family.index,
+			.Queue = queue,
+			.DescriptorPoolSize = 1024,
+			.MinImageCount = imageCount,
+			.ImageCount = imageCount,
+			.PipelineCache = nullptr,
+			.PipelineInfoMain = ImGui_ImplVulkan_PipelineInfo{
+				.RenderPass = VK_NULL_HANDLE,
+				.MSAASamples = sampleCount,
+				.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+					.pNext = nullptr,
+					.viewMask = 0,
+					.colorAttachmentCount = 1,
+					.pColorAttachmentFormats = colorFormats.data(),
+					.depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+					.stencilAttachmentFormat = VK_FORMAT_UNDEFINED
+				}
+			},
+			.UseDynamicRendering = true,
+			.Allocator = nullptr,
+			.CheckVkResultFn = EWE_VK_RESULT,
+		};
 
 		ImGui_ImplVulkan_Init(&init_info);
 
@@ -120,92 +139,8 @@ namespace EWE{
 	}
 
 	void ImguiHandler::InitializeImages() {
-		//i need the automatic transfer manager again, it'll help simplify this
-		EWE::CommandPool stc_cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT };
 
-		VkCommandBufferAllocateInfo cmdBufAllocInfo{};
-		cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		cmdBufAllocInfo.pNext = nullptr;
-		cmdBufAllocInfo.commandBufferCount = 1;
-		cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		cmdBufAllocInfo.commandPool = stc_cmdPool.commandPool;
-
-		VkCommandBuffer temp_stc_cmdBuf;
-		EWE::EWE_VK(vkAllocateCommandBuffers, Global::logicalDevice->device, &cmdBufAllocInfo, &temp_stc_cmdBuf);
-		stc_cmdPool.allocatedBuffers++;
-
-		EWE::CommandBuffer transition_stc(stc_cmdPool, temp_stc_cmdBuf);
-		VkCommandBufferBeginInfo beginSTCInfo{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = nullptr,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-			.pInheritanceInfo = nullptr
-		};
-		transition_stc.Begin(beginSTCInfo);
-
-
-		std::vector<VkImageMemoryBarrier2> transition_barriers(2);
-
-		uint64_t current_barrier_index = 0;
-
-		for (auto& cai : colorAttachmentImages) {
-			transition_barriers[current_barrier_index].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-			transition_barriers[current_barrier_index].pNext = nullptr;
-			transition_barriers[current_barrier_index].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			transition_barriers[current_barrier_index].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			transition_barriers[current_barrier_index].srcAccessMask = VK_ACCESS_2_NONE;
-			transition_barriers[current_barrier_index].dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-			transition_barriers[current_barrier_index].image = cai.image;
-			transition_barriers[current_barrier_index].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			transition_barriers[current_barrier_index].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			transition_barriers[current_barrier_index].subresourceRange = EWE::ImageView::GetDefaultSubresource(cai);
-			transition_barriers[current_barrier_index].srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-			transition_barriers[current_barrier_index].dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-			current_barrier_index++;
-		}
-
-		VkDependencyInfo transition_dependency{
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.pNext = nullptr,
-			.dependencyFlags = 0,
-			.memoryBarrierCount = 0,
-			.bufferMemoryBarrierCount = 0,
-			.imageMemoryBarrierCount = static_cast<uint32_t>(transition_barriers.size()),
-			.pImageMemoryBarriers = transition_barriers.data()
-		};
-
-		vkCmdPipelineBarrier2(transition_stc, &transition_dependency);
-
-		transition_stc.End();
-
-		VkFenceCreateInfo fenceCreateInfo{
-			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0
-		};
-		EWE::Fence stc_fence{ *Global::logicalDevice, fenceCreateInfo };
-
-		VkSubmitInfo stc_submit_info{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.pNext = nullptr,
-			.waitSemaphoreCount = 0,
-			.pWaitDstStageMask = nullptr,
-			.commandBufferCount = 1,
-			.pCommandBuffers = &temp_stc_cmdBuf,
-			.signalSemaphoreCount = 0
-		};
-
-		queue.Submit(1, &stc_submit_info, stc_fence);
-
-		transition_stc.state = CommandBuffer::State::Pending;
-
-		EWE_VK(vkWaitForFences, Global::logicalDevice->device, 1, &stc_fence.vkFence, VK_TRUE, 5 * static_cast<uint64_t>(1.0e9));
-
-		for (auto& cai : colorAttachmentImages) {
-			cai.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		}
-		renderTracker.compact.Expand(&renderTracker.vk_data);
+		renderTracker.compact.Expand(&renderingInfo);
 	}
 
 	void ImguiHandler::BeginRender() {
@@ -230,10 +165,10 @@ namespace EWE{
 		Global::logicalDevice->BeginLabel(cmdBuffers[Global::frameIndex], &labelUtil);
 #endif
 
-		if (colorAttachmentImages[Global::frameIndex].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+		if (renderTracker.full.color_images[Global::frameIndex][0].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
 			std::vector<Resource<Buffer>*> explicitBuffers{};
 			Resource<Image> attachmentResource{
-				.image = &colorAttachmentImages[Global::frameIndex],
+				.image = &renderTracker.full.color_images[Global::frameIndex][0],
 				.usage = UsageData<Image>{
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 					.accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -245,10 +180,10 @@ namespace EWE{
 			};
 		}
 
-		renderTracker.compact.Update(&renderTracker.vk_data, Global::frameIndex);
+		renderTracker.compact.Update(&renderingInfo, Global::frameIndex);
 
 		isRendering = true;
-		vkCmdBeginRendering(currentCmdBuf, &renderTracker.vk_data.renderingInfo);
+		vkCmdBeginRendering(currentCmdBuf, &renderingInfo.renderingInfo);
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();

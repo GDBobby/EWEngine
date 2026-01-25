@@ -99,167 +99,7 @@ int main() {
 #endif
     EWE::Framework framework(logicalDevice);
 
-    //if either of these formats are changed, passConfig needs to be changed as well. these just happen to match the defaults
-    VkFormat colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    VkFormat depthFormat = VK_FORMAT_D16_UNORM;
-
-    EWE::PerFlight<EWE::Image> colorAttachmentImages{ logicalDevice };
-    EWE::PerFlight<EWE::Image> depthAttachmentImages{ logicalDevice };
-
-    //most of the pnext seem useless. some other useful stuff, 
-    /*
-    VkOpaqueCaptureDescriptorDataCreateInfoEXT,
-    VkExternalMemoryImageCreateInfo
-    VkImageFormatListCreateInfo,
-    */
-    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-        colorAttachmentImages[i].arrayLayers = 1;
-        depthAttachmentImages[i].arrayLayers = 1;
-        colorAttachmentImages[i].extent = { EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height, 1 };
-        depthAttachmentImages[i].extent = { EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height, 1 };
-        colorAttachmentImages[i].mipLevels = 1;
-        depthAttachmentImages[i].mipLevels = 1;
-        colorAttachmentImages[i].owningQueue = renderQueue;
-        depthAttachmentImages[i].owningQueue = renderQueue;
-        colorAttachmentImages[i].samples = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachmentImages[i].samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachmentImages[i].tiling = VK_IMAGE_TILING_OPTIMAL;
-        depthAttachmentImages[i].tiling = VK_IMAGE_TILING_OPTIMAL;
-        colorAttachmentImages[i].type = VK_IMAGE_TYPE_2D;
-        depthAttachmentImages[i].type = VK_IMAGE_TYPE_2D;
-    }
-
-    VmaAllocationCreateInfo vmaAllocCreateInfo{};
-    vmaAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    //if(imageCreateInfo.width * height > some amount){
-    vmaAllocCreateInfo.flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) | static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT);
-    //}
-    for (auto& cai : colorAttachmentImages) {
-        cai.format = colorFormat;
-        cai.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        cai.Create(vmaAllocCreateInfo);
-    }
-    for (auto& dai : depthAttachmentImages) {
-        dai.format = depthFormat;
-        dai.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        dai.Create(vmaAllocCreateInfo);
-    }
-#if EWE_DEBUG_NAMING
-    colorAttachmentImages[0].SetName("cai 0");
-    colorAttachmentImages[1].SetName("cai 1");
-    depthAttachmentImages[0].SetName("dai 0");
-    depthAttachmentImages[1].SetName("dai 1");
-#endif
-
-
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
-
-    //before getting into the render, the layouts of the attachments need to be transitioned
-    {
-        EWE::CommandPool stc_cmdPool{ logicalDevice, *renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT };
-
-        VkCommandBufferAllocateInfo cmdBufAllocInfo{};
-        cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmdBufAllocInfo.pNext = nullptr;
-        cmdBufAllocInfo.commandBufferCount = 1;
-        cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        cmdBufAllocInfo.commandPool = stc_cmdPool.commandPool;
-
-        VkCommandBuffer temp_stc_cmdBuf;
-        EWE::EWE_VK(vkAllocateCommandBuffers, logicalDevice.device, &cmdBufAllocInfo, &temp_stc_cmdBuf);
-        stc_cmdPool.allocatedBuffers++;
-
-        EWE::CommandBuffer transition_stc(stc_cmdPool, temp_stc_cmdBuf);
-        VkCommandBufferBeginInfo beginSTCInfo{};
-        beginSTCInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginSTCInfo.pNext = nullptr;
-        beginSTCInfo.pInheritanceInfo = nullptr;
-        beginSTCInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        transition_stc.Begin(beginSTCInfo);
-
-        std::vector<VkImageMemoryBarrier2> transition_barriers(4);
-
-        uint64_t current_barrier_index = 0;
-
-        for (auto& cai : colorAttachmentImages) {
-            transition_barriers[current_barrier_index].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-            transition_barriers[current_barrier_index].pNext = nullptr;
-            transition_barriers[current_barrier_index].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            transition_barriers[current_barrier_index].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            transition_barriers[current_barrier_index].srcAccessMask = VK_ACCESS_2_NONE;
-            transition_barriers[current_barrier_index].dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            transition_barriers[current_barrier_index].image = cai.image;
-            transition_barriers[current_barrier_index].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            transition_barriers[current_barrier_index].newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            transition_barriers[current_barrier_index].subresourceRange = EWE::ImageView::GetDefaultSubresource(cai);
-            transition_barriers[current_barrier_index].srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-            transition_barriers[current_barrier_index].dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-            current_barrier_index++;
-        }
-        for (auto& dai : depthAttachmentImages) {
-            transition_barriers[current_barrier_index].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-            transition_barriers[current_barrier_index].pNext = nullptr;
-            transition_barriers[current_barrier_index].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            transition_barriers[current_barrier_index].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            transition_barriers[current_barrier_index].srcAccessMask = VK_ACCESS_2_NONE;
-            transition_barriers[current_barrier_index].dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            transition_barriers[current_barrier_index].image = dai.image;
-            transition_barriers[current_barrier_index].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            transition_barriers[current_barrier_index].newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-            transition_barriers[current_barrier_index].subresourceRange = EWE::ImageView::GetDefaultSubresource(dai);
-            transition_barriers[current_barrier_index].srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-            transition_barriers[current_barrier_index].dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
-
-            current_barrier_index++;
-        }
-
-        VkDependencyInfo transition_dependency{};
-        transition_dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-        transition_dependency.pNext = nullptr;
-        transition_dependency.dependencyFlags = 0;
-        transition_dependency.bufferMemoryBarrierCount = 0;
-        transition_dependency.memoryBarrierCount = 0;
-        transition_dependency.imageMemoryBarrierCount = static_cast<uint32_t>(transition_barriers.size());
-        transition_dependency.pImageMemoryBarriers = transition_barriers.data();
-
-        vkCmdPipelineBarrier2(transition_stc, &transition_dependency);
-
-        transition_stc.End();
-
-        VkFenceCreateInfo fenceCreateInfo{
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0
-        };
-        EWE::Fence stc_fence{ logicalDevice, fenceCreateInfo };
-
-        VkSubmitInfo stc_submit_info{
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .pNext = nullptr,
-            .waitSemaphoreCount = 0,
-            .pWaitDstStageMask = nullptr,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &temp_stc_cmdBuf,
-            .signalSemaphoreCount = 0
-        };
-
-        renderQueue->Submit(1, &stc_submit_info, stc_fence);
-
-        transition_stc.state = EWE::CommandBuffer::State::Pending;
-
-        EWE::EWE_VK(vkWaitForFences, logicalDevice.device, 1, &stc_fence.vkFence, VK_TRUE, 5 * static_cast<uint64_t>(1.0e9));
-
-        for (auto& cai : colorAttachmentImages) {
-            cai.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-        for (auto& dai : depthAttachmentImages) {
-            dai.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-        }
-    }
-
-    EWE::PerFlight<EWE::ImageView> colorAttViews{ colorAttachmentImages };
-    EWE::PerFlight<EWE::ImageView> depthAttViews{ depthAttachmentImages };
 
     //pipeline
     auto* triangle_vert = framework.shaderFactory.GetShader("examples/common/shaders/basic.vert.spv");
@@ -277,12 +117,12 @@ int main() {
     EWE::RasterTask triangle_raster_task{"triangle raster task", logicalDevice, *renderQueue, passConfig, true};
 
     EWE::ObjectRasterData triangle_rasterObj;
-    EWE::ObjectRasterConfig& objectConfig = triangle_rasterObj.config;
-    objectConfig.SetDefaults();
-    objectConfig.cullMode = VK_CULL_MODE_NONE;
-    objectConfig.depthClamp = false;
-    objectConfig.rasterizerDiscard = false;
-    objectConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    triangle_rasterObj.layout = &triangle_layout;
+    triangle_rasterObj.config.SetDefaults();
+    triangle_rasterObj.config.cullMode = VK_CULL_MODE_NONE;
+    triangle_rasterObj.config.depthClamp = false;
+    triangle_rasterObj.config.rasterizerDiscard = false;
+    triangle_rasterObj.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
     //std::vector<VkDynamicState> dynamicState{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
      
@@ -300,7 +140,6 @@ int main() {
     EWE::RenderGraph& renderGraph = engine.renderGraph;
     EWE::GPUTask& renderTask = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, triangleRecord, "render");
 
-
     triangle_raster_task.scissor = EWE::Global::window->screenDimensions;
     triangle_raster_task.viewport.x = 0.f;
     triangle_raster_task.viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
@@ -310,25 +149,25 @@ int main() {
     triangle_raster_task.viewport.maxDepth = 1.f;
     triangle_raster_task.AdjustPipelines();
 
-    auto& color_att = renderTask.renderTracker->compact.color_attachments.emplace_back();
-    color_att.imageView[0] = &colorAttViews[0];
-    color_att.imageView[1] = &colorAttViews[1];
-    color_att.clearValue.color.float32[0] = 0.f;
-    color_att.clearValue.color.float32[1] = 0.f;
-    color_att.clearValue.color.float32[2] = 0.f;
-    color_att.clearValue.color.float32[3] = 0.f;
-    color_att.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_att.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    auto& color_att = triangle_raster_task.renderTracker.compact.color_attachments.emplace_back();
+    color_att.imageView[0] = &triangle_raster_task.renderTracker.full.color_views[0][0];
+    color_att.imageView[1] = &triangle_raster_task.renderTracker.full.color_views[1][0];
+    color_att.info.clearValue.color.float32[0] = 0.f;
+    color_att.info.clearValue.color.float32[1] = 0.f;
+    color_att.info.clearValue.color.float32[2] = 0.f;
+    color_att.info.clearValue.color.float32[3] = 0.f;
+    color_att.info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_att.info.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-    auto& depth_att = renderTask.renderTracker->compact.depth_attachment;
-    depth_att.imageView[0] = &depthAttViews[0];
-    depth_att.imageView[1] = &depthAttViews[1];
-    depth_att.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depth_att.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depth_att.clearValue.depthStencil.depth = 0.f;
-    depth_att.clearValue.depthStencil.stencil = 0; //idk what to set this to tbh
+    auto& depth_att = triangle_raster_task.renderTracker.compact.depth_attachment;
+    depth_att.imageView[0] = &triangle_raster_task.renderTracker.full.depth_views[0];
+    depth_att.imageView[1] = &triangle_raster_task.renderTracker.full.depth_views[1];
+    depth_att.info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depth_att.info.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depth_att.info.clearValue.depthStencil.depth = 0.f;
+    depth_att.info.clearValue.depthStencil.stencil = 0; //idk what to set this to tbh
     
-    renderTask.SetRenderInfo();
+    triangle_raster_task.renderTracker.SetRenderInfo();
 
 
     VmaAllocationCreateInfo vmaAllocInfo{
@@ -387,52 +226,50 @@ int main() {
         vertex_buffer.Flush();
         vertex_buffer.Unmap();
     }
-    def_push->GetRef().buffer_addr[0] = vertex_buffer.deviceAddress;
-    def_draw->GetRef().firstInstance = 0;
-    def_draw->GetRef().firstVertex = 0;
-    def_draw->GetRef().instanceCount = 1;
-    def_draw->GetRef().vertexCount = 3;
+
+    triangle_drawData.buffers[0] = &vertex_buffer;
+    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
+        triangle_drawData.UpdateBuffer();
+        triangle_drawData.paramPack->GetRef(i).firstInstance = 0;
+        triangle_drawData.paramPack->GetRef(i).firstVertex = 0;
+        triangle_drawData.paramPack->GetRef(i).instanceCount = 1;
+        triangle_drawData.paramPack->GetRef(i).vertexCount = 3;
+    }
+
+
+    EWE::HeapBlock<EWE::CommandRecord> mergeRecords{
+        engine.swapchain.available_surface_formats.size() 
+    };
+    EWE::HeapBlock<EWE::GPUTask*> mergeTasks{
+        engine.swapchain.available_surface_formats.size() 
+    };// = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, mergeRecord, "merge");
     
-
-    EWE::CommandRecord mergeRecord{};
-    mergeRecord.BeginRender();
-    auto* deferred_merge_pipe = mergeRecord.BindPipeline();
-    auto* def_merge_vp_scissor = mergeRecord.SetViewportScissor();
-    mergeRecord.BindDescriptor();
-    auto* deferred_merge_push = mergeRecord.Push();
-    auto deferred_merge_draw = mergeRecord.Draw();
-    mergeRecord.EndRender();
-    EWE::GPUTask& mergeTask = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, mergeRecord, "merge");
-
-    def_merge_vp_scissor->GetRef().scissor = EWE::Global::window->screenDimensions;
-    def_merge_vp_scissor->GetRef().viewport.x = 0.f;
-    def_merge_vp_scissor->GetRef().viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
-    def_merge_vp_scissor->GetRef().viewport.width = static_cast<float>(EWE::Global::window->screenDimensions.width);
-    def_merge_vp_scissor->GetRef().viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
-    def_merge_vp_scissor->GetRef().viewport.minDepth = 0.0f;
-    def_merge_vp_scissor->GetRef().viewport.maxDepth = 1.f;
+    EWE::HeapBlock<EWE::RasterTask> mergeRasters{
+        engine.swapchain.available_surface_formats.size()
+    };
+    EWE::VertexDrawData merge_drawData{};
+    passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
 
     auto* merge_vert = framework.shaderFactory.GetShader("examples/common/shaders/merge.vert.spv");
     auto* merge_frag = framework.shaderFactory.GetShader("examples/common/shaders/merge.frag.spv");
     EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
-    //passconfig should be using a full rendergraph setup
-    //just a coincidence that object and passconfig are identical to the earlier pipe
-    passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
 
-    std::vector<EWE::GraphicsPipeline*> mergePipelines{};
-    mergePipelines.reserve(engine.swapchain.available_surface_formats.size());
-    {
-        uint8_t whichMerge = 0;
-        for (auto& format : engine.swapchain.available_surface_formats) {
-            passConfig.colorAttachmentFormats[0] = format.format;
-            mergePipelines.emplace_back(new EWE::GraphicsPipeline(logicalDevice, 0, &triangle_layout, passConfig, objectConfig, dynamicState));
+    EWE::ObjectRasterData merge_rasterObj;
+    merge_rasterObj.config = triangle_rasterObj.config;
+    merge_rasterObj.layout = &merge_layout;
 
-#if EWE_DEBUG_NAMING
-            std::string debugName = "merge" + std::to_string(whichMerge);
-            mergePipelines[whichMerge]->SetDebugName("merge");
-            whichMerge++;
-#endif
-        }
+    for (uint8_t i = 0; i < engine.swapchain.available_surface_formats.size(); i++) {
+        mergeRecords.ConstructAt(i);
+
+        auto& format = engine.swapchain.available_surface_formats[i];
+        passConfig.colorAttachmentFormats[0] = format.format;
+        mergeRasters.ConstructAt(i, "merge raster", logicalDevice, *renderQueue, passConfig, false);
+        mergeRasters[i].AddDraw(merge_rasterObj, merge_drawData);
+
+        mergeRasters[i].Record(mergeRecords[i]);
+
+        mergeTasks.ConstructAt(i, &renderGraph.tasks.AddElement(logicalDevice, *renderQueue, mergeRecords[i], "merge"));
+        //mergePipelines.emplace_back(new EWE::GraphicsPipeline(logicalDevice, 0, &triangle_layout, passConfig, objectConfig, dynamicState));
     }
 
     VkFormat currentSwapchainFormat = engine.swapchain.surface_format.format;
@@ -444,17 +281,17 @@ int main() {
                 break;
             }
         }
-        deferred_merge_pipe->GetRef().pipe = mergePipelines[swapchainFormatIndex]->vkPipe;
+        
+        printf("need to replace this line\n");
+        //deferred_merge_pipe->GetRef().pipe = mergePipelines[swapchainFormatIndex]->vkPipe;
     }
-    deferred_merge_pipe->GetRef().bindPoint = merge_layout.bindPoint;
-    deferred_merge_pipe->GetRef().layout = merge_layout.vkLayout;
 
-    deferred_merge_push->GetRef().Reset();
-
-    deferred_merge_draw->GetRef().firstInstance = 0;
-    deferred_merge_draw->GetRef().firstVertex = 0;
-    deferred_merge_draw->GetRef().vertexCount = 4;
-    deferred_merge_draw->GetRef().instanceCount = 1;
+    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
+        merge_drawData.paramPack->GetRef(i).firstInstance = 0;
+        merge_drawData.paramPack->GetRef(i).firstVertex = 0;
+        merge_drawData.paramPack->GetRef(i).vertexCount = 4;
+        merge_drawData.paramPack->GetRef(i).instanceCount = 1;
+    }
 
     auto& first_node = nodeGraph.AddNode("First Node");
     first_node.buffer->position = lab::vec2(0.f);
@@ -471,11 +308,33 @@ int main() {
     EWE::Input::Mouse mouseData{};
     mouseData.TakeCallbackControl();
 
-    int colorAttOutputPin = renderTask.AddImagePin(nullptr, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    int merge_worldSrcPin = mergeTask.AddImagePin(&colorAttachmentImages[EWE::Global::frameIndex], VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    int merge_DstPin = mergeTask.AddImagePin(nullptr, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    EWE::UsageData<EWE::Image> initial_acquire_usage{
+        .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+    renderTask.prefix.imageAcquisitions.emplace_back(
+        triangle_raster_task.renderTracker.full.color_images[0],
+        initial_acquire_usage
+    );
 
-    int merge_imguiSrcPin = mergeTask.AddImagePin(&imguiHandler.colorAttachmentImages[EWE::Global::frameIndex], VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    EWE::UsageData<EWE::Image> merge_acquire_usage{
+        .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .accessMask = VK_ACCESS_2_SHADER_READ_BIT,
+        .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    };
+
+    for (std::size_t i = 0; i < mergeTasks.Size(); i++) {
+        mergeTasks[i]->prefix.imageAcquisitions.emplace_back(
+            mergeRasters[i].renderTracker.full.color_images[0],
+            merge_acquire_usage
+        );
+        mergeTasks[i]->prefix.imageAcquisitions.emplace_back(
+            triangle_raster_task.renderTracker.full.color_images[0],
+            merge_acquire_usage
+        );
+    }
 
     renderGraph.presentBridge.SetSubresource(
         VkImageSubresourceRange{
@@ -489,13 +348,7 @@ int main() {
 
     EWE::SubmissionTask world_render_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "world render"};
     EWE::SubmissionTask imgui_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "imgui"};
-    world_render_submission.full_workload = [&](EWE::CommandBuffer& cmdBuf) {
-        EWE::TaskBridge renderPrefix(renderTask);
-        renderPrefix.GenerateRightHandBarriers(renderTask.explicitBufferState, renderTask.explicitImageState, renderTask.queue);
-        renderPrefix.Execute(cmdBuf);
-        renderTask.Execute(cmdBuf);
-        return true;
-    };
+
     imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
     imgui_submission.external_workload = [](EWE::Backend::SubmitInfo&, uint8_t frameIndex) {
         return true;
@@ -552,23 +405,23 @@ int main() {
     EWE::Sampler attachmentSampler{ logicalDevice, samplerCreateInfo };
 
     EWE::PerFlight<EWE::DescriptorImageInfo> world_attachment_descriptor(
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, colorAttViews[0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, colorAttViews[1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, triangle_raster_task.renderTracker.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, triangle_raster_task.renderTracker.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
     );
     EWE::PerFlight<EWE::DescriptorImageInfo> imgui_attachment_descriptor(
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.colorAttachmentViews[0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.colorAttachmentViews[1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.renderTracker.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.renderTracker.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
     );
 
+    std::size_t currentMergeTaskIndex = 0;
 
     attachment_blit_submission.full_workload = [&](EWE::CommandBuffer& cmdBuf) {
         //i dont really know how to bridge tasks in different submisisons yet
         //fully explicit right now
         EWE::Image& presentImage = engine.swapchain.GetCurrentImage();
-        mergeTask.SetResource(merge_DstPin, presentImage);
+        mergeTasks[currentMergeTaskIndex]->prefix.SetResource(merge_DstPin, presentImage);
 
-        EWE::TaskBridge renderBridge{ renderTask, mergeTask };
-        renderBridge.RecreateBarriers();
+        mergeTask.SetResource(merge_DstPin, presentImage);
 
         std::vector<EWE::Resource<EWE::Buffer>*> bufferResources{}; //fake, its a reference
 
@@ -635,9 +488,11 @@ int main() {
         mergeTask.renderTracker->compact.color_attachments.push_back(
             EWE::SimplifiedAttachment{
                 .imageView = {&present_view, &present_view},
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .clearValue = {0.f, 0.f, 0.f, 0.f}
+                .info = EWE::AttachmentInfo{
+                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    .clearValue = {0.f, 0.f, 0.f, 0.f}
+                }
             }
         );
         mergeTask.renderTracker->compact.depth_attachment.imageView[EWE::Global::frameIndex] = nullptr;
@@ -703,7 +558,7 @@ int main() {
                 glfwPollEvents();
 
                 if (renderGraph.Acquire(EWE::Global::frameIndex)) {
-                    auto swapImage = engine.swapchain.GetCurrentImage();
+                    auto& swapImage = engine.swapchain.GetCurrentImage();
 
                     renderTask.SetResource(colorAttOutputPin, colorAttachmentImages[EWE::Global::frameIndex]);
                     mergeTask.SetResource(merge_worldSrcPin, colorAttachmentImages[EWE::Global::frameIndex]);
@@ -719,9 +574,7 @@ int main() {
                     //i think i also want the previous frame's submit signal to be waited on here, but idk
                     //auto& secondBackSemInfo = waitSemInfos[waitSemInfos.size() - 2].semaphore = engine.swapchain.GetCurrentSemaphores().present
 
-                    nodeGraph.UpdateRender(mouseData);
-
-                    renderTask.UpdateFrameIndex(EWE::Global::frameIndex);
+                    nodeGraph.UpdateRender(mouseData, EWE::Global::frameIndex);
 #ifdef EWE_IMGUI
                     imguiHandler.BeginRender();
                     //nodeGraph.Imgui();
