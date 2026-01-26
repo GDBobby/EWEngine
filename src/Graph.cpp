@@ -26,7 +26,7 @@ namespace EWE{
         void Graph::Record(CommandRecord& record) {
             def_label = record.BeginLabel();
             def_pipe = record.BindPipeline();
-            def_push = record.Push();
+            def_push.deferred_push = record.Push();
             def_vertParamPack = record.Draw();
             record.EndLabel();
         }

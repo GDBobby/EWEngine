@@ -5,10 +5,7 @@
 #include "EightWinds/CommandPool.h"
 #include "EightWinds/Backend/Fence.h"
 
-#include "EightWinds/RenderGraph/TaskBridge.h"
-
 #include "EWEngine/Global.h"
-
 
 #include "EightWinds/Backend/STC_Helper.h"
 
@@ -51,15 +48,29 @@ namespace EWE{
 		cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
 		cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
 		renderTracker{
-			.full{
-				RenderInfo3{"imgui render info",
-					*Global::logicalDevice,
-					queue,
-					Global::window->screenDimensions.width, Global::window->screenDimensions.height,
-					{VK_FORMAT_R8G8B8A8_UNORM},
-					VK_FORMAT_D16_UNORM
+			"imgui render info",
+			*Global::logicalDevice,
+			queue,
+			Global::window->screenDimensions.width, Global::window->screenDimensions.height,
+			{
+				AttachmentConstructionInfo{
+					.format = VK_FORMAT_R8G8B8A8_UNORM,
+					.info = AttachmentInfo{
+						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+						.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						.clearValue = {0.f, 0.f, 0.f, 0.f}
+					}
 				}
-			}
+			},
+			AttachmentConstructionInfo{
+				.format = VK_FORMAT_D16_UNORM,
+				.info = AttachmentInfo{
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+					.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.clearValue = {0.f, 0.f, 0.f, 0.f}
+				}
+			},
+			0
 		},
 		semaphores{ *Global::logicalDevice, false}
     {
@@ -140,7 +151,7 @@ namespace EWE{
 
 	void ImguiHandler::InitializeImages() {
 
-		renderTracker.compact.Expand(&renderingInfo);
+		renderTracker.CascadeFull();
 	}
 
 	void ImguiHandler::BeginRender() {
@@ -166,24 +177,12 @@ namespace EWE{
 #endif
 
 		if (renderTracker.full.color_images[Global::frameIndex][0].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-			std::vector<Resource<Buffer>*> explicitBuffers{};
-			Resource<Image> attachmentResource{
-				.image = &renderTracker.full.color_images[Global::frameIndex][0],
-				.usage = UsageData<Image>{
-					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-					.accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-				}
-			};
-			std::vector<Resource<Image>*> explicitImages{
-				&attachmentResource
-			};
+
+
 		}
 
-		renderTracker.compact.Update(&renderingInfo, Global::frameIndex);
-
 		isRendering = true;
-		vkCmdBeginRendering(currentCmdBuf, &renderingInfo.renderingInfo);
+		vkCmdBeginRendering(currentCmdBuf, &renderTracker.deferred_render_info.GetRef(Global::frameIndex));
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
