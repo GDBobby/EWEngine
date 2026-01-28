@@ -334,6 +334,8 @@ int main() {
 
     auto& first_node = nodeGraph.AddNode("First Node");
     first_node.buffer->Init();
+    auto& first_pin = first_node.AddPin("first pin");
+    first_pin.buffer->Init();
 
     EWE::Input::Mouse mouseData{};
     mouseData.TakeCallbackControl();

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "EightWinds/CommandBuffer.h"
-
 #include "EWEngine/NodeGraph/Pin.h"
 #include "EWEngine/NodeGraph/Link.h"
 #include "EWEngine/InputData.h"
@@ -14,38 +12,21 @@
 
 namespace EWE{
     namespace Node{
-        struct NodeBuffer{
-            lab::vec3 titleColor;
-            float titleScale; //what percentage of the foreground it takes up, vertical only
-            lab::vec3 foregroundColor;
-            float foregroundScale; //what percentage of the width it takes up, width and height separate
-            
-            lab::vec3 backgroundColor;
-
-            //i could make it a mat3x3 and precompute that on the GPU. its a bit cleaner, but uses more space (9 floats instead of 4)
-            lab::vec2 position;
-            lab::vec2 scale;
-
-            void Init() {
-                titleColor = lab::vec3(1.f, 0.f, 0.f);
-                titleScale = 0.9f;
-                foregroundColor = lab::vec3(0.f, 0.f, 1.f);
-                foregroundScale = 0.975f;
-                backgroundColor = lab::vec3(0.f, 1.f, 0.f);
-
-                position = lab::vec2(0.f);
-                scale = lab::vec2(0.3f);
-            }
-        };
 
         struct Node{
             std::string name;
             NodeBuffer* buffer;
             uint32_t index; //into the contiguous buffer that owns this memory
 
-            std::vector<Pin> pins{};
+            std::vector<Pin*> pins{};
             //i dont know how I want to store links yet
             std::vector<Link*> links{};
+
+            static std::function<Pin&(std::string_view name, NodeBuffer* buffer, uint32_t index)> pin_adder;
+
+            Pin& AddPin() {
+                return *pins.emplace_back();
+            }
 
             [[nodiscard]] explicit Node(std::string_view name, NodeBuffer* buffer, uint32_t index)
                 : name{name},

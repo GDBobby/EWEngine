@@ -3,6 +3,7 @@
 #include "GlobalPushConstant.glsl"
 
 struct VertexData{
+    
     vec3 titleColor;
     float titleScale;
 
@@ -10,6 +11,7 @@ struct VertexData{
     float foregroundScale;
 
     vec3 backgroundColor;
+    int objectType;
 
     vec2 position;
     vec2 scale;
@@ -32,22 +34,43 @@ void main(){
     VertexArray vertexArray = VertexArray(push.device_addresses[0]);
     VertexData vertData = vertexArray.vertices[outIndex];
 
-    //bool withinTitle = ((verticalPosition + 1.0) / 2.0) < vertData.titleScale;
-    const bool withinTitle = verticalPosition < ((vertData.titleScale - 0.5) * 2.0);
+    if(vertData.objectType == 0){
+        //bool withinTitle = ((verticalPosition + 1.0) / 2.0) < vertData.titleScale;
+        const bool withinTitle = verticalPosition < ((vertData.titleScale - 0.5) * 2.0);
 
-    float absVertPos = abs(verticalPosition);
-    float absHoriPos = abs(horizontalPosition);
+        float absVertPos = abs(verticalPosition);
+        float absHoriPos = abs(horizontalPosition);
 
-    const bool withinBorder = (absVertPos < vertData.foregroundScale) && (absHoriPos < vertData.foregroundScale);
+        const bool withinBorder = (absVertPos < vertData.foregroundScale) && (absHoriPos < vertData.foregroundScale);
 
-    if(withinTitle){
-        fragColor = vec4(vertData.titleColor, 1.0);
-    } 
-    else if(withinBorder){
-        fragColor = vec4(vertData.foregroundColor, 1.0);
+        if(withinTitle){
+            fragColor = vec4(vertData.titleColor, 1.0);
+        } 
+        else if(withinBorder){
+            fragColor = vec4(vertData.foregroundColor, 1.0);
+        }
+        else {
+            fragColor = vec4(vertData.backgroundColor, 1.0);
+        }
     }
-    else {
-        fragColor = vec4(vertData.backgroundColor, 1.0);
-    }
+    else if(vertData.objectType == 1){
+        vec2 uv;
+        uv.x = horizontalPosition;
+        uv.y = verticalPosition;
 
+        float sqrd_len = 3. * (uv.x * uv.x + uv.y * uv.y);
+        
+        float withinCircle = float(sqrd_len < 2.8);
+        
+        float colorVal = withinCircle * abs(1.0 - (
+                    (
+                        pow(sqrd_len, 3.0) - 
+                        3.0 * pow(sqrd_len, 2.0) 
+                        + 4.0
+                        + pow(sqrd_len, 2.0 / 16.0)
+                    )
+                ) / 4.0);
+        
+        fragColor = vec4(vertData.foregroundColor * colorVal, 1.0);
+    }
 }

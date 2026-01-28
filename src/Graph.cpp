@@ -26,9 +26,13 @@ namespace EWE{
         void Graph::Record(RasterTask& rasterTask) {
            // printf("label addr - %zu\n"), def_label->data;
 
-            vert_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/node.vert.spv");
-            frag_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/node.frag.spv");
-            pipeLayout = new PipeLayout(*Global::logicalDevice, { vert_shader, frag_shader });
+            node_vert_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/node.vert.spv");
+            node_frag_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/node.frag.spv");
+            node_pipeLayout = new PipeLayout(*Global::logicalDevice, { node_vert_shader, node_frag_shader });
+
+            //pin_vert_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/pin.vert.spv");
+            //pin_frag_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/pin.frag.spv");
+            //pin_pipeLayout = new PipeLayout(*Global::logicalDevice, { pin_vert_shader, pin_frag_shader });
 
             EWE::ObjectRasterConfig objectConfig;
             objectConfig.SetDefaults();
@@ -39,12 +43,12 @@ namespace EWE{
             objectConfig.polygonMode = VK_POLYGON_MODE_FILL;
             //pipe = new GraphicsPipeline(*Global::logicalDevice, 1, pipeLayout, passConfig, objectConfig, { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR });
 
-            ObjectRasterData config{
-                .layout = pipeLayout,
+            ObjectRasterData node_config{
+                .layout = node_pipeLayout,
                 .config = objectConfig
             };
 
-            rasterTask.AddDraw(config, drawData);
+            rasterTask.AddDraw(node_config, drawData);
 
             //task raster config isn't gonna pla ynicely with labels, unless I allow the user to input arbitrary commands
         }
@@ -66,6 +70,7 @@ namespace EWE{
         }
 
         void Graph::UpdateRender(Input::Mouse const& mouseData, uint8_t frameIndex) {
+
             for (auto& node : nodes) {
                 node.Update(mouseData);
             }
@@ -73,8 +78,17 @@ namespace EWE{
             drawData.paramPack->GetRef(frameIndex).instanceCount = nodes.size();
         }
 
+        Pin& Graph::AddPin(Node& parent_node) {
+            const uint32_t index = nodes.size() + pins.size();
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+        }
+        Pin& Graph::AddPin(std::string_view name, Node& parent_node) {
+            const uint32_t index = nodes.size() + pins.size();
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+        }
+
         Node& Graph::AddNode() {
-            const uint32_t index = nodes.size();
+            const uint32_t index = nodes.size() + pins.size();
             return nodes.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
         }
         Node& Graph::AddNode(std::string_view name) {
