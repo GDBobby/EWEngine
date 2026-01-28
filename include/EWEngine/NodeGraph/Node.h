@@ -28,17 +28,21 @@ namespace EWE{
 
             void Init() {
                 titleColor = lab::vec3(1.f, 0.f, 0.f);
-                titleScale = 0.1f;
+                titleScale = 0.9f;
                 foregroundColor = lab::vec3(0.f, 0.f, 1.f);
-                foregroundScale = 0.9f;
+                foregroundScale = 0.975f;
                 backgroundColor = lab::vec3(0.f, 1.f, 0.f);
 
                 position = lab::vec2(0.f);
-                scale = lab::vec2(1.f);
+                scale = lab::vec2(0.3f);
             }
         };
 
         struct Node{
+            std::string name;
+            NodeBuffer* buffer;
+            uint32_t index; //into the contiguous buffer that owns this memory
+
             std::vector<Pin> pins{};
             //i dont know how I want to store links yet
             std::vector<Link*> links{};
@@ -60,7 +64,7 @@ namespace EWE{
             
             Node(Node const& copySrc) = delete;
             Node& operator=(Node const& copySrc) = delete;
-            Node(Node&& moveSrc) noexcept
+            [[nodiscard]] Node(Node&& moveSrc) noexcept
                 : pins{std::move(moveSrc.pins)},
                 links{std::move(moveSrc.links)},
                 name{std::move(moveSrc.name)}
@@ -73,11 +77,6 @@ namespace EWE{
                 links = std::move(moveSrc.links);
                 name = moveSrc.name;
             }
-
-            std::string name;
-
-            NodeBuffer* buffer;
-            uint32_t index; //into the contiguous buffer that owns this memory
 
             bool Update(Input::Mouse const& mouseData);
 

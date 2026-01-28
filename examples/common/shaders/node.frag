@@ -32,12 +32,13 @@ void main(){
     VertexArray vertexArray = VertexArray(push.device_addresses[0]);
     VertexData vertData = vertexArray.vertices[outIndex];
 
-    bool withinTitle = (verticalPosition + 1.0 / 2.0) > vertData.titleScale;
+    //bool withinTitle = ((verticalPosition + 1.0) / 2.0) < vertData.titleScale;
+    const bool withinTitle = verticalPosition < ((vertData.titleScale - 0.5) * 2.0);
 
     float absVertPos = abs(verticalPosition);
     float absHoriPos = abs(horizontalPosition);
 
-    bool withinBorder = (absVertPos < vertData.foregroundScale) && (absHoriPos < vertData.foregroundScale);
+    const bool withinBorder = (absVertPos < vertData.foregroundScale) && (absHoriPos < vertData.foregroundScale);
 
     if(withinTitle){
         fragColor = vec4(vertData.titleColor, 1.0);

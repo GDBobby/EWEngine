@@ -6,6 +6,10 @@
 
 #include "EWEngine/Global.h"
 
+#ifdef USING_NVIDIA_AFTERMATH
+#include "EightWinds/Backend/nvidia/Aftermath.h"
+#endif
+
 #ifdef EWE_IMGUI
 #include "imgui.h"
 #endif
@@ -125,6 +129,7 @@ namespace EWE{
         auto& features12 = specDev.GetFeature<VkPhysicalDeviceVulkan12Features>();
         features12.scalarBlockLayout = VK_TRUE;
         features12.bufferDeviceAddress = VK_TRUE;
+        features12.bufferDeviceAddressCaptureReplay = EWE_DEBUG_BOOL;
         features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
         features12.descriptorBindingPartiallyBound = VK_TRUE;
         features12.runtimeDescriptorArray = VK_TRUE;
@@ -135,6 +140,9 @@ namespace EWE{
         auto& features13 = specDev.GetFeature<VkPhysicalDeviceVulkan13Features>();
         features13.dynamicRendering = VK_TRUE;
         features13.synchronization2 = VK_TRUE;
+
+        auto& features14 = specDev.GetFeature<VkPhysicalDeviceVulkan14Features>();
+        features14.pushDescriptor = VK_TRUE;
 
         auto& devFaultFeatures = specDev.GetFeature<VkPhysicalDeviceFaultFeaturesEXT>();
         devFaultFeatures.deviceFault = VK_TRUE;
@@ -178,13 +186,29 @@ namespace EWE{
         }
     #endif
 
-        EWE::PhysicalDevice physicalDevice{ instance, evaluatedDevices[1].device, window.surface };
+        EWE::PhysicalDevice physicalDevice{ instance, evaluatedDevices[0].device, window.surface };
         VkBaseInStructure* pNextChain = reinterpret_cast<VkBaseInStructure*>(&specDev.features.base);
+#ifdef USING_NVIDIA_AFTERMATH
+        InitializeAftermath();
+
+        VkDeviceDiagnosticsConfigCreateInfoNV nvDiagInfo{
+            .sType = VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV,
+            .pNext = pNextChain,
+            .flags = VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV |
+                VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
+                VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV,
+        };
+
+#endif
 
         return specDev.ConstructDevice(
             evaluatedDevices[0],
             std::forward<EWE::PhysicalDevice>(physicalDevice),
+#ifdef USING_NVIDIA_AFTERMATH
+            reinterpret_cast<VkBaseInStructure*>(&nvDiagInfo),
+#else
             pNextChain,
+#endif
             application_wide_vk_version,
             VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT
         );
@@ -287,8 +311,8 @@ namespace EWE{
                 printf("recreating swap at frame : %zu\n", totalFramesSubmitted);
             }
 
-            ImGui::End();
         }
+        ImGui::End();
     }
 #endif
 

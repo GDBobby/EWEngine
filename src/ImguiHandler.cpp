@@ -47,30 +47,29 @@ namespace EWE{
 		: queue{ queue },
 		cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
 		cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
-		renderTracker{
+		renderInfo{
 			"imgui render info",
-			*Global::logicalDevice,
-			queue,
-			Global::window->screenDimensions.width, Global::window->screenDimensions.height,
-			{
-				AttachmentConstructionInfo{
-					.format = VK_FORMAT_R8G8B8A8_UNORM,
-					.info = AttachmentInfo{
+			*Global::logicalDevice, queue,
+			AttachmentSetInfo{
+				.width = Global::window->screenDimensions.width, 
+				.height = Global::window->screenDimensions.height,
+				.renderingFlags = 0,
+				.colors = {
+					AttachmentInfo{
+						.format = VK_FORMAT_R8G8B8A8_UNORM,
 						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-						.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 						.clearValue = {0.f, 0.f, 0.f, 0.f}
+
 					}
-				}
-			},
-			AttachmentConstructionInfo{
-				.format = VK_FORMAT_D16_UNORM,
-				.info = AttachmentInfo{
+				},
+				.depth = AttachmentInfo{
+					.format = VK_FORMAT_D16_UNORM,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 					.clearValue = {0.f, 0.f, 0.f, 0.f}
 				}
-			},
-			0
+			}
 		},
 		semaphores{ *Global::logicalDevice, false}
     {
@@ -81,22 +80,6 @@ namespace EWE{
 			cmdBuffers[i].SetDebugName(debugName);
 		}
 #endif
-		
-
-		renderTracker.compact.color_attachments.resize(1);
-		renderTracker.compact.color_attachments[0].imageView[0] = &renderTracker.full.color_views[0][0];
-		renderTracker.compact.color_attachments[0].imageView[1] = &renderTracker.full.color_views[1][0];
-		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[0] = 0.f;
-		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[1] = 0.f;
-		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[2] = 0.f;
-		renderTracker.compact.color_attachments[0].info.clearValue.color.float32[3] = 0.f;
-		renderTracker.compact.color_attachments[0].info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		renderTracker.compact.color_attachments[0].info.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-		renderTracker.compact.depth_attachment.imageView[0] = nullptr;
-		renderTracker.compact.depth_attachment.imageView[1] = nullptr;
-
-		renderTracker.compact.flags = 0;
 
 		InitializeImages();
 
@@ -129,7 +112,7 @@ namespace EWE{
 					.viewMask = 0,
 					.colorAttachmentCount = 1,
 					.pColorAttachmentFormats = colorFormats.data(),
-					.depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+					.depthAttachmentFormat = VK_FORMAT_D16_UNORM,
 					.stencilAttachmentFormat = VK_FORMAT_UNDEFINED
 				}
 			},
@@ -151,10 +134,9 @@ namespace EWE{
 
 	void ImguiHandler::InitializeImages() {
 
-		renderTracker.CascadeFull();
 	}
 
-	void ImguiHandler::BeginRender() {
+	void ImguiHandler::BeginCommandBuffer() {
 		VkCommandBufferBeginInfo beginInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.pNext = nullptr,
@@ -165,6 +147,9 @@ namespace EWE{
 		auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
 		currentCmdBuf.Reset();
 		currentCmdBuf.Begin(beginInfo);
+	}
+	void ImguiHandler::BeginRender() {
+		auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
 
 #if EWE_DEBUG_NAMING
 		VkDebugUtilsLabelEXT labelUtil{
@@ -176,13 +161,8 @@ namespace EWE{
 		Global::logicalDevice->BeginLabel(cmdBuffers[Global::frameIndex], &labelUtil);
 #endif
 
-		if (renderTracker.full.color_images[Global::frameIndex][0].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-
-
-		}
-
 		isRendering = true;
-		vkCmdBeginRendering(currentCmdBuf, &renderTracker.deferred_render_info.GetRef(Global::frameIndex));
+		vkCmdBeginRendering(currentCmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();

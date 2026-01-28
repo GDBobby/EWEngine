@@ -7,6 +7,7 @@
 #include "EWEngine/NodeGraph/ContiguousContainer.h"
 
 #include "EightWinds/RenderGraph/Command/Record.h"
+#include "EightWinds/RenderGraph/RasterTask.h"
 
 #include "EightWinds/Pipeline/PipelineBase.h"
 
@@ -27,20 +28,16 @@ namespace EWE{
             Node& AddNode(std::string_view name);
             Node& AddNode();
 
-            GlobalPushConstant_Abstract def_push{};
-            DeferredReference<VertexDrawParamPack>* def_vertParamPack = nullptr;
-            DeferredReference<LabelParamPack>* def_label = nullptr;
-            DeferredReference<PipelineParamPack>* def_pipe = nullptr;
+            VertexDrawData drawData;
 
-            Pipeline* pipe;
             Shader* vert_shader;
             Shader* frag_shader;
             PipeLayout* pipeLayout;
 
             //how do I robustly connect this with GPUTask?
-            void Record(CommandRecord& record);
+            void Record(RasterTask& rasterTask);
+            void Undefer();
 
-            void InitializeRender();
             void UpdateRender(Input::Mouse const& mouseData, uint8_t frameIndex);
 
 #ifdef EWE_IMGUI

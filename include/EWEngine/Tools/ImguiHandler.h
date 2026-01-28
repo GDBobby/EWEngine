@@ -31,8 +31,7 @@ namespace EWE{
         CommandPool cmdPool;
 
         PerFlight<CommandBuffer> cmdBuffers;
-        RenderInfo renderingInfo;
-        RenderTracker renderTracker;
+        FullRenderInfo renderInfo;
         PerFlight<Semaphore> semaphores;
 
         [[nodiscard]] explicit ImguiHandler(
@@ -45,6 +44,7 @@ namespace EWE{
 
         //let's make this contorl it's own pool
         bool isRendering = false;
+        void BeginCommandBuffer();
         void BeginRender();
         void EndRender();
         void SetSubmissionData(PerFlight<Backend::SubmitInfo>& submitInfo);
