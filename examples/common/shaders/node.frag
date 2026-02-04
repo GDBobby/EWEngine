@@ -13,7 +13,7 @@ struct VertexData{
     vec3 backgroundColor;
     int objectType;
 
-    vec2 position;
+    vec4 position;
     vec2 scale;
 };
 
@@ -71,6 +71,9 @@ void main(){
                     )
                 ) / 4.0);
         
-        fragColor = vec4(vertData.foregroundColor * colorVal, 1.0);
+        fragColor = vec4(vertData.foregroundColor * colorVal, withinCircle);
+    }
+    else{
+        fragColor = vec4(1.0);
     }
 }

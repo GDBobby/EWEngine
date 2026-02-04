@@ -30,10 +30,6 @@ namespace EWE{
             node_frag_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/node.frag.spv");
             node_pipeLayout = new PipeLayout(*Global::logicalDevice, { node_vert_shader, node_frag_shader });
 
-            //pin_vert_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/pin.vert.spv");
-            //pin_frag_shader = new Shader(*Global::logicalDevice, "examples/common/shaders/pin.frag.spv");
-            //pin_pipeLayout = new PipeLayout(*Global::logicalDevice, { pin_vert_shader, pin_frag_shader });
-
             EWE::ObjectRasterConfig objectConfig;
             objectConfig.SetDefaults();
             objectConfig.cullMode = VK_CULL_MODE_NONE;
@@ -41,6 +37,14 @@ namespace EWE{
             objectConfig.rasterizerDiscard = false;
             objectConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
             objectConfig.polygonMode = VK_POLYGON_MODE_FILL;
+            objectConfig.blendAttachment.blendEnable = VK_TRUE;
+            objectConfig.blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            objectConfig.blendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            objectConfig.blendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            objectConfig.blendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+            objectConfig.blendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            objectConfig.blendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            objectConfig.blendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
             //pipe = new GraphicsPipeline(*Global::logicalDevice, 1, pipeLayout, passConfig, objectConfig, { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR });
 
             ObjectRasterData node_config{
@@ -70,40 +74,65 @@ namespace EWE{
         }
 
         void Graph::UpdateRender(Input::Mouse const& mouseData, uint8_t frameIndex) {
-
             for (auto& node : nodes) {
                 node.Update(mouseData);
             }
-
-            drawData.paramPack->GetRef(frameIndex).instanceCount = nodes.size();
+            drawData.paramPack->GetRef(frameIndex).instanceCount = nodes.size() + pins.size();
         }
 
+        Pin& Graph::AddPin(NodeID node_index) {
+            const uint32_t index = nodes.size() + pins.size();
+            auto& parent_node = nodes[node_index];
+            parent_node.pins.emplace_back(pins.size());
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+        }
+        Pin& Graph::AddPin(std::string_view name, NodeID node_index) {
+            const uint32_t index = nodes.size() + pins.size();
+            auto& parent_node = nodes[node_index];
+            parent_node.pins.emplace_back(pins.size());
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+        }
         Pin& Graph::AddPin(Node& parent_node) {
             const uint32_t index = nodes.size() + pins.size();
+            parent_node.pins.emplace_back(pins.size());
             return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
         }
         Pin& Graph::AddPin(std::string_view name, Node& parent_node) {
             const uint32_t index = nodes.size() + pins.size();
+            parent_node.pins.emplace_back(pins.size());
             return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
         }
 
         Node& Graph::AddNode() {
             const uint32_t index = nodes.size() + pins.size();
-            return nodes.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+            return nodes.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, pins);
         }
         Node& Graph::AddNode(std::string_view name) {
             const uint32_t index = nodes.size();
-            return nodes.emplace_back(name, reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+            return nodes.emplace_back(name, reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, pins);
         }
 
 #ifdef EWE_IMGUI
         void Graph::Imgui() {
             if (ImGui::Begin("node graph")) {
                 ImGui::Text("node count : %zu", nodes.size());
+                
                 for (auto& node : nodes) {
                     //do some kinda tree thing
                     if (ImGui::TreeNode(node.name.c_str())) {
                         node.Imgui();
+                        const std::string add_pin_index = "add pin##" + std::to_string(node.index);
+                        if (ImGui::Button(add_pin_index.c_str())) {
+                            auto& pin = AddPin(node);
+                            pin.buffer->InitPin();
+                        }
+                        const std::string pin_tree = "pins##" + std::to_string(node.index);
+                        if (ImGui::TreeNode(pin_tree.c_str())) {
+                            for (auto& pin_index : node.pins) {
+                                pins[pin_index].Imgui();
+                            }
+                            ImGui::TreePop();
+                        }
                         ImGui::TreePop();
                     }
                 }

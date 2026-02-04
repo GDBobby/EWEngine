@@ -166,7 +166,7 @@ int main() {
     nodeGraph.Record(triangle_raster_task);
 
     EWE::CommandRecord triangleRecord{};
-    triangle_raster_task.Record(triangleRecord);
+    triangle_raster_task.Record(triangleRecord, true);
 
     EWE::RenderGraph& renderGraph = engine.renderGraph;
     EWE::GPUTask& renderTask = renderGraph.tasks.AddElement("main render", logicalDevice, *renderQueue, triangleRecord);
@@ -297,6 +297,7 @@ int main() {
     //by poppin the color and then putting it back, the image won't be constructed with the raster task
     //then putting it back in after construction, the pipelines will be constructed correctly
     passConfig.attachment_set_info.colors.clear(); 
+    passConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     
     EWE::FullRenderInfo merge_render_info{
         "merge",
@@ -332,10 +333,19 @@ int main() {
         merge_drawData.paramPack->GetRef(i).instanceCount = 1;
     }
 
-    auto& first_node = nodeGraph.AddNode("First Node");
-    first_node.buffer->Init();
-    auto& first_pin = first_node.AddPin("first pin");
-    first_pin.buffer->Init();
+    uint32_t first_node_index = UINT32_MAX;
+    uint32_t second_node_index = UINT32_MAX;
+    {
+        auto& first_node = nodeGraph.AddNode("First Node");
+        first_node.buffer->Init();
+        first_node_index = first_node.index;
+        auto& second_node = nodeGraph.AddNode("Second Node");
+        second_node.buffer->Init();
+        second_node_index = second_node.index;
+        auto& first_pin = nodeGraph.AddPin("first pin", first_node_index);
+        first_pin.buffer->InitPin();
+        first_pin.buffer->objectType = EWE::Node::NodeBuffer::OT_Pin;
+    }
 
     EWE::Input::Mouse mouseData{};
     mouseData.TakeCallbackControl();

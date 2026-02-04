@@ -9,7 +9,7 @@ namespace EWE{
     requires std::assignable_from<T&, T&&>
     struct ContiguousContainer{
         //id like an array but i dont feel like dealing with objects that cant be trivially constructed
-        std::vector<T> data;
+        std::vector<T> data; //potentially swap to HeapBlock?
         using value_type = T;
         using size_type  = std::size_t;
 

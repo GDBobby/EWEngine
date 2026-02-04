@@ -25,10 +25,13 @@ namespace EWE{
         
             ContiguousContainer<Node> nodes{};
 
+            //the references are getting invalidated, be careful with lfietime and switch to the index immediately
             Node& AddNode(std::string_view name);
             Node& AddNode();
             Pin& AddPin(Node& parent_node);
             Pin& AddPin(std::string_view name, Node& parent_node);
+            Pin& AddPin(NodeID node_index);
+            Pin& AddPin(std::string_view name, NodeID node_index);
 
             ContiguousContainer<Pin> pins;
 

@@ -1,9 +1,49 @@
 #include "EWEngine/NodeGraph/Node.h"
 
+#ifdef EWE_IMGUI
 #include "imgui.h"
+#endif
 
 namespace EWE{
     namespace Node {
+        Node::Node(std::string_view name, NodeBuffer* buffer, uint32_t index, ContiguousContainer<Pin>& upper_pins)
+            : name{ name },
+            buffer{ buffer },
+            index{ index },
+            upper_pins{ upper_pins }
+        {
+            buffer->Init();
+        }
+        Node::Node(NodeBuffer* buffer, uint32_t index, ContiguousContainer<Pin>& upper_pins)
+            : name{},
+            buffer{ buffer },
+            index{ index },
+            upper_pins{ upper_pins }
+        {
+            buffer->Init();
+        }
+        Node::Node(Node&& moveSrc) noexcept
+            : name{ std::move(moveSrc.name) },
+            buffer{ moveSrc.buffer },
+            index{ moveSrc.index },
+            pins{ std::move(moveSrc.pins) },
+            links{ std::move(moveSrc.links) },
+            upper_pins{ moveSrc.upper_pins }
+
+        {
+            //moveSrc.buffer = nullptr;
+            //doesnt matter ^ buffer is just an index into an array of trivially constructed memory
+        }
+        Node& Node::operator=(Node&& moveSrc) noexcept {
+            memcpy(buffer, moveSrc.buffer, sizeof(NodeBuffer));
+            //destroy old pins?
+            pins = std::move(moveSrc.pins);
+            links = std::move(moveSrc.links);
+            name = moveSrc.name;
+            return *this;
+        }
+
+
         bool Node::Update(Input::Mouse const& mouseData) {
             return true;
         }
@@ -22,9 +62,21 @@ namespace EWE{
             name = "background color" + extension;
             ImGui::ColorEdit3(name.c_str(), &buffer->backgroundColor.x);
             name = "Position" + extension;
-            ImGui::SliderFloat2(name.c_str(), &buffer->position.x, -1.f, 1.f);
+            lab::vec4 oldPos = buffer->position;
+            if (ImGui::SliderFloat4(name.c_str(), &buffer->position.x, -1.f, 1.f)) {
+                auto pos_diff = oldPos - buffer->position;
+                for (auto& pin_index : pins) {
+                    upper_pins[pin_index].buffer->position -= pos_diff;
+                }
+            }
             name = "scale" + extension;
-            ImGui::SliderFloat2(name.c_str(), &buffer->scale.x, 0.f, 1.f);
+            lab::vec2 oldScale = buffer->scale;
+            if (ImGui::SliderFloat2(name.c_str(), &buffer->scale.x, 0.f, 1.f)) {
+                auto scale_diff = oldScale - buffer->scale;
+                for (auto& pin_index : pins) {
+                    upper_pins[pin_index].buffer->scale -= scale_diff;
+                }
+            }
         }
 #endif
     }

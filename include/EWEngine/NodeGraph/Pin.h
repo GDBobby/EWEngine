@@ -29,7 +29,7 @@ namespace EWE{
             int objectType;
 
             //i could make it a mat3x3 and precompute that on the GPU. its a bit cleaner, but uses more space (9 floats instead of 4)
-            lab::vec2 position;
+            lab::vec4 position;
             lab::vec2 scale;
 
             void Init() {
@@ -41,8 +41,34 @@ namespace EWE{
 
                 objectType = OT_Node;
 
-                position = lab::vec2(0.f);
-                scale = lab::vec2(0.3f);
+                position = lab::vec4(0.f);
+                scale = lab::vec2(0.15f);
+                /*
+                constexpr std::size_t stride = sizeof(NodeBuffer);
+                constexpr auto offset = std::array<std::size_t, 8>{
+                    offsetof(NodeBuffer, titleColor),
+                    offsetof(NodeBuffer, titleScale),
+                    offsetof(NodeBuffer, foregroundColor),
+                    offsetof(NodeBuffer, foregroundScale),
+                    offsetof(NodeBuffer, backgroundColor),
+                    offsetof(NodeBuffer, objectType),
+                    offsetof(NodeBuffer, position),
+                    offsetof(NodeBuffer, scale)
+
+                };
+                */
+            }
+            void InitPin() {
+                titleColor = lab::vec3(1.f, 0.f, 0.f);
+                titleScale = 0.9f;
+                foregroundColor = lab::vec3(0.3f, 0.3f, 0.5f);
+                foregroundScale = 0.975f;
+                backgroundColor = lab::vec3(0.f, 1.f, 0.f);
+
+                objectType = OT_Pin;
+
+                position = lab::vec4(0.f);
+                scale = lab::vec2(0.03f);
             }
         };
 
@@ -54,19 +80,8 @@ namespace EWE{
             PinOffset offset_within_parent; //which pin in the parent is it?
             PinID globalPinID;
 
-            [[nodiscard]] explicit Pin(std::string_view name, NodeBuffer* buffer, uint32_t index)
-                :name{name},
-                buffer{buffer},
-                globalPinID{index}
-            {
-
-            }
-            [[nodiscard]] explicit Pin(NodeBuffer* buffer, uint32_t index)
-                :name{},
-                buffer{ buffer },
-                globalPinID{ index } {
-
-            }
+            [[nodiscard]] explicit Pin(std::string_view name, NodeBuffer* buffer, uint32_t index);
+            [[nodiscard]] explicit Pin(NodeBuffer* buffer, uint32_t index);
 
             enum Type : uint8_t{
                 InOut = 0,

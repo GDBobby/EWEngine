@@ -21,8 +21,9 @@ struct VertexData{
     float foregroundScale;
 
     vec3 backgroundColor;
+    int objectType;
 
-    vec2 position;
+    vec4 position;
     vec2 scale;
 };
 
@@ -42,8 +43,8 @@ void main(){
     horizontalPosition = position.x;
 
 
-    position = (position * vertData.scale) + vertData.position;
-    gl_Position = vec4(position, 0.0, 1.0);
+    position = (position * vertData.scale) + vertData.position.xy;
+    gl_Position = vec4(position, vertData.position.z, 1.0);
   
     outIndex = gl_InstanceIndex;
 }
