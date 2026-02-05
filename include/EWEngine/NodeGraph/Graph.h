@@ -11,12 +11,18 @@
 
 #include "EightWinds/Pipeline/PipelineBase.h"
 
+#include "EWEngine/Tools/ImguiFileExplorer.h"
+
+#include "EWEngine/Preprocessor.h"
 
 #include <vector>
 
 namespace EWE{
     namespace Node{
         struct Graph{
+            static constexpr std::size_t graph_version = 0;
+
+            std::string name = "new file";
             static constexpr uint32_t MaxNodeCount = 4096;
             //std::array<NodeBuffer, MaxNodeCount> nodeBuffers{};
             Buffer gp_buffer;
@@ -24,6 +30,7 @@ namespace EWE{
             [[nodiscard]] explicit Graph();
         
             ContiguousContainer<Node> nodes{};
+            ContiguousContainer<Pin> pins; //removing a pin is going to invaidate larger indexes
 
             //the references are getting invalidated, be careful with lfietime and switch to the index immediately
             Node& AddNode(std::string_view name);
@@ -33,7 +40,6 @@ namespace EWE{
             Pin& AddPin(NodeID node_index);
             Pin& AddPin(std::string_view name, NodeID node_index);
 
-            ContiguousContainer<Pin> pins;
 
             VertexDrawData drawData;
 
@@ -55,6 +61,18 @@ namespace EWE{
             void Imgui();
 #endif
 
+            void Serialize();
+            void Deserialize(std::string_view name);
+
+            bool selecting_file = false;
+            void SaveFile();
+            void SaveFileAs(std::string_view dstName);
+            void CloseFile();
+            void OpenFile(std::string_view name);
+
+#ifdef EWE_IMGUI
+            ExplorerContext fileExplorer;
+#endif
             //drawing configurations
         };
     }

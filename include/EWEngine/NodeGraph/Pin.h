@@ -4,6 +4,7 @@
 #include "EWEngine/InputData.h"
 
 #include <string>
+#include <fstream>
 
 
 namespace EWE{
@@ -32,44 +33,11 @@ namespace EWE{
             lab::vec4 position;
             lab::vec2 scale;
 
-            void Init() {
-                titleColor = lab::vec3(1.f, 0.f, 0.f);
-                titleScale = 0.9f;
-                foregroundColor = lab::vec3(0.f, 0.f, 1.f);
-                foregroundScale = 0.975f;
-                backgroundColor = lab::vec3(0.f, 1.f, 0.f);
+            void Init();
+            void InitPin();
 
-                objectType = OT_Node;
-
-                position = lab::vec4(0.f);
-                scale = lab::vec2(0.15f);
-                /*
-                constexpr std::size_t stride = sizeof(NodeBuffer);
-                constexpr auto offset = std::array<std::size_t, 8>{
-                    offsetof(NodeBuffer, titleColor),
-                    offsetof(NodeBuffer, titleScale),
-                    offsetof(NodeBuffer, foregroundColor),
-                    offsetof(NodeBuffer, foregroundScale),
-                    offsetof(NodeBuffer, backgroundColor),
-                    offsetof(NodeBuffer, objectType),
-                    offsetof(NodeBuffer, position),
-                    offsetof(NodeBuffer, scale)
-
-                };
-                */
-            }
-            void InitPin() {
-                titleColor = lab::vec3(1.f, 0.f, 0.f);
-                titleScale = 0.9f;
-                foregroundColor = lab::vec3(0.3f, 0.3f, 0.5f);
-                foregroundScale = 0.975f;
-                backgroundColor = lab::vec3(0.f, 1.f, 0.f);
-
-                objectType = OT_Pin;
-
-                position = lab::vec4(0.f);
-                scale = lab::vec2(0.03f);
-            }
+            void Serialize(std::ofstream& outFile);
+            void Deserialize(std::ifstream& inFile);
         };
 
         struct Pin{

@@ -53,8 +53,7 @@ void PrintAllExtensions(VkPhysicalDevice physicalDevice) {
 int main() {
 
 #ifdef USING_NVIDIA_AFTERMATH
-    printf("using nvidia aftermath - %s\n",
-           std::filesystem::current_path().string().c_str());
+    printf("using nvidia aftermath - %s\n", std::filesystem::current_path().string().c_str());
 #endif
 
 #if defined(__SANITIZE_ADDRESS__)
@@ -97,6 +96,9 @@ int main() {
     else if (current_working_directory.parent_path().stem() == "build") {
         current_working_directory = current_working_directory.parent_path().parent_path();
     }
+    if (current_working_directory.stem() == "EWEngine") {
+        current_working_directory = current_working_directory / "examples";
+    }
     std::filesystem::current_path(current_working_directory);
 #if EWE_DEBUG_BOOL
     printf("current dir - %s\n", std::filesystem::current_path().string().c_str());
@@ -106,8 +108,8 @@ int main() {
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
-    auto* triangle_vert = framework.shaderFactory.GetShader("examples/common/shaders/basic.vert.spv");
-    auto* triangle_frag = framework.shaderFactory.GetShader("examples/common/shaders/basic.frag.spv");
+    auto* triangle_vert = framework.shaderFactory.GetShader("common/shaders/basic.vert.spv");
+    auto* triangle_frag = framework.shaderFactory.GetShader("common/shaders/basic.frag.spv");
 
     EWE::PipeLayout triangle_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ triangle_vert, triangle_frag });
     //passconfig should be using a full rendergraph setup
@@ -263,8 +265,8 @@ int main() {
     }
 
     passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
-    auto* merge_vert = framework.shaderFactory.GetShader("examples/common/shaders/merge.vert.spv");
-    auto* merge_frag = framework.shaderFactory.GetShader("examples/common/shaders/merge.frag.spv");
+    auto* merge_vert = framework.shaderFactory.GetShader("common/shaders/merge.vert.spv");
+    auto* merge_frag = framework.shaderFactory.GetShader("common/shaders/merge.frag.spv");
     EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
     /*    
     EWE::HeapBlock<EWE::CommandRecord> mergeRecords{

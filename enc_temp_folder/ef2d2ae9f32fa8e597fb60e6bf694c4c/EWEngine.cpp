@@ -29,22 +29,16 @@ namespace EWE{
         ExtensionEntry<swapchainExt, true, 0>,
         ExtensionEntry<dynState3Ext, true, 0>,
         ExtensionEntry<meshShaderExt, false, 100000>,
-        ExtensionEntry<deviceFaultExt, false, 0>
-#if EWE_DEBUG_BOOL
-        , ExtensionEntry<dabReportExt, false, 0>
-#endif
+        ExtensionEntry<deviceFaultExt, false, 0>,
+        ExtensionEntry<dabReportExt, false, 0>
     >;
 
 
     using Example_FeatureManager = EWE::Backend::FeatureManager<rounded_down_vulkan_version,
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT,
         VkPhysicalDeviceMeshShaderFeaturesEXT,
-        VkPhysicalDeviceFaultFeaturesEXT
-
-#if EWE_DEBUG_BOOL
-        ,
+        VkPhysicalDeviceFaultFeaturesEXT,
         VkPhysicalDeviceAddressBindingReportFeaturesEXT
-#endif
     >;
 
     using Example_PropertyManager = EWE::Backend::PropertyManager<rounded_down_vulkan_version,
@@ -154,10 +148,8 @@ namespace EWE{
         devFaultFeatures.deviceFault = VK_TRUE;
         devFaultFeatures.deviceFaultVendorBinary = VK_TRUE;
 
-#if EWE_DEBUG_BOOL
         auto& dabReportFeatures = specDev.GetFeature<VkPhysicalDeviceAddressBindingReportFeaturesEXT>();
         dabReportFeatures.reportAddressBinding = VK_TRUE;
-#endif
 
         auto evaluatedDevices = specDev.ScorePhysicalDevices(instance);
 

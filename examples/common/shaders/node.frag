@@ -63,12 +63,8 @@ void main(){
         float withinCircle = float(sqrd_len < 2.8);
         
         float colorVal = withinCircle * abs(1.0 - (
-                    (
-                        pow(sqrd_len, 3.0) - 
-                        3.0 * pow(sqrd_len, 2.0) 
-                        + 4.0
-                        + pow(sqrd_len, 2.0 / 16.0)
-                    )
+                    pow(sqrd_len, 3.0) - 3.0 * pow(sqrd_len, 2.0) 
+                    + 4.0 + pow(sqrd_len, 2.0 / 16.0)
                 ) / 4.0);
         
         fragColor = vec4(vertData.foregroundColor * colorVal, withinCircle);
