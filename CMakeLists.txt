@@ -1,7 +1,7 @@
 include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
 message(STATUS "Local .env.cmake: ${LOCAL_ENV}")
 
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.24)
 
 project(EWEngine VERSION 2.0.0)
 
@@ -61,6 +61,13 @@ if(POLICY CMP0077)
 	cmake_policy(SET CMP0077 NEW)
 endif()
 
+FetchContent_Declare(
+    boost_context
+    GIT_REPOSITORY https://github.com/boostorg/context.git
+	GIT_TAG 639fa73
+	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/boost"
+)
+FetchContent_MakeAvailable(boost_context)
 
 FetchContent_Declare(
 	rapidjson
@@ -205,6 +212,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	${GLSLANG_LIBS}
 	$<$<CONFIG:Debug>:${AFTERMATH_LIBS}>
 	EWGraphics
+	Boost::context
 )
 
 if(EWE_EXAMPLES)

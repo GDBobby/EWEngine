@@ -105,6 +105,10 @@ int main() {
 #endif
     EWE::Framework framework(logicalDevice);
 
+    EWE::Input::Mouse mouseData{};
+    mouseData.TakeCallbackControl();
+
+    glfwSetMouseButtonCallback(EWE::Global::window->window, EWE::Input::Mouse::MouseCallback);
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
@@ -116,8 +120,9 @@ int main() {
     EWE::TaskRasterConfig passConfig;
     passConfig.SetDefaults();
     passConfig.pipelineRenderingCreateInfo.depthAttachmentFormat = VK_FORMAT_D16_UNORM;
-    passConfig.depthStencilInfo.depthTestEnable = VK_FALSE;
-    passConfig.depthStencilInfo.depthWriteEnable = VK_FALSE;
+    passConfig.depthStencilInfo.depthTestEnable = VK_TRUE;
+    passConfig.depthStencilInfo.depthWriteEnable = VK_TRUE;
+    passConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     passConfig.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
     passConfig.depthStencilInfo.stencilTestEnable = VK_FALSE;
 
@@ -268,31 +273,7 @@ int main() {
     auto* merge_vert = framework.shaderFactory.GetShader("common/shaders/merge.vert.spv");
     auto* merge_frag = framework.shaderFactory.GetShader("common/shaders/merge.frag.spv");
     EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
-    /*    
-    EWE::HeapBlock<EWE::CommandRecord> mergeRecords{
-        engine.swapchain.available_surface_formats.size() 
-    };
-    EWE::HeapBlock<EWE::GPUTask*> mergeTasks{
-        engine.swapchain.available_surface_formats.size()
-    };// = renderGraph.tasks.AddElement(logicalDevice, *renderQueue, mergeRecord, "merge");
-    EWE::HeapBlock<EWE::RasterTask> mergeRasters{
-        engine.swapchain.available_surface_formats.size()
-    };
 
-    for (uint8_t i = 0; i < engine.swapchain.available_surface_formats.size(); i++) {
-        mergeRecords.ConstructAt(i);
-
-        auto& format = engine.swapchain.available_surface_formats[i];
-        passConfig.color_att_info[0].format = format.format;
-        mergeRasters.ConstructAt(i, "merge raster", logicalDevice, *renderQueue, passConfig, false);
-        mergeRasters[i].AddDraw(merge_rasterObj, merge_drawData);
-
-        mergeRasters[i].Record(mergeRecords[i]);
-
-        mergeTasks.ConstructAt(i, &renderGraph.tasks.AddElement(logicalDevice, *renderQueue, mergeRecords[i], "merge"));
-        //mergePipelines.emplace_back(new EWE::GraphicsPipeline(logicalDevice, 0, &triangle_layout, passConfig, objectConfig, dynamicState));
-    }
-    */
     EWE::CommandRecord mergeRecord{};
 
     auto color_temp = passConfig.attachment_set_info.colors[0];
@@ -349,8 +330,6 @@ int main() {
         first_pin.buffer->objectType = EWE::Node::NodeBuffer::OT_Pin;
     }
 
-    EWE::Input::Mouse mouseData{};
-    mouseData.TakeCallbackControl();
 
     EWE::UsageData<EWE::Image> initial_acquire_usage{
         .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -482,18 +461,6 @@ int main() {
 
         merge_drawData.UpdateBuffer();
 
-        
-        //if (currentSwapchainFormat != engine.swapchain.surface_format.format) {
-        //    uint8_t swapchainFormatIndex = 0;
-        //    currentSwapchainFormat = engine.swapchain.surface_format.format;
-        //    for (uint8_t i = 0; i < engine.swapchain.available_surface_formats.size(); i++) {
-        //        if (currentSwapchainFormat == engine.swapchain.available_surface_formats[i].format) {
-        //            swapchainFormatIndex = i;
-        //            break;
-        //        }
-        //    }
-        //    currentMergeTaskIndex = swapchainFormatIndex;
-        //}
         engine.swapchain.GetCurrentImageView().image.layout;
 
         VkRenderingAttachmentInfo presentAttachmentInfo{
@@ -576,6 +543,7 @@ int main() {
                     //i think i also want the previous frame's submit signal to be waited on here, but idk
                     //auto& secondBackSemInfo = waitSemInfos[waitSemInfos.size() - 2].semaphore = engine.swapchain.GetCurrentSemaphores().present
 
+                    mouseData.UpdatePosition(EWE::Global::window->window);
                     nodeGraph.UpdateRender(mouseData, EWE::Global::frameIndex);
                     renderGraph.ChangeResource(mergeTask, present_img_att_index, &swapImage, EWE::Global::frameIndex);
                     renderGraph.presentBridge.UpdateSrcData(&mergeTask.queue, &mergeTask.resources.images[present_img_att_index], EWE::Global::frameIndex);

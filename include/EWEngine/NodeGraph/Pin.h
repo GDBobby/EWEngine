@@ -2,6 +2,7 @@
 
 #include "LAB/Vector.h"
 #include "EWEngine/InputData.h"
+#include "EightWinds/Data/StreamHelper.h"
 
 #include <string>
 #include <fstream>
@@ -36,8 +37,24 @@ namespace EWE{
             void Init();
             void InitPin();
 
-            void Serialize(std::ofstream& outFile);
-            void Deserialize(std::ifstream& inFile);
+            template<typename StreamObj>
+            void ProcessStream(StreamObj& streamObj) {
+                Stream::Operator<StreamObj> stream{ streamObj };
+                if (objectType == OT_Node) {
+                    stream.Process(titleColor);
+                    stream.Process(titleScale);
+                    stream.Process(foregroundColor);
+                    stream.Process(foregroundScale);
+                    stream.Process(backgroundColor);
+                    stream.Process(position);
+                    stream.Process(scale);
+                }
+                else if (objectType == OT_Pin) {
+                    stream.Process(foregroundColor);
+                    stream.Process(position);
+                    stream.Process(scale);
+                }
+            }
         };
 
         struct Pin{
@@ -48,8 +65,8 @@ namespace EWE{
             PinOffset offset_within_parent; //which pin in the parent is it?
             PinID globalPinID;
 
-            [[nodiscard]] explicit Pin(std::string_view name, NodeBuffer* buffer, uint32_t index);
-            [[nodiscard]] explicit Pin(NodeBuffer* buffer, uint32_t index);
+            [[nodiscard]] explicit Pin(std::string_view name, NodeBuffer* buffer, PinID index, NodeID parentNode);
+            [[nodiscard]] explicit Pin(NodeBuffer* buffer, PinID index, NodeID parentNode);
 
             enum Type : uint8_t{
                 InOut = 0,

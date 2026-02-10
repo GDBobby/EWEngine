@@ -2,6 +2,7 @@
 
 #include "EightWinds/LogicalDevice.h"
 #include "EightWinds/Window.h"
+#include "EightWinds/Data/Fiber/Scheduler.h"
 
 namespace EWE{
 
@@ -14,6 +15,7 @@ namespace EWE{
         extern Instance* instance;
         extern Window* window;
         extern uint8_t frameIndex;
+        extern Fiber::Scheduler* scheduler;
         //dont move logicaldevice, just construct it in place
         bool Create(LogicalDevice& logicalDevice, Window& window);
     }

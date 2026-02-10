@@ -10,6 +10,7 @@ namespace EWE{
         PhysicalDevice& physicalDevice;
         Instance& instance;
         Window& window;
+        Fiber::Scheduler scheduler;
     };
 
     GlobalData* globalData = nullptr;
@@ -25,6 +26,7 @@ namespace EWE{
         Instance* instance;
         Window* window;
         uint8_t frameIndex;
+        Fiber::Scheduler* scheduler;
 
         
         bool Create(LogicalDevice& logicalDevice, Window& window) {
@@ -36,7 +38,8 @@ namespace EWE{
                 .logicalDevice = logicalDevice,
                 .physicalDevice = logicalDevice.physicalDevice,
                 .instance = logicalDevice.instance,
-                .window = window
+                .window = window,
+                .scheduler{}
             };
 
             ::EWE::Global::logicalDevice = &globalData->logicalDevice;
@@ -44,6 +47,7 @@ namespace EWE{
             instance = &globalData->instance;
             ::EWE::Global::window = &globalData->window;
             frameIndex = 0; 
+            ::EWE::Global::scheduler = &globalData->scheduler;
 
             return true;
         }

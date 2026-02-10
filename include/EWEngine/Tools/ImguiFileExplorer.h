@@ -15,7 +15,10 @@
 namespace EWE{
 	struct ExplorerContext{
 		std::filesystem::path current_path{};
+
+		//only for internal closing
 		bool enabled = true;
+
 		std::optional<std::filesystem::path> selected_file = std::nullopt;
 
 		[[nodiscard]] explicit ExplorerContext(std::string_view path);

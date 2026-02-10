@@ -5,6 +5,7 @@
 #include "LAB/Vector.h"
 
 #include <functional>
+#include <array>
 
 namespace EWE{
     namespace Input{
@@ -15,6 +16,25 @@ namespace EWE{
                 Down,
                 Released
             };
+            Status current = Released;
+            void Update(bool pressed) {
+                if (pressed) {
+                    switch (current) {
+                        case Up: 
+                        case Released: current = Pressed; break;
+                        case Down:
+                        case Pressed: current = Down; break;
+                    }
+                }
+                else{
+                    switch (current) {
+                        case Up: break;
+                        case Released: current = Up; break;
+                        case Down: 
+                        case Pressed: current = Released; break;
+                    }
+                }
+            }
         };
 
         struct Mouse{
@@ -23,14 +43,14 @@ namespace EWE{
             
             int scroll_wheel_diff;
 
-            Button::Status buttons[32];
+            std::array<bool, 32> buttons; //whats the significance of 32?
 
             void Update(int button, int action, int mods) {
                 if(action == GLFW_PRESS){
-                    buttons[button] = Button::Status::Down;
+                    buttons[button] = true;
                 }
                 else{
-                    buttons[button] = Button::Status::Up;
+                    buttons[button] = false;
                 }
             }
 
@@ -57,7 +77,7 @@ namespace EWE{
         };
 
         struct Keyboard{
-            Button::Status buttons[256];
+            Button::Status buttons[256]; //256? magic?
 
             void Update(int key, int scancode, int action, int mods) {
                 if(action == GLFW_PRESS){

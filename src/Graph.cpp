@@ -4,18 +4,23 @@
 
 #include "EightWinds/Pipeline/Graphics.h"
 
-#include "EightWinds/Data/StreamHelper.h"
-
 #include <filesystem>
+#include <fstream>
 
 #ifdef EWE_IMGUI
 #include "imgui.h"
-#endif
+#include "magic_enum/magic_enum.hpp"
 
-#include <fstream>
+//template<typename T>
+//void imgui_enum(std::string_view name, T& val, int min, int max) {
+//
+//    ImGui::SliderInt(name.data(), reinterpret_cast<int*>(&val), min, max, magic_enum::enum_name(val).data());
+//}
+#endif
 
 namespace EWE{
     namespace Node{
+
         Graph::Graph()
             : gp_buffer{
                 *Global::logicalDevice, 
@@ -82,9 +87,75 @@ namespace EWE{
         }
 
         void Graph::UpdateRender(Input::Mouse const& mouseData, uint8_t frameIndex) {
-            for (auto& node : nodes) {
-                node.Update(mouseData);
+            static Input::Button lmb;
+
+            lmb.Update(mouseData.buttons[GLFW_MOUSE_BUTTON_LEFT]);
+
+            lab::ivec2 mousePos{ static_cast<int>(mouseData.current_pos.x), static_cast<int>(mouseData.current_pos.y) };
+            current_mouse_coverage.mouse_pos = mousePos;
+            static lab::ivec2 old_mouse_pos;
+
+            if (lmb.current == Input::Button::Pressed) {
+                current_mouse_coverage.index = -1;
+
+
+                for (auto& node : nodes) {
+                    if (node.Update(mouseData)) {
+                        const lab::vec2 inner_coord = UI::CoordWithinQuad(mousePos, node.buffer->position, node.buffer->scale, Global::window->screenDimensions.width, Global::window->screenDimensions.height);
+                        if (inner_coord.x >= 0.0f && inner_coord.x <= 1.0f && inner_coord.y <= 1.0f && inner_coord.y >= 0.0f) {
+                            const lab::vec2 adjusted_center_coords{
+                                lab::Abs(inner_coord.x - 0.5f) * 2.f,
+                                lab::Abs(inner_coord.y - 0.5f) * 2.f
+                            };
+                            if ((adjusted_center_coords.x > node.buffer->foregroundScale) && (adjusted_center_coords.y > node.buffer->foregroundScale)) {
+                                current_mouse_coverage.selection = MouseCoveragePackage::Selection::Resize;
+                            }
+                            else if (inner_coord.y < (1.0f - node.buffer->titleScale)) {
+                                current_mouse_coverage.selection = MouseCoveragePackage::Selection::Translate;
+                            }
+
+                            current_mouse_coverage.index = node.index;
+                            current_mouse_coverage.coord_within_node = inner_coord;
+                        }
+                    }
+                }
             }
+            else if(lmb.current == Input::Button::Released) {
+                current_mouse_coverage.selection = MouseCoveragePackage::Selection::None;
+            }
+
+            switch (current_mouse_coverage.selection) {
+                case MouseCoveragePackage::Selection::None: break;
+                case MouseCoveragePackage::Selection::Translate: {
+                    const lab::ivec2 mouse_diff{
+                        mousePos.x - old_mouse_pos.x,
+                        mousePos.y - old_mouse_pos.y
+                    };
+                    const lab::vec2 transDiff = UI::Position_Difference(mouse_diff, Global::window->screenDimensions.width, Global::window->screenDimensions.height);
+                    printf("trans diff : %.2f:%.2f\n", transDiff.x, transDiff.y);
+                    nodes[current_mouse_coverage.index].buffer->position.x += transDiff.x;
+                    nodes[current_mouse_coverage.index].buffer->position.y += transDiff.y;
+                    break;
+                }
+                case MouseCoveragePackage::Selection::Resize: {
+
+                    const lab::ivec2 mouse_diff{
+                        mousePos.x - old_mouse_pos.x,
+                        mousePos.y - old_mouse_pos.y
+                    };
+                    const lab::vec2 transDiff = UI::Position_Difference(mouse_diff, Global::window->screenDimensions.width, Global::window->screenDimensions.height);
+                    printf("scale diff : %.2f:%.2f\n", transDiff.x, transDiff.y);
+                    nodes[current_mouse_coverage.index].buffer->scale += transDiff;
+                    break;
+                }
+                case MouseCoveragePackage::Selection::Link: {
+
+                    break;
+                }
+            }
+
+            old_mouse_pos = mousePos;
+           
             drawData.paramPack->GetRef(frameIndex).instanceCount = nodes.size() + pins.size();
         }
 
@@ -92,23 +163,23 @@ namespace EWE{
             const uint32_t index = nodes.size() + pins.size();
             auto& parent_node = nodes[node_index];
             parent_node.pins.emplace_back(pins.size());
-            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, node_index);
         }
         Pin& Graph::AddPin(std::string_view name, NodeID node_index) {
             const uint32_t index = nodes.size() + pins.size();
             auto& parent_node = nodes[node_index];
             parent_node.pins.emplace_back(pins.size());
-            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, node_index);
         }
         Pin& Graph::AddPin(Node& parent_node) {
             const uint32_t index = nodes.size() + pins.size();
             parent_node.pins.emplace_back(pins.size());
-            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, parent_node.index);
         }
         Pin& Graph::AddPin(std::string_view name, Node& parent_node) {
             const uint32_t index = nodes.size() + pins.size();
             parent_node.pins.emplace_back(pins.size());
-            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index);
+            return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, parent_node.index);
         }
 
         Node& Graph::AddNode() {
@@ -136,46 +207,129 @@ namespace EWE{
             Deserialize(name);
         }
 
+        void Graph::Serialize() {
+            std::ofstream outFile{ name };
+            ProcessStream(outFile);
+            outFile.close();
+        }
+        void Graph::Deserialize(std::string_view name) {
+            std::ifstream inFile{ name.data(), std::ios::binary };
+            if (!inFile.is_open()) {
+                inFile.open(name);
+            }
+            if (!inFile.is_open()) {
+                throw std::runtime_error("failed to load graph file");
+            }
+            ProcessStream(inFile);
+            inFile.close();
+        }
+
 #ifdef EWE_IMGUI
+
+        void Graph::ImguiMenuBar() {
+
+            if (ImGui::BeginMainMenuBar()) {
+                if (ImGui::BeginMenu("File")) {
+                    if (ImGui::MenuItem("New", "")) {
+                    }
+                    if (ImGui::MenuItem("Save", "Ctrl + S")) {
+                        Serialize();
+                        //LevelManager::saveLevel()
+                    }
+                    if (ImGui::MenuItem("Save As", "")) {
+                        //Serialize();
+                        //open some kinda saving screen, maybe the file explorer again
+                    }
+
+                    if (ImGui::MenuItem("Load", "Ctrl + L")) {
+                        selecting_file = true;
+                    }
+                    //if (ImGui::MenuItem("Exit", "")) {
+                    //    closePlease = true;
+                    //}
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Settings")) {
+                    ImGui::Checkbox("nodes resizable [Ctrl + R]", &settings.nodes_resizable);
+                    if (ImGui::SliderFloat("global background scale", &settings.global_background_scale, 0.5f, 1.f)) {
+                        for (auto& node : nodes) {
+                            node.buffer->foregroundScale = settings.global_background_scale;
+                        }
+                    }
+                    if (ImGui::SliderFloat("global title scale", &settings.global_title_scale, 0.5f, 1.f)) {
+                        for (auto& node : nodes) {
+                            node.buffer->titleScale = settings.global_title_scale;
+                        }
+                    }
+                    if (ImGui::ColorEdit3("global background color", &settings.global_background_color.x)) {
+                        for (auto& node : nodes) {
+                            node.buffer->backgroundColor = settings.global_background_color;
+                        }
+                    }
+                    if (ImGui::ColorEdit3("global foreground color", &settings.global_foreground_color.x)) {
+                        for (auto& node : nodes) {
+                            node.buffer->foregroundColor = settings.global_foreground_color;
+                        }
+                    }
+                    if (ImGui::ColorEdit3("global title color", &settings.global_title_color.x)) {
+                        for (auto& node : nodes) {
+                            node.buffer->titleColor = settings.global_title_color;
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+                //printf("after ?? \n");
+                ImGui::EndMainMenuBar();
+            }
+        }
+
         void Graph::Imgui() {
+            ImguiMenuBar();
+
             if (selecting_file) {
                 if (ImGui::Begin(fileExplorer.current_path.string().c_str(), &selecting_file)) {
                     fileExplorer.Imgui();
 
-                    ImGui::End();
                 }
+                ImGui::End();
                 if (fileExplorer.selected_file.has_value()) {
                     CloseFile();
                     OpenFile(fileExplorer.selected_file.value().string());
+                    fileExplorer.selected_file = std::nullopt;
                 }
             }
 
 
             if (ImGui::Begin("node graph")) {
-                
+
                 constexpr std::size_t name_size = 128;
                 char name_buffer[name_size];
                 strncpy(name_buffer, name.c_str(), name_size);
                 if (ImGui::InputText("graph name", name_buffer, name_size)) {
                     name = name_buffer;
                 }
-                if (ImGui::Button("Serialize")) {
-                    Serialize();
+                ImGui::Text("current_mouse_coverage : %d", current_mouse_coverage.index);
+                ImGui::Text("mouse pos : {%d:%d}", current_mouse_coverage.mouse_pos.x, current_mouse_coverage.mouse_pos.y);
+                if (current_mouse_coverage.index >= 0) {
+                    ImGui::Text("node : {%d} - innner coord : {%.2f:%.2f} : %s", current_mouse_coverage.index, current_mouse_coverage.coord_within_node.x, current_mouse_coverage.coord_within_node.y, magic_enum::enum_name(current_mouse_coverage.selection).data());
+
                 }
-                
+
                 ImGui::Text("node count : %zu", nodes.size());
+                if(ImGui::Button("Add Node")){
+                    AddNode();
+                }
                 
                 for (auto& node : nodes) {
                     //do some kinda tree thing
-                    if (ImGui::TreeNode(node.name.c_str())) {
+                    ImGui::PushID(node.index); 
+                    if (ImGui::TreeNodeEx((void*)(intptr_t)node.index, 0, "%s", node.name.c_str())) {
                         node.Imgui();
-                        const std::string add_pin_index = "add pin##" + std::to_string(node.index);
-                        if (ImGui::Button(add_pin_index.c_str())) {
+                        if (ImGui::Button("add pin")) {
                             auto& pin = AddPin(node);
                             pin.buffer->InitPin();
                         }
-                        const std::string pin_tree = "pins##" + std::to_string(node.index);
-                        if (ImGui::TreeNode(pin_tree.c_str())) {
+                        if (ImGui::TreeNode("pins")) {
                             for (auto& pin_index : node.pins) {
                                 pins[pin_index].Imgui();
                             }
@@ -183,92 +337,12 @@ namespace EWE{
                         }
                         ImGui::TreePop();
                     }
+                    ImGui::PopID();
                 }
             }
             ImGui::End();
         }
 #endif
 
-        void Graph::Serialize() {
-            //compress the data first? shift down nodes and pins if they weren't already compressed?
-
-            printf("current filepath : %s\n", std::filesystem::current_path().string().c_str());
-
-            const std::string file_name = name + ".ewng";
-            std::ofstream outFile{ file_name.c_str(), std::ios::binary };
-            //header
-            //outFile << name.size(); //the file is named after the name
-            Stream::Helper(outFile, graph_version);
-            std::size_t temp_buffer = nodes.size();
-            Stream::Helper(outFile, temp_buffer);
-            temp_buffer = pins.size();
-            Stream::Helper(outFile, temp_buffer);
-            //outFile << links.size(); //idk yet
-
-
-            for (auto& node : nodes) {
-                temp_buffer = node.name.size();
-                Stream::Helper(outFile, temp_buffer);
-                outFile.write(node.name.c_str(), node.name.size());
-                node.buffer->Serialize(outFile);
-                //link count? or separate?
-            }
-            for (auto& pin : pins) {
-                temp_buffer = pin.name.size();
-                Stream::Helper(outFile, temp_buffer);
-                outFile.write(pin.name.c_str(), pin.name.size());
-                outFile.write(reinterpret_cast<const char*>(&pin.parentNode), sizeof(pin.parentNode));
-                pin.buffer->Serialize(outFile);
-            }
-
-            outFile.close();
-        }
-
-        void Graph::Deserialize(std::string_view name) {
-            std::ifstream inFile{ name.data(), std::ios::binary};
-
-            //header
-            std::size_t version;
-            inFile >> version;
-            std::size_t nodeCount;
-            inFile >> nodeCount;
-            std::size_t pinCount;
-            inFile >> pinCount;
-
-            std::size_t current_buffer_index = 0;
-
-            nodes.reserve(nodeCount);
-
-            for (std::size_t i = 0; i < nodeCount; i++) {
-
-                std::size_t nameSize;
-                inFile >> nameSize;
-                std::string nameBuffer;
-                nameBuffer.resize(nameSize);
-                inFile.read(nameBuffer.data(), nameSize);
-                Node& temp_node = AddNode(nameBuffer);
-
-                //std::size_t node_pin_count;
-                //inFile >> node_pin_count; //idk how to do this yet, do i even care or do i just trust the pins to sort it out
-
-                temp_node.buffer->Deserialize(inFile);
-            }
-            for (std::size_t i = 0; i < pinCount; i++){
-
-                std::size_t nameSize;
-                inFile >> nameSize;
-
-                std::string nameBuffer;
-                nameBuffer.resize(nameSize);
-                inFile.read(nameBuffer.data(), nameSize);
-
-                NodeID parentId;
-                inFile >> parentId;
-                Pin& temp_pin = AddPin(nameBuffer, parentId);
-
-                temp_pin.buffer->Deserialize(inFile);
-                nodes[parentId].pins.emplace_back(temp_pin.globalPinID);
-            }
-        }
     } //namespace Node
 } //namespace EWE

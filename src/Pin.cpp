@@ -1,47 +1,11 @@
 #include "EWEngine/NodeGraph/Pin.h"
 
-#include "EightWinds/Data/StreamHelper.h"
-
 #ifdef EWE_IMGUI
 #include "imgui.h"
 #endif
 
 namespace EWE {
     namespace Node {
-
-
-        void NodeBuffer::Serialize(std::ofstream& outFile) {
-            if (objectType == OT_Node) {
-                Stream::Helper(outFile, titleColor);
-                Stream::Helper(outFile, titleScale);
-                Stream::Helper(outFile, foregroundColor);
-                Stream::Helper(outFile, foregroundScale);
-                Stream::Helper(outFile, backgroundColor);
-                Stream::Helper(outFile, position);
-                Stream::Helper(outFile, scale);
-            }
-            else if (objectType == OT_Pin) {
-                Stream::Helper(outFile, foregroundColor);
-                Stream::Helper(outFile, position);
-                Stream::Helper(outFile, scale);
-            }
-        }
-        void NodeBuffer::Deserialize(std::ifstream& inFile) {
-            if (objectType == OT_Node) {
-                Stream::Helper(inFile, titleColor);
-                Stream::Helper(inFile, titleScale);
-                Stream::Helper(inFile, foregroundColor);
-                Stream::Helper(inFile, foregroundScale);
-                Stream::Helper(inFile, backgroundColor);
-                Stream::Helper(inFile, position);
-                Stream::Helper(inFile, scale);
-            }
-            else if (objectType == OT_Pin) {
-                Stream::Helper(inFile, foregroundColor);
-                Stream::Helper(inFile, position);
-                Stream::Helper(inFile, scale);
-            }
-        }
 
         void NodeBuffer::Init() {
             titleColor = lab::vec3(1.f, 0.f, 0.f);
@@ -79,19 +43,20 @@ namespace EWE {
         }
 
 
-        Pin::Pin(std::string_view name, NodeBuffer* buffer, uint32_t index)
+        Pin::Pin(std::string_view name, NodeBuffer* buffer, PinID index, NodeID parentNode)
             :name{ name },
             buffer{ buffer },
+            parentNode{parentNode},
             globalPinID{ index }
-        {
 
-        }
-        Pin::Pin(NodeBuffer* buffer, uint32_t index)
+        {}
+
+        Pin::Pin(NodeBuffer* buffer, PinID index, NodeID parentNode)
             :name{},
             buffer{ buffer },
-            globalPinID{ index } {
-
-        }
+            parentNode{ parentNode },
+            globalPinID{ index } 
+        {}
 
         bool Pin::Update(Input::Mouse const& mouseData) {
             return true;
@@ -99,14 +64,12 @@ namespace EWE {
 #ifdef EWE_IMGUI
         void Pin::Imgui() {
             const std::string pin_name = "pin[" + std::to_string(globalPinID) + ':' + std::to_string(offset_within_parent) + ']';
+            ImGui::PushID(globalPinID);
             ImGui::Text(pin_name.c_str());
-            const std::string extension = std::string("##") + std::to_string(reinterpret_cast<uint64_t>(this));
-            std::string name = std::string("color") + extension;
-            ImGui::ColorEdit3(name.c_str(), &buffer->foregroundColor.x);
-            name = "Position" + extension;
-            ImGui::SliderFloat4(name.c_str(), &buffer->position.x, -1.f, 1.f);
-            name = "scale" + extension;
-            ImGui::SliderFloat2(name.c_str(), &buffer->scale.x, 0.f, 1.f);
+            ImGui::ColorEdit3("color", &buffer->foregroundColor.x);
+            ImGui::SliderFloat4("Position", &buffer->position.x, -1.f, 1.f);
+            ImGui::SliderFloat2("scale", &buffer->scale.x, 0.f, 1.f);
+            ImGui::PopID();
         }
 #endif
     }

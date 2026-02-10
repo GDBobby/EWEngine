@@ -36,18 +36,19 @@ void main(){
 
     if(vertData.objectType == 0){
         //bool withinTitle = ((verticalPosition + 1.0) / 2.0) < vertData.titleScale;
-        const bool withinTitle = verticalPosition < ((vertData.titleScale - 0.5) * 2.0);
+        const bool withinTitle = verticalPosition > ((vertData.titleScale - 0.5) * 2.0);
 
         float absVertPos = abs(verticalPosition);
         float absHoriPos = abs(horizontalPosition);
 
         const bool withinBorder = (absVertPos < vertData.foregroundScale) && (absHoriPos < vertData.foregroundScale);
-
-        if(withinTitle){
-            fragColor = vec4(vertData.titleColor, 1.0);
-        } 
-        else if(withinBorder){
-            fragColor = vec4(vertData.foregroundColor, 1.0);
+        if(withinBorder){
+            if(withinTitle){
+                fragColor = vec4(vertData.titleColor, 1.0);
+            } 
+            else {
+                fragColor = vec4(vertData.foregroundColor, 1.0);
+            }
         }
         else {
             fragColor = vec4(vertData.backgroundColor, 1.0);

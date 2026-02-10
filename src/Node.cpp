@@ -45,13 +45,28 @@ namespace EWE{
 
 
         bool Node::Update(Input::Mouse const& mouseData) {
+            if (mouseData.buttons[GLFW_MOUSE_BUTTON_LEFT] == Input::Button::Status::Down) {
+                //check if within bounds
+                buffer->position;
+                buffer->scale;
+
+            }
             return true;
         }
 
 #ifdef EWE_IMGUI
         void Node::Imgui() {
             const std::string extension = std::string("##") + std::to_string(reinterpret_cast<uint64_t>(this));
-            std::string name = std::string("title color") + extension;
+            std::string name = std::string("name") + extension;
+
+            static constexpr std::size_t name_length = 128;
+            static char name_buffer[name_length];
+            
+            strncpy(name_buffer, this->name.c_str(), this->name.size());
+            if (ImGui::InputText(name.c_str(), name_buffer, name_length)) {
+                this->name = name_buffer;
+            }
+            name = std::string("title color") + extension;;
             ImGui::ColorEdit3(name.c_str(), &buffer->titleColor.x);
             name = "title scale" + extension;
             ImGui::SliderFloat(name.c_str(), &buffer->titleScale, 0.f, 1.f);
