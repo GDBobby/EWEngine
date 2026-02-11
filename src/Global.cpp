@@ -10,7 +10,7 @@ namespace EWE{
         PhysicalDevice& physicalDevice;
         Instance& instance;
         Window& window;
-        Fiber::Scheduler scheduler;
+        marl::Scheduler scheduler;
     };
 
     GlobalData* globalData = nullptr;
@@ -26,7 +26,8 @@ namespace EWE{
         Instance* instance;
         Window* window;
         uint8_t frameIndex;
-        Fiber::Scheduler* scheduler;
+        
+        marl::Scheduler* scheduler;
 
         
         bool Create(LogicalDevice& logicalDevice, Window& window) {
@@ -39,7 +40,7 @@ namespace EWE{
                 .physicalDevice = logicalDevice.physicalDevice,
                 .instance = logicalDevice.instance,
                 .window = window,
-                .scheduler{}
+                .scheduler{marl::Scheduler::Config::allCores() - 1}
             };
 
             ::EWE::Global::logicalDevice = &globalData->logicalDevice;

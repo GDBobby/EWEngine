@@ -172,7 +172,7 @@ int main() {
     EWE::Node::Graph nodeGraph{};
     nodeGraph.Record(triangle_raster_task);
 
-    EWE::CommandRecord triangleRecord{};
+    EWE::Command::Record triangleRecord{};
     triangle_raster_task.Record(triangleRecord, true);
 
     EWE::RenderGraph& renderGraph = engine.renderGraph;
@@ -274,7 +274,7 @@ int main() {
     auto* merge_frag = framework.shaderFactory.GetShader("common/shaders/merge.frag.spv");
     EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
 
-    EWE::CommandRecord mergeRecord{};
+    EWE::Command::Record mergeRecord{};
 
     auto color_temp = passConfig.attachment_set_info.colors[0];
     //by poppin the color and then putting it back, the image won't be constructed with the raster task

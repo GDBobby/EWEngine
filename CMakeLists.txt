@@ -62,12 +62,12 @@ if(POLICY CMP0077)
 endif()
 
 FetchContent_Declare(
-    boost_context
-    GIT_REPOSITORY https://github.com/boostorg/context.git
-	GIT_TAG 639fa73
-	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/boost"
+	marl
+	GIT_REPOSITORY https://github.com/google/marl.git
+	GIT_TAG main
+	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/marl"
 )
-FetchContent_MakeAvailable(boost_context)
+FetchContent_MakeAvailable(marl)
 
 FetchContent_Declare(
 	rapidjson
@@ -212,7 +212,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	${GLSLANG_LIBS}
 	$<$<CONFIG:Debug>:${AFTERMATH_LIBS}>
 	EWGraphics
-	Boost::context
+	marl
 )
 
 if(EWE_EXAMPLES)
