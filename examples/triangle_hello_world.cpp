@@ -210,9 +210,9 @@ int main() {
         .priority = 1.f
     };
 
-    struct alignas(16) TriangleVertex {
-        float pos[2]; //xy
-        float color[3]; //rgb, the 4th element isnt read, but i need it for alignment
+    struct TriangleVertex {
+        lab::vec2 pos; //xy
+        lab::vec3 color; //rgb, the 4th element isnt read, but i need it for alignment
     };
     for (auto& str : triangle_vert->structData) {
         if (str.name == "Vertex") {
@@ -384,6 +384,19 @@ int main() {
         imguiHandler.BeginRender();
         nodeGraph.Imgui();
         engine.Imgui();
+        //EWE::ImguiExtension::Imgui(triangle_raster_task);
+        //EWE::ImguiExtension::Imgui(mergeRaster);
+        //EWE::ImguiExtension::Imgui(renderGraph);
+        if (ImGui::TreeNode("triangle record")) {
+            EWE::ImguiExtension::Imgui(triangleRecord);
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("merge record")) {
+            EWE::ImguiExtension::Imgui(mergeRecord);
+            ImGui::TreePop();
+        }
+
         //ImGui::ShowDemoWindow();
         imguiHandler.EndRender();
         return true;

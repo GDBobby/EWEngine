@@ -8,6 +8,9 @@
 #include "EightWinds/RenderGraph/Command/Record.h"
 #include "EightWinds/RenderGraph/RasterTask.h"
 #include "EightWinds/Sampler.h"
+#include "EightWinds/ImageView.h"
+
+#include "EightWinds/Window.h"
 
 #include "EWEngine/Global.h"
 
@@ -57,7 +60,7 @@ namespace EWE {
 		Font(std::unordered_map<wchar_t, EWE::Font::CharacterData>& vertData, std::unordered_map<wchar_t, float>& advanceData, uint16_t width, uint16_t height, void* imgdata);
 		Font& operator=(Font& other) = delete;
 		Font& operator=(Font&& other) = delete;
-		Font(Font&& other) noexcept;
+		Font(Font&& other) noexcept = delete;
 		Font(Font& other) = delete;
 
 		float GetCharWidth(wchar_t c, const float charW) const;
@@ -81,14 +84,13 @@ namespace EWE {
 		PerFlight<Buffer> buffers;
 
 		Font::CharacterData::Vert* mapped = nullptr;
-
-		VkImageMemoryBarrier2 GenerateBarrier(VkImageLayout dstLayout);
 	};
 
 
 	class TextOverlay {
 	private:
 		static constexpr uint32_t TEXTOVERLAY_MAX_CHAR_COUNT = 65536 / sizeof(lab::vec4);
+		LogicalDevice& logicalDevice;
 
 		Shader vertShader;
 		Shader fragShader;
@@ -113,7 +115,7 @@ namespace EWE {
 
 		ObjectRasterData objectConfig;
 
-		[[nodiscard]] explicit TextOverlay(float framebufferwidth, float framebufferheight);
+		[[nodiscard]] explicit TextOverlay(LogicalDevice& logicalDevice, float screenWidth, float screenHeight);
 		~TextOverlay();
 		
 		static float GetWidth(std::string const& text, float textScale = 1.f);
@@ -130,7 +132,7 @@ namespace EWE {
 		static bool SetCurrentFont(uint16_t);
 		static int16_t GetCurrentFont();
 		static uint16_t GetFontCount();
-		static std::string const& GetCurrentFontName();
+		static std::string_view GetCurrentFontName();
 
 		static int AddFont(Font* font);
 		static bool RemoveFont(uint16_t fontIndex);
@@ -148,7 +150,7 @@ namespace EWE {
 		void Record(RasterTask& task){
 			objectConfig.config.SetDefaults();
 
-			task.AddDraw(objectConfig, indirect_vert_raw);
+			task.Add_Vert_IndirectCountDraw(objectConfig, indirect_vert_raw);
 		}
 	};
 }

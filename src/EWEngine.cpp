@@ -30,7 +30,8 @@ namespace EWE{
         ExtensionEntry<swapchainExt, true, 0>,
         ExtensionEntry<dynState3Ext, true, 0>,
         ExtensionEntry<meshShaderExt, false, 100000>,
-        ExtensionEntry<deviceFaultExt, false, 0>
+        ExtensionEntry<deviceFaultExt, false, 0>,
+        ExtensionEntry<scalarBlockExt, true, 0>
 #if EWE_DEBUG_BOOL
         , ExtensionEntry<dabReportExt, false, 0>
 #endif
@@ -143,6 +144,7 @@ namespace EWE{
         features12.descriptorBindingVariableDescriptorCount = VK_TRUE;
         features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
         features12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+        features12.timelineSemaphore = VK_TRUE;
 
         auto& features13 = specDev.GetFeature<VkPhysicalDeviceVulkan13Features>();
         features13.dynamicRendering = VK_TRUE;
@@ -239,9 +241,15 @@ namespace EWE{
         window{instance, 1280, 720, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
         swapchain{logicalDevice, window, GetPresentQueue(logicalDevice)},
-        renderGraph{logicalDevice, swapchain}
+        renderGraph{logicalDevice, swapchain},
+        stcManager{logicalDevice, GetPresentQueue(logicalDevice)},
+        textOverlay{ 
+            logicalDevice, 
+            static_cast<float>(window.screenDimensions.width), 
+            static_cast<float>(window.screenDimensions.height) 
+        }
     {
-        Global::Create(logicalDevice, window);
+        Global::Create(logicalDevice, window, stcManager);
     }
 
 #if EWE_IMGUI

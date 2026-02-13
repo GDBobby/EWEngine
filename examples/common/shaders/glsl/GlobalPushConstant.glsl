@@ -11,7 +11,7 @@
 #define ARBITRARY_MAX_TEXTURE_COUNT 8
 layout(push_constant) uniform Push {
     //0 is invalid
-    uint64_t device_addresses[ARBITRARY_MAX_BUFFER_COUNT];
+    uint64_t buffer_address[ARBITRARY_MAX_BUFFER_COUNT];
     // [-1] is the invalid index
     int texture_index[ARBITRARY_MAX_TEXTURE_COUNT];
 } push;

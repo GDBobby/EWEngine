@@ -31,7 +31,7 @@ layout(location = 0) out vec4 fragColor;
 
 void main(){
 
-    VertexArray vertexArray = VertexArray(push.device_addresses[0]);
+    VertexArray vertexArray = VertexArray(push.buffer_address[0]);
     VertexData vertData = vertexArray.vertices[outIndex];
 
     if(vertData.objectType == 0){

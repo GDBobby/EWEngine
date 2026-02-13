@@ -7,7 +7,15 @@
 #include "EightWinds/LogicalDevice.h"
 #include "EightWinds/Swapchain.h"
 
+#include "EWEngine/STC_Manager.h"
+
 #include "EightWinds/RenderGraph/RenderGraph.h"
+
+#include "EWEngine/TextOverlay.h"
+
+#ifdef EWE_IMGUI
+#include "Imgui/Framework_Imgui.h"
+#endif
 
 #include <string_view>
 
@@ -17,7 +25,9 @@ namespace EWE{
         Window window;
         LogicalDevice logicalDevice;
         Swapchain swapchain;
+        STC_Manager stcManager;
         RenderGraph renderGraph;
+        TextOverlay textOverlay;
 
         uint64_t totalFramesSubmitted = 0;
 

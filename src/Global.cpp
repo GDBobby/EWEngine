@@ -1,5 +1,9 @@
 #include "EWEngine/Global.h"
 
+#include "EightWinds/LogicalDevice.h"
+#include "EightWinds/Window.h"
+#include "EWEngine/STC_Manager.h"
+
 #include <thread>
 
 namespace EWE{
@@ -11,6 +15,7 @@ namespace EWE{
         Instance& instance;
         Window& window;
         marl::Scheduler scheduler;
+        STC_Manager& stcManager;
     };
 
     GlobalData* globalData = nullptr;
@@ -28,9 +33,10 @@ namespace EWE{
         uint8_t frameIndex;
         
         marl::Scheduler* scheduler;
+        STC_Manager* stcManager;
 
         
-        bool Create(LogicalDevice& logicalDevice, Window& window) {
+        bool Create(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager) {
 #if EWE_DEBUG_BOOL
             assert(globalData == nullptr);
 #endif
@@ -40,7 +46,8 @@ namespace EWE{
                 .physicalDevice = logicalDevice.physicalDevice,
                 .instance = logicalDevice.instance,
                 .window = window,
-                .scheduler{marl::Scheduler::Config::allCores() - 1}
+                .scheduler{marl::Scheduler::Config::allCores()},
+                .stcManager = stcManager
             };
 
             ::EWE::Global::logicalDevice = &globalData->logicalDevice;

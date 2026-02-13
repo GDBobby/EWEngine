@@ -71,7 +71,7 @@ namespace EWE{
 				}
 			}
 		},
-		semaphores{ *Global::logicalDevice, false}
+		semaphores{ *Global::logicalDevice}
     {
 #if EWE_DEBUG_NAMING
 		for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {

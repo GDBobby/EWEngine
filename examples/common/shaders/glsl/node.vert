@@ -5,7 +5,6 @@
 layout(location = 0) flat out int outIndex;
 layout(location = 1) out float verticalPosition;
 layout(location = 2) out float horizontalPosition;
-layout(location = 3) out vec3 vert_color;
 
 const vec2 defaultPositions[4] = vec2[4](
     vec2(-1.0, -1.0),
@@ -15,9 +14,16 @@ const vec2 defaultPositions[4] = vec2[4](
 );
 
 struct VertexData{
-    vec3 color;
+    vec3 titleColor;
+    float titleScale;
 
-    vec2 position;
+    vec3 foregroundColor;
+    float foregroundScale;
+
+    vec3 backgroundColor;
+    int objectType;
+
+    vec4 position;
     vec2 scale;
 };
 
@@ -29,7 +35,7 @@ layout(buffer_reference, scalar) readonly buffer VertexArray {
 
 void main(){
 
-    VertexArray vertexArray = VertexArray(push.device_addresses[0]);
+    VertexArray vertexArray = VertexArray(push.buffer_address[0]);
     VertexData vertData = vertexArray.vertices[gl_InstanceIndex];
 
     vec2 position = defaultPositions[gl_VertexIndex];
@@ -37,10 +43,8 @@ void main(){
     horizontalPosition = position.x;
 
 
-    position = (position * vertData.scale) + vertData.position;
-    gl_Position = vec4(position, 0.0, 1.0);
-	
-	vert_color = vertData.color;
+    position = (position * vertData.scale) + vertData.position.xy;
+    gl_Position = vec4(position, vertData.position.z, 1.0);
   
     outIndex = gl_InstanceIndex;
 }
