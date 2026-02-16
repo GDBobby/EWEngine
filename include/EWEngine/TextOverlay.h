@@ -34,11 +34,11 @@ namespace EWE {
 		float y{ 0.f };
 		uint8_t align{ TA_left };
 		float scale{ 1.f };
-		TextStruct() {}
-		TextStruct(std::string string, float x, float y, uint8_t align, float scale)
+		[[nodiscard]] TextStruct() {}
+		[[nodiscard]] TextStruct(std::string string, float x, float y, uint8_t align, float scale)
 			: string{ string }, x{ x }, y{ y }, align{ align }, scale{ scale }
 		{}
-		TextStruct(std::string string, float x, float y, TextAlign align, float scale) 
+		[[nodiscard]] TextStruct(std::string string, float x, float y, TextAlign align, float scale)
 			: string{ string }, x{ x }, y{ y }, align{ static_cast<uint8_t>(align) }, scale{ scale }
 		{}
 		uint16_t GetSelectionIndex(double xpos);
@@ -46,6 +46,17 @@ namespace EWE {
 	};
 
 	struct Font {
+		struct Glyph {
+			lab::vec2 uv0;
+			lab::vec2 uv1;
+			int width;
+			int height;
+			int bearingX;
+			int bearingY;
+			int advance;
+		};
+
+
 		~Font();
 		struct CharacterData {
 			struct Vert {

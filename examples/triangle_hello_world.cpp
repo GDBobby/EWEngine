@@ -386,7 +386,10 @@ int main() {
         engine.Imgui();
         //EWE::ImguiExtension::Imgui(triangle_raster_task);
         //EWE::ImguiExtension::Imgui(mergeRaster);
-        //EWE::ImguiExtension::Imgui(renderGraph);
+        if (ImGui::TreeNode("render graph")) {
+            EWE::ImguiExtension::Imgui(renderGraph);
+            ImGui::TreePop();
+        }
         if (ImGui::TreeNode("triangle record")) {
             EWE::ImguiExtension::Imgui(triangleRecord);
             ImGui::TreePop();

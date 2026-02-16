@@ -84,7 +84,23 @@ set(RAPIDJSON_BUILD_THIRDPARTY_GTEST OFF CACHE BOOL "")
 
 FetchContent_MakeAvailable(rapidjson)
 
-#tinyobj
+FetchContent_Declare(
+	freetype
+	GIT_REPOSITORY https://gitlab.freedesktop.org/freetype/freetype.git
+	GIT_TAG master
+)
+FetchContent_MakeAvailable(freetype)
+
+set(HB_HAVE_FREETYPE ON CACHE BOOL "" FORCE)
+set(HB_BUILD_UTILS OFF CACHE BOOL "" FORCE)
+set(HB_BUILD_SUBSET OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  harfbuzz
+  GIT_REPOSITORY https://github.com/harfbuzz/harfbuzz.git
+  GIT_TAG main
+)
+FetchContent_MakeAvailable(harfbuzz)
+
 FetchContent_Declare(
 	tinyobj
 	GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader
@@ -213,6 +229,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	$<$<CONFIG:Debug>:${AFTERMATH_LIBS}>
 	EWGraphics
 	marl
+	harfbuzz
+	freetype
 )
 
 if(EWE_EXAMPLES)

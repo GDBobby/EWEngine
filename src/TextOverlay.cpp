@@ -12,6 +12,10 @@
 #include <sstream>
 #include <iomanip>
 
+#include <hb.h>
+#include <hb-ft.h>
+
+
 namespace EWE {
 
 	TextOverlay* textOverlayPtr{ nullptr };
@@ -205,6 +209,8 @@ namespace EWE {
 	}
 
 	void TextOverlay::LoadConsolas24() {
+		FT_Face face;
+		hb_font_t* font = hb_ft_font_create(face, NULL);
 		//unsigned char** font24pixels = new unsigned char* [STB_FONT_consolas_24_latin1_BITMAP_WIDTH];
 		//for (std::size_t i = 0; i < STB_FONT_consolas_24_latin1_BITMAP_WIDTH; ++i) {
 		//	font24pixels[i] = new unsigned char[STB_FONT_consolas_24_latin1_BITMAP_WIDTH];

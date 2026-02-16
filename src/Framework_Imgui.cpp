@@ -12,6 +12,8 @@
 #include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/Pipeline/TaskRasterConfig.h"
 
+#include "EightWinds/Pipeline/Graphics.h"
+
 #include "magic_enum/magic_enum.hpp"
 
 #include <string>
@@ -90,6 +92,9 @@ namespace EWE{
         }
         ImGui::Checkbox("owns attachment lifetime", &obj.ownsAttachmentLifetime);
 
+        for (auto& def_pipe : obj.deferred_pipelines) {
+            auto* graphics_pipe = reinterpret_cast<GraphicsPipeline*>(def_pipe.pipeline);
+        }
         
         ImGui::PopID();
     }
