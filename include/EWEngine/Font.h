@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <string>
 #include <cstring>
+#include <cstdint>
 
 struct Glyph {
     lab::vec2 uv0;
@@ -86,8 +87,8 @@ public:
         }
 
         Glyph g{
-			.uv0{penX / (float)atlasW, penY / (float)atlasH},
-			.uv1{(penX + bmp->width) / (float)atlasW, (penY + bmp->rows) / (float)atlasH},
+			.uv0{penX / static_cast<float>(atlasW), penY / (float)atlasH},
+			.uv1{(penX + bmp->width) / static_cast<float>(atlasW), (penY + bmp->rows) / static_cast<float>(atlasH)},
 			.width = bmp->width,
 			.height = bmp->rows,
 			.bearingX = face->glyph->bitmap_left,

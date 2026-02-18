@@ -11,14 +11,14 @@
             "hidden": true,
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_CXX_STANDARD": "26",
                 "CMAKE_CXX_EXTENSIONS": "OFF"
             }
         },
         {
             "name": "msvc-base",
             "inherits": "base",
-            "generator": "Visual Studio 17 2022",
+            "generator": "Visual Studio 18 2026",
             "architecture": "x64"
         },
         {
@@ -156,6 +156,35 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
             }
+        },
+        {
+            "name": "gcc-trunk-base",
+            "inherits": "base",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_CXX_FLAGS": "-freflection", 
+                "CMAKE_C_COMPILER": "/home/corey/gcc-trunk/bin/gcc",
+                "CMAKE_CXX_COMPILER": "/home/corey/gcc-trunk/bin/g++",
+                "CMAKE_CXX_STANDARD": "26",
+                "CMAKE_EXE_LINKER_FLAGS": "-L/home/corey/gcc-trunk/lib64 -Wl,-rpath,/home/corey/gcc-trunk/lib64 -static-libgcc -static-libstdc++",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "gcc-trunk-debug",
+            "inherits": "gcc-trunk-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "-DEWE_DEBUG -freflection",
+                "OUTPUT_POSTFIX": "-d"
+            }
+        },
+        {
+            "name": "gcc-trunk-release",
+            "inherits": "gcc-trunk-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         }
     ],
     "buildPresets": [
@@ -218,6 +247,14 @@
         {
             "name": "ninja-clang-relwithdeb-asan",
             "configurePreset": "ninja-clang-relwithdeb-asan"
+        },
+        {
+            "name": "gcc-trunk-debug",
+            "configurePreset": "gcc-trunk-debug"
+        },
+        {
+            "name": "gcc-trunk-release",
+            "configurePreset": "gcc-trunk-release"
         }
     ]
 }

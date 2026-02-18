@@ -215,7 +215,7 @@ namespace EWE{
         void Graph::Deserialize(std::string_view name) {
             std::ifstream inFile{ name.data(), std::ios::binary };
             if (!inFile.is_open()) {
-                inFile.open(name);
+                inFile.open(name.data());
             }
             if (!inFile.is_open()) {
                 throw std::runtime_error("failed to load graph file");

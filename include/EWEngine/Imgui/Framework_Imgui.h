@@ -59,6 +59,8 @@ namespace EWE{
 	template<> void ImguiExtension::Imgui(Resource<Buffer>& obj);
 	template<> void ImguiExtension::Imgui(UsageData<Image>& obj);
 	template<> void ImguiExtension::Imgui(UsageData<Buffer>& obj);
+
+
 		
 } //namespace EWE
 #endif

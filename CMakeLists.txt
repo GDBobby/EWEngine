@@ -12,7 +12,6 @@ message(STATUS "~~~ CURRENT SOURCE DIR : ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "project name : ${PROJECT_NAME}")
 message(STATUS "build location : ${CMAKE_CURRENT_BINARY_DIR}")
 
-set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -109,26 +108,26 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyobj)
 
-if(DEFINED EWGRAPHICS_PATH)
-	if(EXISTS "${EWGRAPHICS_PATH}/CMakeLists.txt")
-		message(STATUS "~~~~FOUND~~~~ Using local EWGraphics from ${EWGRAPHICS_PATH}")
-		add_subdirectory(${EWGRAPHICS_PATH} ${EWGRAPHICS_PATH})
-		set(EWGraphics_LIB EWGraphics)
+if(DEFINED EWFRAMEWORK_PATH)
+	if(EXISTS "${EWFRAMEWORK_PATH}/CMakeLists.txt")
+		message(STATUS "~~~~FOUND~~~~ Using local EWFramework from ${EWFRAMEWORK_PATH}")
+		add_subdirectory(${EWFRAMEWORK_PATH} "${EWFRAMEWORK_PATH}/build")
+		set(EWFramework_LIB EWFramework)
 	else()
-		message(ERROR "${EWGRAPHICS_PATH} does not contain CMakeLists.txt")
+		message(ERROR "${EWFRAMEWORK_PATH} does not contain CMakeLists.txt")
 	endif()
 else()
-	message(STATUS "EWGRAPHICS_PATH - ${EWGRAPHICS_PATH}")
-  	message(STATUS "!!!!FAILED!!!! to find ewe_framework_path in .env.cmake, using FetchContent")
+	message(STATUS "EWFRAMEWORK_PATH - ${EWFRAMEWORK_PATH}")
+  	message(FATAL_ERROR "!!!!FAILED!!!! to find ewe_framework_path in .env.cmake, using FetchContent. until the framework is a git submodule, this is an error")
 	FetchContent_Declare(
-		EWGraphics
+		EWFramework
 		GIT_REPOSITORY https://github.com/GDBobby/VulkanFramework
 		SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ewf"
 		GIT_TAG main
 	)
-	FetchContent_MakeAvailable(EWGraphics)
+	FetchContent_MakeAvailable(EWFramework)
 
-	set(EWGraphics_LIB EWGraphics)
+	set(EWFramework_LIB EWFramework)
 endif()
 
 if(NOT TARGET LinearAlgebra)
@@ -191,7 +190,7 @@ else()
 endif()
 
 
-message(STATUS "found EWGraphics [${EWGraphics_SOURCE_DIR}]")
+message(STATUS "found EWFramework [${EWFramework_SOURCE_DIR}]")
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES} ${HEADER_FILES} ${IMGUI_SOURCES})
 
@@ -208,7 +207,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 	${rapidjson_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/external/include
 	${LinearAlgebra_SOURCE_DIR}
-    ${EWGraphics_SOURCE_DIR}/include
+    ${EWFramework_SOURCE_DIR}/include
 	${imgui_SOURCE_DIR}
 	${magicenum_SOURCE_DIR}/include
 )
@@ -217,17 +216,17 @@ message(STATUS "linking directories")
 
 target_link_directories(${PROJECT_NAME} PUBLIC
 	${Vulkan_LIB_DIR}
-	$<$<CONFIG:Debug>:${EWGraphics_SOURCE_DIR}/Debug>
-	$<$<CONFIG:Release>:${EWGraphics_SOURCE_DIR}/Release>
+	$<$<CONFIG:Debug>:${EWFramework_SOURCE_DIR}/Debug>
+	$<$<CONFIG:Release>:${EWFramework_SOURCE_DIR}/Release>
 )
-message(STATUS "linking libs - ${EWGraphics_LIB}")
+message(STATUS "linking libs - ${EWFramework_LIB}")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
 	glfw
 	${Vulkan_LIBRARY}
 	${GLSLANG_LIBS}
 	$<$<CONFIG:Debug>:${AFTERMATH_LIBS}>
-	EWGraphics
+	EWFramework
 	marl
 	harfbuzz
 	freetype
