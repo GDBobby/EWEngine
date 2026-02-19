@@ -50,6 +50,23 @@ void PrintAllExtensions(VkPhysicalDevice physicalDevice) {
 }
 #endif
 
+template<std::meta::info T>
+std::string GetMetaInfo_Temp(){
+    if constexpr(std::meta::is_complete_type(T)){
+        return "complete type";
+        if constexpr(std::meta::is_class_type(T)){
+            return "complete class type";
+        }
+    }
+    else if constexpr(std::meta::is_type(T)){
+        return "incomplete type";
+        if constexpr(std::meta::is_class_type(T)){
+            return "incomplete class";
+        }
+    }
+    return "none";
+}
+
 int main() {
 
 
@@ -377,7 +394,7 @@ int main() {
     EWE::SubmissionTask imgui_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "imgui"};
 
     imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
-    imgui_submission.external_workload = [&](EWE::Backend::SubmitInfo&, uint8_t frameIndex) {
+    imgui_submission.external_workload = [&](EWE::Backend::SubmitInfo& submitInfo, uint8_t frameIndex) {
 #ifdef EWE_IMGUI
         imguiHandler.BeginCommandBuffer();
         imguiTask.prefix.Execute(imguiHandler.cmdBuffers[frameIndex], frameIndex);
@@ -399,11 +416,36 @@ int main() {
             EWE::ImguiExtension::Imgui(mergeRecord);
             ImGui::TreePop();
         }
-
-        if(ImGui::TreeNode("reflect EWE")){
-            EWE::ImguiReflect<^^EWE>();
+        if(ImGui::TreeNode("reflection")){
+            //static constexpr std::size_t temp_size = std::meta::template_arguments_of(^^EWE::HeapBlock<EWE::Image>).size();
+            
+            //ImGui::Text("%zu:%s:%s", temp_size, GetMetaInfo_Temp<^^EWE::HeapBlock>().c_str(), GetMetaInfo_Temp<^^EWE::HeapBlock<EWE::Image>>().c_str());
+            Reflection::ImguiReflect<^^EWE>();
             ImGui::TreePop();
         }
+
+        /*
+        if(ImGui::TreeNode("reflect namespace")){
+            EWE::ImguiReflectProperties<^^EWE>();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("reflect func")){
+            EWE::ImguiReflectProperties<^^EWE::EWE_VK>();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("reflect literal")){
+            EWE::ImguiReflectProperties<^^EWE::max_frames_in_flight>();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("reflect struct")){
+            EWE::ImguiReflectProperties<^^EWE::LogicalDevice>();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("reflect function parameter")){
+            EWE::ImguiReflectProperties<^^submitInfo>();
+            ImGui::TreePop();
+        }
+        */
 
         //ImGui::ShowDemoWindow();
         imguiHandler.EndRender();
