@@ -25,7 +25,7 @@
 
 #include "EightWinds/RenderGraph/RasterTask.h"
 
-#include "EWEngine/Imgui/Framework_Imgui_Refl.h"
+#include "EWEngine/Reflection/ImguiReflection.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -66,6 +66,40 @@ std::string GetMetaInfo_Temp(){
     }
     return "none";
 }
+
+
+  template<std::meta::info T, Reflection::MetaType meta_type>
+  consteval uint8_t GetTemplateType_Debug(){
+    uint8_t ret = 0;
+
+    if constexpr(std::meta::is_template(T)) {
+      //if constexpr((meta_type == Reflection::MetaType::IncompleteType) || (meta_type == Reflection::MetaType::IncompleteClass) || (meta_type == Reflection::MetaType::Invalid)) {
+      //  ret |= 1;
+      //}
+      //else {
+        if constexpr(std::meta::is_function_template(T)){
+          //return TemplateType::Function;
+          ret |= 1 << 1;
+        }
+        else if constexpr(std::meta::is_variable_template(T)){
+          ret |= 1 << 2;
+        }
+        else if constexpr(std::meta::is_class_template(T)){
+          ret |= 1 << 3;
+        }
+        else if constexpr(std::meta::is_alias_template(T)){
+          ret |= 1 << 4;
+        }
+        else{
+          ret |= 1 << 5;
+        }
+      //}
+    }
+    else{
+          ret |= 1 << 6;
+    }
+    return ret;
+  }
 
 int main() {
 
@@ -416,14 +450,31 @@ int main() {
             EWE::ImguiExtension::Imgui(mergeRecord);
             ImGui::TreePop();
         }
-        if(ImGui::TreeNode("reflection")){
-            //static constexpr std::size_t temp_size = std::meta::template_arguments_of(^^EWE::HeapBlock<EWE::Image>).size();
-            
-            //ImGui::Text("%zu:%s:%s", temp_size, GetMetaInfo_Temp<^^EWE::HeapBlock>().c_str(), GetMetaInfo_Temp<^^EWE::HeapBlock<EWE::Image>>().c_str());
-            Reflection::ImguiReflect<^^EWE>();
+
+        if(ImGui::TreeNode("reflect TEST")){
+            static constexpr auto hb_i_info = ^^EWE::HeapBlock<EWE::Image>;
+            /*
+            static constexpr auto temp_val = std::meta::is_template(hb_i_info);
+            static constexpr auto temp_val2 = std::meta::is_function_template(hb_i_info);
+            static constexpr auto temp_val3 = std::meta::is_variable_template(hb_i_info);
+            static constexpr auto temp_val4 = std::meta::is_class_template(hb_i_info);
+            static constexpr auto temp_val5 = std::meta::is_alias_template(hb_i_info);
+            static constexpr std::size_t temp_args = std::meta::template_arguments_of(hb_i_info).size();
+            ImGui::Text("Debugging template : %zu - %d:%d:%d:%d:%d", temp_args, temp_val, temp_val2, temp_val3, temp_val4, temp_val5); 
+            //the current result ^ is           1 -  0, 0, 0, 0, 0
+
+            ImGui::Separator();
+            */
+            union TestUnion{
+                int x;
+                float y;
+            };
+            Reflection::ImguiReflect<^^TestUnion>();
+
+            Reflection::ImguiReflect<hb_i_info>();
+            Reflection::ImguiReflect<^^EWE::HeapBlock>();
             ImGui::TreePop();
         }
-
         /*
         if(ImGui::TreeNode("reflect namespace")){
             EWE::ImguiReflectProperties<^^EWE>();

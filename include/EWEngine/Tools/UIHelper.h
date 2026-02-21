@@ -6,9 +6,6 @@
 namespace EWE{
 	namespace UI{
 		constexpr lab::vec2 Position_ScreenToVulkan(int x, int y, float screen_width, float screen_height){
-			
-			//if input == 0,0, output == -1,1
-			//if input == screen_width,screen_height, output = 1, -1
 			return lab::vec2{
 				((static_cast<float>(x) / screen_width) - 0.5f) * 2.f,
 				((static_cast<float>(y) / screen_height) - 0.5f) * -2.f

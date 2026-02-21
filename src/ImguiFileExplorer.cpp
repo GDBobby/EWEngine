@@ -63,9 +63,9 @@ namespace EWE{
 					
 					static constexpr auto size_names = std::to_array<std::string_view>({
 						std::string_view{"bytes"},
-						std::string_view{"kbs"},
-						std::string_view{"mbs"},
-						std::string_view{"gbs"}
+						std::string_view{"KBs"},
+						std::string_view{"MBs"},
+						std::string_view{"GBs"}
 					});
 					std::size_t size_index = 0;
 					while(file_size > (1024 * 10)){

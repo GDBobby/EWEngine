@@ -30,7 +30,7 @@ namespace EWE{
         ExtensionEntry<swapchainExt, true, 0>,
         ExtensionEntry<dynState3Ext, true, 0>,
         ExtensionEntry<meshShaderExt, false, 100000>,
-        ExtensionEntry<deviceFaultExt, false, 0>,
+        ExtensionEntry<deviceFaultExt, false, 10000>,
         ExtensionEntry<scalarBlockExt, true, 0>
 #if EWE_DEBUG_BOOL
         , ExtensionEntry<dabReportExt, false, 0>
@@ -164,38 +164,32 @@ namespace EWE{
 
         auto evaluatedDevices = specDev.ScorePhysicalDevices(instance);
 
-        if (!evaluatedDevices[0].passedRequirements) {
-    #if EWE_DEBUG_BOOL
-            printf("highest score device failed requirements, exiting\n");
-            printf("device count - %zu\n", evaluatedDevices.size());
-            for(uint8_t i = 0; i < evaluatedDevices.size(); i++) {
-                auto& evDev = evaluatedDevices[i];
-                printf("results[%d] - %s --- %d - %zu\n", i, evDev.name.c_str(), evDev.passedRequirements, evDev.score);
-                const uint32_t variant_version = evDev.api_version >> 29;
-                const uint32_t major_version = (evDev.api_version - (variant_version << 29)) >> 22;
-                const uint32_t minor_version = (evDev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
-                const uint32_t patch_version = (evDev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
+#if EWE_DEBUG_BOOL
+        printf("evaluated %zu devices\n", evaluatedDevices.size());
+        printf("if the first device failed, none are available\n");
+        for(auto& dev : evaluatedDevices){
+            printf("device name : %s\n", dev.name.c_str());
+            printf("\trequirements : score : %d:%zu\n", dev.passedRequirements, dev.score);
+            auto& props12 = dev.properties.properties.Get<VkPhysicalDeviceVulkan12Properties>();
+            printf("\tdriver\n");
+            printf("\t\tid:%zu\n", props12.driverID);
+            printf("\t\tname:%s\n", props12.driverName);
+            printf("\t\tinfo:%s\n", props12.driverInfo);
 
-                printf("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
+            const uint32_t variant_version = dev.api_version >> 29;
+            const uint32_t major_version = (dev.api_version - (variant_version << 29)) >> 22;
+            const uint32_t minor_version = (dev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
+            const uint32_t patch_version = (dev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
 
-                for(auto& fp : evDev.failureReport){
+            printf("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
+            if (dev.failureReport.size() > 0){
+                printf("\tfailure report-\n");
+                for(auto& fp : dev.failureReport){
                     printf("\t\tfp - %s\n", fp.c_str());
                 }
             }
-    #endif
-            throw std::runtime_error("failed to find an appropriate device for the engine");
         }
-    #if EWE_DEBUG_BOOL
-        else{
-            auto& evDev = evaluatedDevices[0];
-            const uint32_t variant_version = evDev.api_version >> 29;
-            const uint32_t major_version = (evDev.api_version - (variant_version << 29)) >> 22;
-            const uint32_t minor_version = (evDev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
-            const uint32_t patch_version = (evDev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
-
-            printf("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
-        }
-    #endif
+#endif
 
         EWE::PhysicalDevice physicalDevice{ instance, evaluatedDevices[0].device, window.surface };
         VkBaseInStructure* pNextChain = reinterpret_cast<VkBaseInStructure*>(&specDev.features.base);
@@ -209,8 +203,9 @@ namespace EWE{
                 VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
                 VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV,
         };
-
 #endif
+
+
 
         return specDev.ConstructDevice(
             evaluatedDevices[0],
