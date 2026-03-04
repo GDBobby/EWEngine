@@ -2,7 +2,7 @@
 
 #include <meta>
 
-namespace Reflection{
+namespace Reflect{
 
   /*
     Incomplete types
@@ -26,18 +26,6 @@ namespace Reflection{
 
   */
 
-
-  template <typename E>
-  requires std::is_enum_v<E>
-  constexpr std::string_view enum_to_string(E value) {
-    template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^E))) {
-      if (value == [:e:]) {
-        return std::meta::identifier_of(e);
-      }
-    }
-
-    return "<unnamed>";
-  }
 
   static constexpr std::string_view null_str_v{"has no identifier"};
 
@@ -163,39 +151,10 @@ namespace Reflection{
     Enum,
     Union,
     Function,
-    Reflection,
+    Reflection, //idk, maybe remove this. i dont think std::meta::info woudl be operated on currently
     Object,
   };
 
-  template<std::meta::info T>
-  consteval GetTypeType(){
-    static constexpr auto meta_type = GetMetaType<T>();
-    if constexpr(meta_type == MetaType::Type || meta_type == MetaType::Class || meta_type == MetaType::ClassMember){
-      if constexpr(std::meta::is_void_type(T)){
-        return TypeType::Void;
-      }
-      else if constexpr(std::meta::is_integral_type(T)){
-        return TypeType::Integral;
-      }
-      else if constexpr(std::meta::is_floating_point_type(T)){
-        return TypeType::FloatingPoint;
-      }
-      else if constexpr(std::meta::is_enum_type(T)){
-        return TypeType::Enum;
-      }
-      else if constexpr(std::meta::is_union_type(T)){
-        return TypeType::Union;
-      }
-      else if constexpr(std::meta::is_function(T)){
-        return TypeType::Function;
-      }
-      else if constexpr(std::meta::is_object(T)){
-        return TypeType::Object;
-      }
-    }
-
-    return TypeType::Invalid;
-  }
   enum class TypeComposites{
     NullPointer,
     Array,
@@ -306,6 +265,40 @@ namespace Reflection{
     }
     else{
       return MetaType::Invalid;
+    }
+  }
+
+  template<std::meta::info T>
+  consteval TypeType GetTypeType(){
+    static constexpr auto meta_type = GetMetaType<T>();
+    if constexpr(meta_type == MetaType::Type || meta_type == MetaType::Class || meta_type == MetaType::ClassMember){
+      if constexpr(std::meta::is_void_type(T)){
+        return TypeType::Void;
+      }
+      else if constexpr(std::meta::is_integral_type(T)){
+        return TypeType::Integral;
+      }
+      else if constexpr(std::meta::is_floating_point_type(T)){
+        return TypeType::FloatingPoint;
+      }
+      else if constexpr(std::meta::is_enum_type(T)){
+        return TypeType::Enum;
+      }
+      else if constexpr(std::meta::is_union_type(T)){
+        return TypeType::Union;
+      }
+      else if constexpr(std::meta::is_function(T)){
+        return TypeType::Function;
+      }
+      else if constexpr(std::meta::is_object(T)){
+        return TypeType::Object;
+      }
+      else{
+        return TypeType::Invalid;
+      }
+    }
+    else{
+      return TypeType::Invalid;
     }
   }
 
@@ -442,7 +435,7 @@ namespace Reflection{
         //        std::false_type //if false
         //    >::value;
 
-        if constexpr(meta_type == Reflection::MetaType::Type){
+        if constexpr(meta_type == MetaType::Type){
             if constexpr(std::is_enum_v<typename[:T:]>){
                 return true;
             }

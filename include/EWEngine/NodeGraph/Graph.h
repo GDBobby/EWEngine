@@ -1,24 +1,17 @@
 #pragma once
 
-#include "EightWinds/Data/PerFlight.h"
 #include "EightWinds/Buffer.h"
 
 #include "EWEngine/NodeGraph/Node.h"
 #include "EWEngine/NodeGraph/ContiguousContainer.h"
 
-#include "EightWinds/RenderGraph/Command/Record.h"
 #include "EightWinds/RenderGraph/RasterTask.h"
-
-#include "EightWinds/Pipeline/PipelineBase.h"
 
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 
-#include "EWEngine/Preprocessor.h"
 #include "EightWinds/Data/StreamHelper.h"
 
-#include "EWEngine/Tools/UIHelper.h"
-
-#include <vector>
+#include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
 
 namespace EWE{
     namespace Node{
@@ -56,6 +49,34 @@ namespace EWE{
             Pin& AddPin(std::string_view name, Node& parent_node);
             Pin& AddPin(NodeID node_index);
             Pin& AddPin(std::string_view name, NodeID node_index);
+
+            void ImNodes_AddNode(); 
+            void ImNodes_NodeRender();//includes node title
+            void ImNodes_PinRender();
+
+            void SetupWithImNodes(ImNodes::EWE::Editor& editor){
+                editor.node_renderer = [&](ImNodes::EWE::Node& node) -> void {
+                    Node& internal_node = *reinterpret_cast<Node*>(node.payload);
+                    ImNodes::BeginNodeTitleBar();
+                    ImGui::TextUnformatted(internal_node.name.c_str());
+                    ImNodes::EndNodeTitleBar();
+                };
+
+                editor.pin_renderer = [&](ImNodes::EWE::Node& node, PinOffset pin) -> void{
+/*
+                    Node& internal_node = *reinterpret_cast<Node*>(node.payload);
+                    Pin& internal_pin = *reinterpret_cast<Pin*>(pin.payload);
+                    
+                    if (ImNodes::BeginPinAttribute(pin.globalPinID, ImVec2(pin.position.x, pin.position.y))) {
+                        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), pin.name.c_str());
+                    }
+                    else {
+                        ImGui::TextUnformatted(pin.name.c_str());
+                    }
+                    ImNodes::EndPinAttribute();
+                    */
+                };
+            }
 
 
             VertexDrawData drawData;

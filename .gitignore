@@ -47,3 +47,5 @@ EWGraphics.dir/
 cmake_install.cmake
 
 imgui.ini
+
+compile_commands.json

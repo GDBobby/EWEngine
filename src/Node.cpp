@@ -66,31 +66,35 @@ namespace EWE{
             if (ImGui::InputText(name.c_str(), name_buffer, name_length)) {
                 this->name = name_buffer;
             }
-            name = std::string("title color") + extension;;
-            ImGui::ColorEdit3(name.c_str(), &buffer->titleColor.x);
-            name = "title scale" + extension;
-            ImGui::SliderFloat(name.c_str(), &buffer->titleScale, 0.f, 1.f);
-            name = "foreground color" + extension;
-            ImGui::ColorEdit3(name.c_str(), &buffer->foregroundColor.x);
-            name = "foreground scale" + extension;
-            ImGui::SliderFloat(name.c_str(), &buffer->foregroundScale, 0.f, 1.f);
-            name = "background color" + extension;
-            ImGui::ColorEdit3(name.c_str(), &buffer->backgroundColor.x);
-            name = "Position" + extension;
-            lab::vec4 oldPos = buffer->position;
-            if (ImGui::SliderFloat4(name.c_str(), &buffer->position.x, -1.f, 1.f)) {
-                auto pos_diff = oldPos - buffer->position;
-                for (auto& pin_index : pins) {
-                    upper_pins[pin_index].buffer->position -= pos_diff;
+            if(ImGui::TreeNode("properties")){
+                name = std::string("title color") + extension;;
+                ImGui::ColorEdit3(name.c_str(), &buffer->titleColor.x);
+                name = "title scale" + extension;
+                ImGui::SliderFloat(name.c_str(), &buffer->titleScale, 0.f, 1.f);
+                name = "foreground color" + extension;
+                ImGui::ColorEdit3(name.c_str(), &buffer->foregroundColor.x);
+                name = "foreground scale" + extension;
+                ImGui::SliderFloat(name.c_str(), &buffer->foregroundScale, 0.f, 1.f);
+                name = "background color" + extension;
+                ImGui::ColorEdit3(name.c_str(), &buffer->backgroundColor.x);
+                name = "Position" + extension;
+                lab::vec4 oldPos = buffer->position;
+                if (ImGui::SliderFloat4(name.c_str(), &buffer->position.x, -1.f, 1.f)) {
+                    auto pos_diff = oldPos - buffer->position;
+                    for (auto& pin_index : pins) {
+                        upper_pins[pin_index].buffer->position -= pos_diff;
+                    }
                 }
-            }
-            name = "scale" + extension;
-            lab::vec2 oldScale = buffer->scale;
-            if (ImGui::SliderFloat2(name.c_str(), &buffer->scale.x, 0.f, 1.f)) {
-                auto scale_diff = oldScale - buffer->scale;
-                for (auto& pin_index : pins) {
-                    upper_pins[pin_index].buffer->scale -= scale_diff;
+                name = "scale" + extension;
+                lab::vec2 oldScale = buffer->scale;
+                if (ImGui::SliderFloat2(name.c_str(), &buffer->scale.x, 0.f, 1.f)) {
+                    auto scale_diff = oldScale - buffer->scale;
+                    for (auto& pin_index : pins) {
+                        upper_pins[pin_index].buffer->scale -= scale_diff;
+                    }
                 }
+
+                ImGui::TreePop();
             }
         }
 #endif

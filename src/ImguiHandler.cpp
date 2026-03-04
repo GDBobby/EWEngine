@@ -1,13 +1,17 @@
 #include "EWEngine/Tools/ImguiHandler.h"
 
-#include "EightWinds/ImageView.h"
 #include "EightWinds/CommandBuffer.h"
-#include "EightWinds/CommandPool.h"
-#include "EightWinds/Backend/Fence.h"
 
 #include "EWEngine/Global.h"
 
 #include "EightWinds/Backend/STC_Helper.h"
+
+
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_vulkan.h"
+
+#include "EightWinds/Window.h"
 
 namespace EWE{
 
@@ -45,8 +49,8 @@ namespace EWE{
 		uint32_t imageCount, VkSampleCountFlagBits sampleCount
 	)
 		: queue{ queue },
-		cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
-		cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
+		//cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
+		//cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
 		renderInfo{
 			"imgui render info",
 			*Global::logicalDevice, queue,
@@ -70,19 +74,17 @@ namespace EWE{
 					.clearValue = {0.f, 0.f, 0.f, 0.f}
 				}
 			}
-		},
-		semaphores{ *Global::logicalDevice}
+		}//,
+		//semaphores{ *Global::logicalDevice}
     {
 #if EWE_DEBUG_NAMING
 		for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-			std::string debugName = std::string("imgui [") + std::to_string(i) + ']';
-			semaphores[i].SetName(debugName);
-			cmdBuffers[i].SetDebugName(debugName);
+			//std::string debugName = std::string("imgui [") + std::to_string(i) + ']';
+			//semaphores[i].SetName(debugName);
+			//cmdBuffers[i].SetDebugName(debugName);
 		}
 #endif
-
 		InitializeImages();
-
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -136,6 +138,7 @@ namespace EWE{
 
 	}
 
+	/*
 	void ImguiHandler::BeginCommandBuffer() {
 		VkCommandBufferBeginInfo beginInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -148,8 +151,9 @@ namespace EWE{
 		currentCmdBuf.Reset();
 		currentCmdBuf.Begin(beginInfo);
 	}
-	void ImguiHandler::BeginRender() {
-		auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
+		*/
+	void ImguiHandler::BeginRender(CommandBuffer& cmdBuf) {
+		//auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
 
 #if EWE_DEBUG_NAMING
 		VkDebugUtilsLabelEXT labelUtil{
@@ -158,30 +162,31 @@ namespace EWE{
 			.pLabelName = "imgui",
 			.color = {0.f, 0.f, 0.f, 1.f}
 		};
-		Global::logicalDevice->BeginLabel(cmdBuffers[Global::frameIndex], &labelUtil);
+		Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
 #endif
 
 		isRendering = true;
-		vkCmdBeginRendering(currentCmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
+		vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
 	}
 
-	void ImguiHandler::EndRender() {
-		auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
+	void ImguiHandler::EndRender(CommandBuffer& cmdBuf) {
+		//auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
 		ImGui::Render();
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), currentCmdBuf);
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
 		isRendering = false;
-		vkCmdEndRendering(currentCmdBuf);
+		vkCmdEndRendering(cmdBuf);
 #if EWE_DEBUG_NAMING
-		Global::logicalDevice->EndLabel(currentCmdBuf);
+		Global::logicalDevice->EndLabel(cmdBuf);
 #endif
-		currentCmdBuf.End();
-		currentCmdBuf.state = CommandBuffer::State::Pending;
+		//cmdBuf.End();
+		//cmdBuf.state = CommandBuffer::State::Pending;
 	}
 
+	/*
 	void ImguiHandler::SetSubmissionData(PerFlight<Backend::SubmitInfo>& subInfo) {
 		for (uint8_t i = 0; i < max_frames_in_flight; i++) {
 			subInfo[i].AddCommandBuffer(cmdBuffers[i]);
@@ -197,4 +202,5 @@ namespace EWE{
 			subInfo[i].signalSemaphores.push_back(semSubmitInfo);
 		}
 	}
+	*/
 }

@@ -40,17 +40,29 @@ namespace EWE {
         renderCommandPools{logicalDevice, renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
         stc_mutexes{},
         stc_command_pools{
-            CommandPool{logicalDevice, renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
-            CommandPool{logicalDevice, computeQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
-            CommandPool{logicalDevice, transferQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
+            RingBuffer<CommandPool, 16>{logicalDevice, renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
+            RingBuffer<CommandPool, 16>{logicalDevice, computeQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
+            RingBuffer<CommandPool, 16>{logicalDevice, transferQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
         },
         semAcqMut{},
         semaphores{logicalDevice}
 
         //cmdBufs{}
     {
+#if EWE_DEBUG_NAMING
+		renderQueue.SetName("render queue");
+		if(computeQueue == transferQueue){
+			computeQueue.SetName("C&T queue, compute handle");
+			transferQueue.SetName("C&T queue, transfer handle");
+		}
+		else{
+			computeQueue.SetName("compute queue");
+			transferQueue.SetName("transfer queue");
+		}
+#endif
     }
     STC_Manager::~STC_Manager() {
+		
     }
     
     //fiber focused

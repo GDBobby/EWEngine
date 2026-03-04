@@ -14,7 +14,7 @@
 #include "imgui.h"
 #endif
 
-#include "magic_enum/magic_enum.hpp"
+#include "EWEngine/Reflect/Enum.h"
 
 namespace EWE{
     constexpr ConstEvalStr swapchainExt{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -251,12 +251,12 @@ namespace EWE{
 
     bool DrawPresentModes(Swapchain& swapchain) {
 
-        std::string_view currentName = magic_enum::enum_name(swapchain.swapCreateInfo.presentMode);
+        std::string_view currentName = Reflect::enum_to_string(swapchain.swapCreateInfo.presentMode);
 
         static std::vector<const char*> available_presents{};
         if (available_presents.size() == 0) {
             for (auto& present : swapchain.available_presentModes) {
-                available_presents.push_back(magic_enum::enum_name(present).data());
+                available_presents.push_back(Reflect::enum_to_string(present).data());
             }
         }
 
@@ -286,8 +286,8 @@ namespace EWE{
         if (available_surfaces.size() == 0) {
             for (auto& surface_format : swapchain.available_surface_formats) {
                 available_surfaces.push_back(
-                    std::string(magic_enum::enum_name(surface_format.format).data()) + " : " +
-                    magic_enum::enum_name(surface_format.colorSpace).data()
+                    std::string(Reflect::enum_to_string(surface_format.format).data()) + " : " +
+                    Reflect::enum_to_string(surface_format.colorSpace).data()
                 );
             }
             for (auto const& cstr : available_surfaces) {

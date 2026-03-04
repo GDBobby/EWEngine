@@ -148,14 +148,6 @@ if(NOT TARGET LinearAlgebra)
 endif()
 
 FetchContent_Declare(
-	magicenum
-	GIT_REPOSITORY https://github.com/Neargye/magic_enum
-	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/magicenum"
-	GIT_TAG 2e6e8bf
-)
-FetchContent_MakeAvailable(magicenum)
-
-FetchContent_Declare(
     imguizmo
     GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imguizmo"
@@ -200,7 +192,6 @@ endif()
 
 
 message(STATUS "including directories")
-message(STATUS "magicenum source dir - ${magicenum_SOURCE_DIR}")
 target_include_directories(${PROJECT_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${Vulkan_INCLUDE_DIR}
@@ -209,7 +200,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 	${LinearAlgebra_SOURCE_DIR}
     ${EWFramework_SOURCE_DIR}/include
 	${imgui_SOURCE_DIR}
-	${magicenum_SOURCE_DIR}/include
 )
 
 message(STATUS "linking directories")
@@ -231,6 +221,12 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	harfbuzz
 	freetype
 )
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
+        target_link_libraries(${PROJECT_NAME} PRIVATE stdc++exp) #gcc requires this?
+        #target_link_libraries(${PROJECT_NAME}PRIVATE backtrace)
+    endif()
+endif()
 
 if(EWE_EXAMPLES)
 	message(STATUS "building examples\n\n")

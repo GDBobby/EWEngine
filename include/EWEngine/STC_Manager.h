@@ -113,8 +113,13 @@ namespace EWE{
 
     public:
         [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& renderQueue);
-
         ~STC_Manager();
+
+        STC_Manager(STC_Manager const& copySrc) = delete;
+        STC_Manager(STC_Manager&& moveSrc) = delete;
+        STC_Manager& operator=(STC_Manager const& copySrc) = delete;
+        STC_Manager& operator=(STC_Manager&& moveSrc) = delete;
+
         TimelineSemaphore* GetSemaphore();
         void ReturnSemaphore(TimelineSemaphore* semaphore);
 

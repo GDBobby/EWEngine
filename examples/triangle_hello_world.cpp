@@ -5,16 +5,12 @@
 #include "EWEngine/Global.h"
 
 #include "EightWinds/Pipeline/Layout.h"
-#include "EightWinds/Pipeline/PipelineBase.h"
-#include "EightWinds/Pipeline/Graphics.h"
 #include "EightWinds/Shader.h"
 #include "EightWinds/DescriptorImageInfo.h"
 
 #include "EightWinds/RenderGraph/Command/Record.h"
 #include "EightWinds/RenderGraph/Command/Execute.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
-
-#include "EightWinds/GlobalPushConstant.h"
 
 #include "EightWinds/Image.h"
 #include "EightWinds/ImageView.h"
@@ -25,7 +21,11 @@
 
 #include "EightWinds/RenderGraph/RasterTask.h"
 
-#include "EWEngine/Reflection/ImguiReflection.h"
+#include "EWEngine/Reflect/ImguiReflection.h"
+
+#include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
+
+#include "EWEngine/NodeGraph/RenderGraphNodeGraph.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -66,40 +66,6 @@ std::string GetMetaInfo_Temp(){
     }
     return "none";
 }
-
-
-  template<std::meta::info T, Reflection::MetaType meta_type>
-  consteval uint8_t GetTemplateType_Debug(){
-    uint8_t ret = 0;
-
-    if constexpr(std::meta::is_template(T)) {
-      //if constexpr((meta_type == Reflection::MetaType::IncompleteType) || (meta_type == Reflection::MetaType::IncompleteClass) || (meta_type == Reflection::MetaType::Invalid)) {
-      //  ret |= 1;
-      //}
-      //else {
-        if constexpr(std::meta::is_function_template(T)){
-          //return TemplateType::Function;
-          ret |= 1 << 1;
-        }
-        else if constexpr(std::meta::is_variable_template(T)){
-          ret |= 1 << 2;
-        }
-        else if constexpr(std::meta::is_class_template(T)){
-          ret |= 1 << 3;
-        }
-        else if constexpr(std::meta::is_alias_template(T)){
-          ret |= 1 << 4;
-        }
-        else{
-          ret |= 1 << 5;
-        }
-      //}
-    }
-    else{
-          ret |= 1 << 6;
-    }
-    return ret;
-  }
 
 int main() {
 
@@ -423,20 +389,86 @@ int main() {
     renderTask.GenerateWorkload();
     mergeTask.GenerateWorkload();
 
-    EWE::SubmissionTask world_render_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "world render"};
-    world_render_submission.full_workload = renderTask.workload;
-    EWE::SubmissionTask imgui_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "imgui"};
+    EWE::SubmissionTask& world_render_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "world render");
+    world_render_submission.packaged_tasks.push_back(renderTask.workload);
+    EWE::SubmissionTask& imgui_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "imgui");
 
-    imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
-    imgui_submission.external_workload = [&](EWE::Backend::SubmitInfo& submitInfo, uint8_t frameIndex) {
+
+    EWE::Node::RenderGraphNodeGraph rgng{renderGraph};
+
+    //imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
+    imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
 #ifdef EWE_IMGUI
-        imguiHandler.BeginCommandBuffer();
-        imguiTask.prefix.Execute(imguiHandler.cmdBuffers[frameIndex], frameIndex);
-        imguiHandler.BeginRender();
+        //imguiHandler.BeginCommandBuffer();
+        imguiTask.prefix.Execute(cmdBuf, frameIndex);
+        imguiHandler.BeginRender(cmdBuf);
         nodeGraph.Imgui();
         engine.Imgui();
+
+        rgng.editor.RenderNodes();
         //EWE::ImguiExtension::Imgui(triangle_raster_task);
         //EWE::ImguiExtension::Imgui(mergeRaster);
+        if(ImGui::TreeNode("resources")){
+            if(ImGui::TreeNode("buffers")){
+                logicalDevice.buffers.mut.lock();
+                for(auto res : logicalDevice.buffers){
+                    const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
+                    std::string res_name = res->name + "##" + string_addr;
+                    if(res->name == ""){
+                        res_name = string_addr;
+                    }
+                    if(ImGui::TreeNode(res_name.data())){
+                        for(std::size_t i = 0; i < res->creation_trace.size(); i++){
+                            if(res->creation_trace[i].source_file().size() == 0){
+                                break;
+                            }
+                            ImGui::Text("%zu:%s", i, res->creation_trace[i].source_file().c_str());
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+                logicalDevice.buffers.mut.unlock();
+                ImGui::TreePop();
+            }
+            if(ImGui::TreeNode("images")){
+                logicalDevice.images.mut.lock();
+                for(auto res : logicalDevice.images){
+                    const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
+                    std::string res_name = res->name + "##" + string_addr;
+                    if(res->name == ""){
+                        res_name = string_addr;
+                    }
+                    if(ImGui::TreeNode(res_name.data())){
+                        for(std::size_t i = 0; i < res->creation_trace.size(); i++){
+                            if(res->creation_trace[i].source_file().size() == 0){
+                                break;
+                            }
+                            ImGui::Text("%zu:%s", i, res->creation_trace[i].source_file().c_str());
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+                logicalDevice.images.mut.unlock();
+                ImGui::TreePop();
+            }
+            for(auto& q : logicalDevice.queues){
+                const std::string pool_name = std::string("queue[") + q.debugName + "] pools";
+                if(ImGui::TreeNode(pool_name.c_str())) {
+                    q.commandPools.mut.lock();
+                    for(auto cmdPool : q.commandPools){
+                        const std::string cmdpoolname = std::to_string(reinterpret_cast<std::size_t>(cmdPool));
+                        if(ImGui::TreeNode(cmdpoolname.c_str())){
+                            ImGui::TreePop();
+                        }
+                    }
+                    q.commandPools.mut.unlock();
+                    ImGui::TreePop();
+                }
+            }
+
+            ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("render graph")) {
             EWE::ImguiExtension::Imgui(renderGraph);
             ImGui::TreePop();
@@ -453,84 +485,25 @@ int main() {
 
         if(ImGui::TreeNode("reflect TEST")){
             static constexpr auto hb_i_info = ^^EWE::HeapBlock<EWE::Image>;
-            /*
-            static constexpr auto temp_val = std::meta::is_template(hb_i_info);
-            static constexpr auto temp_val2 = std::meta::is_function_template(hb_i_info);
-            static constexpr auto temp_val3 = std::meta::is_variable_template(hb_i_info);
-            static constexpr auto temp_val4 = std::meta::is_class_template(hb_i_info);
-            static constexpr auto temp_val5 = std::meta::is_alias_template(hb_i_info);
-            static constexpr std::size_t temp_args = std::meta::template_arguments_of(hb_i_info).size();
-            ImGui::Text("Debugging template : %zu - %d:%d:%d:%d:%d", temp_args, temp_val, temp_val2, temp_val3, temp_val4, temp_val5); 
-            //the current result ^ is           1 -  0, 0, 0, 0, 0
-
-            ImGui::Separator();
-            */
             union TestUnion{
                 int x;
                 float y;
             };
-            Reflection::ImguiReflect<^^TestUnion>();
+            Reflect::ImguiReflect<^^TestUnion>();
 
-            Reflection::ImguiReflect<hb_i_info>();
-            Reflection::ImguiReflect<^^EWE::HeapBlock>();
+            Reflect::ImguiReflect<hb_i_info>();
+            Reflect::ImguiReflect<^^EWE::HeapBlock>();
             ImGui::TreePop();
         }
-        /*
-        if(ImGui::TreeNode("reflect namespace")){
-            EWE::ImguiReflectProperties<^^EWE>();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("reflect func")){
-            EWE::ImguiReflectProperties<^^EWE::EWE_VK>();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("reflect literal")){
-            EWE::ImguiReflectProperties<^^EWE::max_frames_in_flight>();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("reflect struct")){
-            EWE::ImguiReflectProperties<^^EWE::LogicalDevice>();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("reflect function parameter")){
-            EWE::ImguiReflectProperties<^^submitInfo>();
-            ImGui::TreePop();
-        }
-        */
 
         //ImGui::ShowDemoWindow();
-        imguiHandler.EndRender();
+        imguiHandler.EndRender(cmdBuf);
         return true;
 #endif
         return false;
-    };
-    EWE::SubmissionTask attachment_blit_submission{ *EWE::Global::logicalDevice, *renderQueue, true, "attachment blit"};
-
-    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-        world_render_submission.submitInfo[i].signalSemaphores.push_back(
-            VkSemaphoreSubmitInfo{
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-                .pNext = nullptr,
-                .semaphore = world_render_submission.signal_semaphores[i],
-                .value = 0,
-                .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .deviceIndex = 0
-            }
-        );
-        attachment_blit_submission.submitInfo[i].signalSemaphores.push_back(
-            VkSemaphoreSubmitInfo{
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-                .pNext = nullptr,
-                .semaphore = engine.swapchain.GetCurrentPresentSemaphore(),
-                .value = 0,
-                .stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                .deviceIndex = 0
-            }
-        );
-
-        world_render_submission.submitInfo[i].AddCommandBuffer(world_render_submission.cmdBuffers[i]);
-        attachment_blit_submission.submitInfo[i].AddCommandBuffer(attachment_blit_submission.cmdBuffers[i]);
     }
+    );
+    EWE::SubmissionTask& attachment_blit_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "attachment blit");
 
     VkSamplerCreateInfo samplerCreateInfo{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -566,7 +539,7 @@ int main() {
 
     std::size_t currentMergeTaskIndex = 0;
 
-    attachment_blit_submission.full_workload = [&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
+    attachment_blit_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
         //i dont really know how to bridge tasks in different submisisons yet
         //fully explicit right now
 
@@ -574,8 +547,6 @@ int main() {
         merge_drawData.textures[1] = &imgui_attachment_descriptor[frameIndex];
 
         merge_drawData.UpdateBuffer();
-
-        engine.swapchain.GetCurrentImageView().image.layout;
 
         VkRenderingAttachmentInfo presentAttachmentInfo{
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -595,32 +566,15 @@ int main() {
         mergeTask.workload(cmdBuf, frameIndex);
         renderGraph.presentBridge.Execute(cmdBuf);
         return true;
-    };
+    });
+
     
 
     renderGraph.execution_order = {
         std::vector<EWE::SubmissionTask*>{&imgui_submission, &world_render_submission},
         std::vector<EWE::SubmissionTask*>{&attachment_blit_submission}
     };
-
-    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-        renderGraph.presentSubmission.incomingSemaphores[i].push_back(engine.swapchain.GetCurrentPresentSemaphore());
-        attachment_blit_submission.submitInfo[i].WaitOnPrevious(imgui_submission.submitInfo[i]);
-        attachment_blit_submission.submitInfo[i].WaitOnPrevious(world_render_submission.submitInfo[i]);
-
-        attachment_blit_submission.submitInfo[i].waitSemaphores.push_back(
-            VkSemaphoreSubmitInfo{
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-                .pNext = nullptr,
-                //just an initial value, this is overwritten every frame
-                .semaphore = engine.swapchain.acquire_semaphores[0].vkSemaphore,
-                .value = 0,
-                .stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,//theres prob a better option
-                .deviceIndex = 0
-            }
-
-        );
-    }
+    attachment_blit_submission.uses_present_image = true;
 
     for (auto iter = renderGraph.tasks.begin(); iter != renderGraph.tasks.end(); iter.operator++()) { //why am i manually calling the operator
         //testing hive iterator
@@ -628,7 +582,7 @@ int main() {
         printf("Task name - %s\n", task.name.c_str());
     }
 
-
+    renderGraph.InitializeSemaphores();
     try { //beginning of render loop
         auto timeBegin = std::chrono::high_resolution_clock::now();
         VkDescriptorImageInfo descImg;
@@ -647,16 +601,6 @@ int main() {
                     auto& swapImage = engine.swapchain.GetCurrentImage();
                     swapImage.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-                    auto& waitSemInfos = attachment_blit_submission.submitInfo[EWE::Global::frameIndex].waitSemaphores;
-                    waitSemInfos.back().semaphore = engine.swapchain.GetAcquireSemaphore(EWE::Global::frameIndex);
-                    auto& signalSemInfos = attachment_blit_submission.submitInfo[EWE::Global::frameIndex].signalSemaphores;
-                    signalSemInfos.back().semaphore = engine.swapchain.GetCurrentPresentSemaphore();
-
-                    renderGraph.presentSubmission.incomingSemaphores[EWE::Global::frameIndex].back() = engine.swapchain.GetCurrentPresentSemaphore();
-
-                    //i think i also want the previous frame's submit signal to be waited on here, but idk
-                    //auto& secondBackSemInfo = waitSemInfos[waitSemInfos.size() - 2].semaphore = engine.swapchain.GetCurrentSemaphores().present
-
                     mouseData.UpdatePosition(EWE::Global::window->window);
                     nodeGraph.UpdateRender(mouseData, EWE::Global::frameIndex);
                     renderGraph.ChangeResource(mergeTask, present_img_att_index, &swapImage, EWE::Global::frameIndex);
@@ -664,7 +608,7 @@ int main() {
                     renderGraph.RecreateBarriers(EWE::Global::frameIndex);
 
                     renderGraph.Execute(EWE::Global::frameIndex);
-                    renderGraph.presentSubmission.Present(EWE::Global::frameIndex);
+                    //renderGraph.presentSubmission.Present(EWE::Global::frameIndex);
 
                     EWE::Global::frameIndex = (EWE::Global::frameIndex + 1) % EWE::max_frames_in_flight;
                     engine.totalFramesSubmitted++;

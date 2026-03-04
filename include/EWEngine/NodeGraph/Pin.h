@@ -5,7 +5,6 @@
 #include "EightWinds/Data/StreamHelper.h"
 
 #include <string>
-#include <fstream>
 
 
 namespace EWE{
@@ -60,6 +59,7 @@ namespace EWE{
         struct Pin{
             std::string name;
             NodeBuffer* buffer; //sucks, but it's a decent temp measure
+            lab::vec2 position;
 
             NodeID parentNode; //potentially void* if not a vector for Node
             PinOffset offset_within_parent; //which pin in the parent is it?

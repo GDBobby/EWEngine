@@ -14,16 +14,9 @@
 
 #include "EightWinds/Pipeline/Graphics.h"
 
-#include "magic_enum/magic_enum.hpp"
-
 #include <string>
 
-
-template<typename T>
-void imgui_enum(std::string_view name, T& val, int min, int max) {
-
-    ImGui::SliderInt(name.data(), reinterpret_cast<int*>(&val), min, max, magic_enum::enum_name(val).data());
-}
+#include "EWEngine/Reflect/Enum.h"
 
 void imgui_bool_check(std::string_view name, VkBool32& vk_bool) {
     bool temp_bool = vk_bool;
@@ -62,7 +55,10 @@ namespace EWE{
     template<> void ImguiExtension::Imgui(RenderGraph& obj){
 		
         for (auto& task : obj.tasks) {
-            ImGui::Text("Task name : %s", task.name.c_str());
+            if(ImGui::TreeNode("Task name : %s", task.name.c_str())){
+                ImguiExtension::Imgui(task);
+                ImGui::TreePop();
+            }
         }
         for (auto& sub : obj.submissions) {
             ImGui::Text("submission name : %s", sub.name.c_str());
@@ -77,7 +73,7 @@ namespace EWE{
             }
         }
 
-        ImGui::Text("present result : %s", magic_enum::enum_name(obj.presentResult).data());
+        ImGui::Text("present result : %s", Reflect::enum_to_string(obj.presentResult).data());
 	}
     
     
@@ -104,7 +100,9 @@ namespace EWE{
         ImGui::PushID(temp_id);
         ImGui::DragInt("viewport count", reinterpret_cast<int*>(&obj.viewportCount), 0, 8); // i have some arbitrary limit somewhere i need to find
         ImGui::DragInt("scissor count", reinterpret_cast<int*>(&obj.scissorCount), 0, 8);
-        imgui_enum("rast samples", obj.rastSamples, 0, 128);
+        //imgui_enum("rast samples", obj.rastSamples, 0, 128);
+        Reflect::ImguiEnum_Combo("rast samples", obj.rastSamples);
+
         ImGui::Checkbox("sample shading", &obj.enable_sampleShading);
         if (obj.minSampleShading) {
             ImGui::DragFloat("min sample shading", &obj.minSampleShading, 0.f, 100.f);
@@ -113,7 +111,7 @@ namespace EWE{
         ImGui::Checkbox("alpha to one enable", &obj.alphaToOneEnable);
 
         for (auto& dynS : obj.dynamicState) {
-            ImGui::Text("dyn state - %s", magic_enum::enum_name(dynS).data());
+            ImGui::Text("dyn state - %s", Reflect::enum_to_string(dynS).data());
         }
 
         ImguiExtension::Imgui(obj.attachment_set_info);
@@ -127,18 +125,21 @@ namespace EWE{
         ImGui::PushID(temp_id);
         ImGui::Checkbox("depth clamp", &obj.depthClamp);
         ImGui::Checkbox("rasterizer discard", &obj.rasterizerDiscard);
-        imgui_enum("polygon mode", obj.polygonMode, 0, 3);
+        //imgui_enum("polygon mode", obj.polygonMode, 0, 3);
+        Reflect::ImguiEnum_Combo("polygon mode", obj.polygonMode);
 
         ImGui::RadioButton("none", reinterpret_cast<int*>(&obj.cullMode), VK_CULL_MODE_NONE); ImGui::SameLine();
         ImGui::RadioButton("front", reinterpret_cast<int*>(&obj.cullMode), VK_CULL_MODE_FRONT_BIT); ImGui::SameLine();
         ImGui::RadioButton("back", reinterpret_cast<int*>(&obj.cullMode), VK_CULL_MODE_BACK_BIT); ImGui::SameLine();
         ImGui::RadioButton("front and back", reinterpret_cast<int*>(&obj.cullMode), VK_CULL_MODE_FRONT_AND_BACK);
 
-        imgui_enum("front face", obj.frontFace, 0, 2);
+        //imgui_enum("front face", obj.frontFace, 0, 2);
+        Reflect::ImguiEnum_Combo("front face", obj.frontFace);
 
         ImguiExtension::Imgui(obj.depthBias);
 
-        imgui_enum("topology", obj.topology, 0, 12);
+        //imgui_enum("topology", obj.topology, 0, 12);
+        Reflect::ImguiEnum_Combo("topology", obj.topology);
         ImGui::Checkbox("primitive restart", &obj.primitiveRestart);
 
         ImguiExtension::Imgui(obj.blendAttachment);
@@ -175,7 +176,10 @@ namespace EWE{
         ImGui::Text("gpu task - %s", obj.name.c_str());
         ImGui::Text("queue index : %d", obj.queue.FamilyIndex());
 
-        ImguiExtension::Imgui(obj.resources);
+        if(ImGui::TreeNode("resources")){
+            ImguiExtension::Imgui(obj.resources);
+            ImGui::TreePop();
+        }
 
         ImGui::PopID();
     }
@@ -183,7 +187,7 @@ namespace EWE{
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
 
-        ImGui::Text("image count[%d] : buffer count[%d]");
+        ImGui::Text("image count[%zu] : buffer count[%zu]", obj.images.size(), obj.buffers.size());
         for (auto& img : obj.images) {
             ImguiExtension::Imgui(img);
         }
@@ -200,15 +204,16 @@ namespace EWE{
 
         ImGui::DragInt("width", reinterpret_cast<int*>(&obj.width), 0, 16536);
         ImGui::DragInt("height", reinterpret_cast<int*>(&obj.height), 0, 16536);
-        //imgui_enum("rendering flags", obj.renderingFlags, 0, 64); //were just gonna assume this is 0 til reflection comes in
+        //come back to this
+        //Reflect::ImguiEnum_Combo("rendering flags", obj.renderingFlags);
 
         int col_count = obj.colors.size();
         if (ImGui::DragInt("color count", &col_count, 0, 16)) {
             obj.colors.resize(col_count);
         }
         for (auto& col : obj.colors) {
-            //ImguiExtension::Imgui(col.format);
-            imgui_enum("format", col.format, 0, 256);
+            //imgui_enum("format", col.format, 0, 256);
+            Reflect::ImguiEnum_Combo("format", col.format);
         }
         ImguiExtension::Imgui(obj.depth);
 
@@ -219,7 +224,7 @@ namespace EWE{
         ImGui::PushID(temp_id);
         imgui_bool_check("depth test enable", obj.depthTestEnable);
         imgui_bool_check("depth write enable", obj.depthWriteEnable);
-        imgui_enum("depth compare op", obj.depthCompareOp, 0, 8);
+        Reflect::ImguiEnum_Combo("depth compare op", obj.depthCompareOp);
         imgui_bool_check("depth bounds test enable", obj.depthBoundsTestEnable);
         imgui_bool_check("stencil test enable", obj.stencilTestEnable);
 
@@ -246,13 +251,20 @@ namespace EWE{
         ImGui::PushID(temp_id);
 
         imgui_bool_check("blend enable", obj.blendEnable);
-        imgui_enum("src color blend factor", obj.srcColorBlendFactor, 0, 20);
-        imgui_enum("dst color blend factor", obj.dstColorBlendFactor, 0, 20);
-        imgui_enum("color blend op", obj.colorBlendOp, 0, 5);
+        //imgui_enum("src color blend factor", obj.srcColorBlendFactor, 0, 20);
+        //imgui_enum("dst color blend factor", obj.dstColorBlendFactor, 0, 20);
+        //imgui_enum("color blend op", obj.colorBlendOp, 0, 5);
 
-        imgui_enum("src alpha blend factor", obj.srcAlphaBlendFactor, 0, 20);
-        imgui_enum("dst alpha blend factor", obj.dstAlphaBlendFactor, 0, 20);
-        imgui_enum("alpha blend op", obj.alphaBlendOp, 0, 5);
+        //imgui_enum("src alpha blend factor", obj.srcAlphaBlendFactor, 0, 20);
+        //imgui_enum("dst alpha blend factor", obj.dstAlphaBlendFactor, 0, 20);
+        //imgui_enum("alpha blend op", obj.alphaBlendOp, 0, 5);
+        Reflect::ImguiEnum_Combo("src color blend factor", obj.srcColorBlendFactor);
+        Reflect::ImguiEnum_Combo("dst color blend factor", obj.dstColorBlendFactor);
+        Reflect::ImguiEnum_Combo("color blend op", obj.colorBlendOp);
+
+        Reflect::ImguiEnum_Combo("src alpha blend factor", obj.srcAlphaBlendFactor);
+        Reflect::ImguiEnum_Combo("dst alpha blend factor", obj.dstAlphaBlendFactor);
+        Reflect::ImguiEnum_Combo("alpha blend op", obj.alphaBlendOp);
 
         imgui_color_components("color write mask", obj.colorWriteMask);
 
@@ -289,10 +301,16 @@ namespace EWE{
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
 
-        ImGui::DragInt("stage", reinterpret_cast<int*>(&obj.stage), 0, 65536);
-        ImGui::DragInt("access mask", reinterpret_cast<int*>(&obj.accessMask), 0, 65536);
+        //Reflect::ImguiEnum_Combo("stage", obj.stage);
+        //Reflect::ImguiEnum_Combo("access mask", obj.accessMask);
 
-        imgui_enum("layout", obj.layout, 0, 9);
+        //these aren't enums
+        ImGui::DragInt("stage", reinterpret_cast<int*>(&obj.stage), 1, 0, 65536);
+        ImGui::DragInt("access mask", reinterpret_cast<int*>(&obj.accessMask), 1, 0, 65536);
+
+
+        //imgui_enum("layout", obj.layout, 0, 9);
+        Reflect::ImguiEnum_Combo("layout", obj.layout);
 
         ImGui::PopID();
     }
@@ -312,14 +330,14 @@ namespace EWE{
         for (std::size_t i = 0; i < Shader::Stage::COUNT; i++) {
             if (obj.shaders[i]) {
                 Shader::Stage temp_val{ static_cast<Shader::Stage::Bits>(i) };
-                ImGui::Text(magic_enum::enum_name(temp_val.value).data());
+                ImGui::Text(Reflect::enum_to_string(temp_val.value).data());
                 ImGui::SameLine();
                 ImGui::Text(" : %s", obj.shaders[i]->name.c_str());
                 ImguiExtension::Imgui(*obj.shaders[i]);
             }
 
-            ImGui::Text("Pipeline Type : %s", magic_enum::enum_name(obj.pipelineType).data());
-            ImGui::Text("Bind Point : %s", magic_enum::enum_name(obj.bindPoint).data());
+            ImGui::Text("Pipeline Type : %s", Reflect::enum_to_string(obj.pipelineType).data());
+            ImGui::Text("Bind Point : %s", Reflect::enum_to_string(obj.bindPoint).data());
         }
         ImGui::PopID();
     }
@@ -335,7 +353,8 @@ namespace EWE{
     FUNC_ENTRY(AttachmentInfo) {
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
-        imgui_enum("format", obj.format, 0, 256);
+        //imgui_enum("format", obj.format, 0, 256);
+        Reflect::ImguiEnum_Combo("format", obj.format);
         ImguiExtension::Imgui(obj.loadOp);
         ImguiExtension::Imgui(obj.storeOp);
         ImGui::DragFloat4("clear value", reinterpret_cast<float*>(obj.clearValue.color.float32), 0.f, 1.f);
@@ -373,10 +392,15 @@ namespace EWE{
     }
 
     template<> void ImguiExtension::Imgui(VkStencilOpState& obj) {
-        imgui_enum("fail op", obj.failOp, 0, 8);
-        imgui_enum("pass op", obj.passOp, 0, 8);
-        imgui_enum("depth fail op", obj.depthFailOp, 0, 8);
-        imgui_enum("compare op", obj.compareOp, 0, 8);
+        //imgui_enum("fail op", obj.failOp, 0, 8);
+        //imgui_enum("pass op", obj.passOp, 0, 8);
+        //imgui_enum("depth fail op", obj.depthFailOp, 0, 8);
+        //imgui_enum("compare op", obj.compareOp, 0, 8);
+
+        Reflect::ImguiEnum_Combo("fail op", obj.failOp);
+        Reflect::ImguiEnum_Combo("pass op", obj.passOp);
+        Reflect::ImguiEnum_Combo("depth fail op", obj.depthFailOp);
+        Reflect::ImguiEnum_Combo("compare op", obj.compareOp);
         ImGui::DragInt("compare mask", reinterpret_cast<int*>(&obj.compareMask), 0, INT32_MAX);
         ImGui::DragInt("write mask", reinterpret_cast<int*>(&obj.compareMask), 0, INT32_MAX);
         ImGui::DragInt("reference", reinterpret_cast<int*>(&obj.reference), 0, INT32_MAX);
@@ -385,7 +409,7 @@ namespace EWE{
 
     template<> void ImguiExtension::Imgui(Command::Record& obj) {
         for (std::size_t i = 0; i < obj.records.size(); i++) {
-            ImGui::Text("%zu\t:%s:%zu", i, magic_enum::enum_name(obj.records[i].type).data(), obj.records[i].paramOffset);
+            ImGui::Text("%zu\t:%s:%zu", i, Reflect::enum_to_string(obj.records[i].type).data(), obj.records[i].paramOffset);
         }
     }
 

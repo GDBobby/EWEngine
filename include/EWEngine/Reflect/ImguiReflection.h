@@ -3,7 +3,8 @@
 #include "EWEngine/Preprocessor.h"
 #include "EightWinds/VulkanHeader.h"
 
-#include "EWEngine/Reflection/Reflect.h"
+#include "EWEngine/Reflect/Reflect.h"
+#include "EWEngine/Reflect/Enum.h"
 
 #include <meta>
 
@@ -40,7 +41,7 @@
     }
     */
 
-namespace Reflection{
+namespace Reflect{
 
     std::string Truncate_Path(std::filesystem::path const& full_path) {
         std::filesystem::path result;

@@ -2,21 +2,15 @@
 
 #include "EWEngine/Global.h"
 
-#include "EightWinds/Pipeline/Graphics.h"
-
 #include <filesystem>
 #include <fstream>
 
 #ifdef EWE_IMGUI
 #include "imgui.h"
-#include "magic_enum/magic_enum.hpp"
-
-//template<typename T>
-//void imgui_enum(std::string_view name, T& val, int min, int max) {
-//
-//    ImGui::SliderInt(name.data(), reinterpret_cast<int*>(&val), min, max, magic_enum::enum_name(val).data());
-//}
+#include "EWEngine/Reflect/Enum.h"
 #endif
+
+#include "EWEngine/Tools/UIHelper.h"
 
 namespace EWE{
     namespace Node{
@@ -311,7 +305,11 @@ namespace EWE{
                 ImGui::Text("current_mouse_coverage : %d", current_mouse_coverage.index);
                 ImGui::Text("mouse pos : {%d:%d}", current_mouse_coverage.mouse_pos.x, current_mouse_coverage.mouse_pos.y);
                 if (current_mouse_coverage.index >= 0) {
-                    ImGui::Text("node : {%d} - innner coord : {%.2f:%.2f} : %s", current_mouse_coverage.index, current_mouse_coverage.coord_within_node.x, current_mouse_coverage.coord_within_node.y, magic_enum::enum_name(current_mouse_coverage.selection).data());
+                    ImGui::Text("node : {%d} - innner coord : {%.2f:%.2f} : %s", 
+                        current_mouse_coverage.index, 
+                        current_mouse_coverage.coord_within_node.x, current_mouse_coverage.coord_within_node.y, 
+                        Reflect::enum_to_string(current_mouse_coverage.selection).data()
+                    );
 
                 }
 
