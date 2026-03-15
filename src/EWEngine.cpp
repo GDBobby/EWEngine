@@ -5,6 +5,7 @@
 #include "EightWinds/Backend/DeviceSpecialization/FeatureProperty.h"
 
 #include "EWEngine/Global.h"
+#include <filesystem>
 
 #ifdef USING_NVIDIA_AFTERMATH
 #include "EightWinds/Backend/nvidia/Aftermath.h"
@@ -237,12 +238,14 @@ namespace EWE{
         logicalDevice{CreateLogicalDevice(instance, window)},
         swapchain{logicalDevice, window, GetPresentQueue(logicalDevice)},
         renderGraph{logicalDevice, swapchain},
-        stcManager{logicalDevice, GetPresentQueue(logicalDevice)},
+        stcManager{logicalDevice, GetPresentQueue(logicalDevice)}//,
+        /*
         textOverlay{ 
             logicalDevice, 
             static_cast<float>(window.screenDimensions.width), 
             static_cast<float>(window.screenDimensions.height) 
         }
+        */
     {
         Global::Create(logicalDevice, window, stcManager);
     }
@@ -318,10 +321,11 @@ namespace EWE{
 
             ImGui::Text(logicalDevice.physicalDevice.name.c_str());
             
-            if (DrawPresentModes(swapchain) || DrawSurfaceFormats(swapchain))
-            {
+            if (DrawPresentModes(swapchain) || DrawSurfaceFormats(swapchain)) {
                 printf("recreating swap at frame : %zu\n", totalFramesSubmitted);
             }
+
+            ImGui::Text("working directory : %s", std::filesystem::current_path().string().c_str());
 
             static bool draw_demo = false;
             ImGui::Checkbox("draw demo", &draw_demo);

@@ -4,6 +4,8 @@
 #include "EightWinds/Window.h"
 #include "EWEngine/STC_Manager.h"
 
+#include "EWEngine/Tools/FileResource.h"
+
 #include <thread>
 
 namespace EWE{
@@ -16,6 +18,8 @@ namespace EWE{
         Window& window;
         marl::Scheduler scheduler;
         STC_Manager& stcManager;
+
+        ShaderFileSystem shaderFS;
     };
 
     GlobalData* globalData = nullptr;
@@ -35,6 +39,8 @@ namespace EWE{
         marl::Scheduler* scheduler;
         STC_Manager* stcManager;
 
+        ShaderFileSystem* shaderFS;
+
         
         bool Create(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager) {
 #if EWE_DEBUG_BOOL
@@ -47,7 +53,8 @@ namespace EWE{
                 .instance = logicalDevice.instance,
                 .window = window,
                 .scheduler{marl::Scheduler::Config::allCores()},
-                .stcManager = stcManager
+                .stcManager = stcManager,
+                .shaderFS{logicalDevice, "/home/Projects/EWEngine/examples/common/shaders"}
             };
 
             ::EWE::Global::logicalDevice = &globalData->logicalDevice;
@@ -56,6 +63,7 @@ namespace EWE{
             ::EWE::Global::window = &globalData->window;
             frameIndex = 0; 
             ::EWE::Global::scheduler = &globalData->scheduler;
+            ::EWE::Global::shaderFS = &globalData->shaderFS;
 
             return true;
         }

@@ -15,7 +15,7 @@
 #include "EightWinds/Image.h"
 #include "EightWinds/ImageView.h"
 
-#include "EWEngine/NodeGraph/Graph.h"
+//#include "EWEngine/NodeGraph/Graph.h"
 
 #include "EWEngine/Tools/ImguiHandler.h"
 
@@ -26,6 +26,13 @@
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
 
 #include "EWEngine/NodeGraph/RenderGraphNodeGraph.h"
+#include "EWEngine/NodeGraph/RasterTaskNodeGraph.h"
+#include "EWEngine/NodeGraph/RecordNodeGraph.h"
+
+#include "EWEngine/Tools/FileResource.h"
+
+#include "EWEngine/InputData.h"
+#include "imgui.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -129,10 +136,10 @@ int main() {
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
-    EWE::Shader triangle_vert{logicalDevice, "common/shaders/basic.vert.spv"};
-    EWE::Shader triangle_frag{logicalDevice, "common/shaders/basic.frag.spv"};
+    EWE::Shader* triangle_vert = EWE::Global::shaderFS->GetShader("basic.vert.spv");
+    EWE::Shader* triangle_frag = EWE::Global::shaderFS->GetShader("basic.frag.spv");
 
-    EWE::PipeLayout triangle_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ &triangle_vert, &triangle_frag });
+    EWE::PipeLayout triangle_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ triangle_vert, triangle_frag });
     //passconfig should be using a full rendergraph setup
     EWE::TaskRasterConfig passConfig;
     passConfig.SetDefaults();
@@ -183,11 +190,11 @@ int main() {
     //also has a push constant, which will be automatically applied
     EWE::VertexDrawData triangle_drawData{};
     triangle_drawData.use_labelPack = true;
-    triangle_raster_task.AddDraw(triangle_rasterObj, triangle_drawData);
+    triangle_raster_task.AddDraw(triangle_rasterObj, &triangle_drawData);
 
 
-    EWE::Node::Graph nodeGraph{};
-    nodeGraph.Record(triangle_raster_task);
+    //EWE::Node::Graph nodeGraph{};
+    //nodeGraph.Record(triangle_raster_task);
 
     EWE::Command::Record triangleRecord{};
     triangle_raster_task.Record(triangleRecord, true);
@@ -213,7 +220,7 @@ int main() {
         }
     }
 
-    nodeGraph.Undefer();
+    //nodeGraph.Undefer();
 
 
     VmaAllocationCreateInfo vmaAllocInfo{
@@ -231,7 +238,7 @@ int main() {
         lab::vec2 pos; //xy
         lab::vec3 color; //rgb, the 4th element isnt read, but i need it for alignment
     };
-    for (auto& str : triangle_vert.structData) {
+    for (auto& str : triangle_vert->BDA_data) {
         if (str.name == "Vertex") {
 
 #if EWE_DEBUG_BOOL
@@ -287,9 +294,9 @@ int main() {
     }
 
     passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
-    EWE::Shader merge_vert{logicalDevice, "common/shaders/merge.vert.spv"};
-    EWE::Shader merge_frag{logicalDevice, "common/shaders/merge.frag.spv"};
-    EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ &merge_vert, &merge_frag });
+    EWE::Shader* merge_vert = EWE::Global::shaderFS->GetShader("merge.vert.spv");
+    EWE::Shader* merge_frag = EWE::Global::shaderFS->GetShader("merge.frag.spv");
+    EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
 
     EWE::Command::Record mergeRecord{};
 
@@ -316,7 +323,7 @@ int main() {
         .config = triangle_rasterObj.config
     };
     EWE::VertexDrawData merge_drawData{};
-    mergeRaster.AddDraw(merge_rasterObj, merge_drawData);
+    mergeRaster.AddDraw(merge_rasterObj, &merge_drawData);
     mergeRaster.Record(mergeRecord);
 
     EWE::GPUTask& mergeTask = renderGraph.tasks.AddElement(
@@ -332,21 +339,6 @@ int main() {
         merge_drawData.paramPack->GetRef(i).vertexCount = 4;
         merge_drawData.paramPack->GetRef(i).instanceCount = 1;
     }
-
-    uint32_t first_node_index = UINT32_MAX;
-    uint32_t second_node_index = UINT32_MAX;
-    {
-        auto& first_node = nodeGraph.AddNode("First Node");
-        first_node.buffer->Init();
-        first_node_index = first_node.index;
-        auto& second_node = nodeGraph.AddNode("Second Node");
-        second_node.buffer->Init();
-        second_node_index = second_node.index;
-        auto& first_pin = nodeGraph.AddPin("first pin", first_node_index);
-        first_pin.buffer->InitPin();
-        first_pin.buffer->objectType = EWE::Node::NodeBuffer::OT_Pin;
-    }
-
 
     EWE::UsageData<EWE::Image> initial_acquire_usage{
         .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -393,8 +385,11 @@ int main() {
     world_render_submission.packaged_tasks.push_back(renderTask.workload);
     EWE::SubmissionTask& imgui_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "imgui");
 
+    
 
     EWE::Node::RenderGraphNodeGraph rgng{renderGraph};
+    //EWE::Node::RasterTaskNodeGraph rtng{};
+    EWE::Node::RecordNodeGraph rng{};
 
     //imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
     imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
@@ -402,10 +397,9 @@ int main() {
         //imguiHandler.BeginCommandBuffer();
         imguiTask.prefix.Execute(cmdBuf, frameIndex);
         imguiHandler.BeginRender(cmdBuf);
-        nodeGraph.Imgui();
+        //nodeGraph.Imgui();
         engine.Imgui();
 
-        rgng.editor.RenderNodes();
         //EWE::ImguiExtension::Imgui(triangle_raster_task);
         //EWE::ImguiExtension::Imgui(mergeRaster);
         if(ImGui::TreeNode("resources")){
@@ -469,20 +463,12 @@ int main() {
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("render graph")) {
-            EWE::ImguiExtension::Imgui(renderGraph);
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNode("triangle record")) {
-            EWE::ImguiExtension::Imgui(triangleRecord);
-            ImGui::TreePop();
-        }
+        if(ImGui::TreeNode("shaders")){
+            EWE::Global::shaderFS->Imgui();
 
-        if (ImGui::TreeNode("merge record")) {
-            EWE::ImguiExtension::Imgui(mergeRecord);
             ImGui::TreePop();
         }
-
+  
         if(ImGui::TreeNode("reflect TEST")){
             static constexpr auto hb_i_info = ^^EWE::HeapBlock<EWE::Image>;
             union TestUnion{
@@ -495,6 +481,40 @@ int main() {
             Reflect::ImguiReflect<^^EWE::HeapBlock>();
             ImGui::TreePop();
         }
+
+
+        if(ImGui::Begin("node editors")){
+
+            auto dragdrop_payload = ImGui::GetDragDropPayload();
+            if (dragdrop_payload == NULL){
+                ImGui::Text("payload null");
+            }
+            else{
+                const int payload_count = (int)dragdrop_payload->DataSize / (int)sizeof(ImGuiID);
+                ImGui::Text("payload count : %d : %s", payload_count, reinterpret_cast<const char*>(dragdrop_payload->Data));
+            }
+
+            if(ImGui::BeginTabBar("node editors")){
+            
+                if(ImGui::BeginTabItem("render graph")){
+                    rgng.RenderNodes();
+
+                    ImGui::EndTabItem();
+                }
+                if(ImGui::BeginTabItem("raster task")){
+                    //rtng.editor.RenderNodes();
+                    ImGui::EndTabItem();
+                }
+                if(ImGui::BeginTabItem("record")){
+                    rng.RenderNodes();
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
+            }
+
+        }
+        ImGui::End();
 
         //ImGui::ShowDemoWindow();
         imguiHandler.EndRender(cmdBuf);
@@ -602,7 +622,7 @@ int main() {
                     swapImage.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
                     mouseData.UpdatePosition(EWE::Global::window->window);
-                    nodeGraph.UpdateRender(mouseData, EWE::Global::frameIndex);
+                    //nodeGraph.UpdateRender(mouseData, EWE::Global::frameIndex);
                     renderGraph.ChangeResource(mergeTask, present_img_att_index, &swapImage, EWE::Global::frameIndex);
                     renderGraph.presentBridge.UpdateSrcData(&mergeTask.queue, &mergeTask.resources.images[present_img_att_index], EWE::Global::frameIndex);
                     renderGraph.RecreateBarriers(EWE::Global::frameIndex);

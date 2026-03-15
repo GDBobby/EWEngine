@@ -8,43 +8,46 @@
 
 namespace EWE{
     namespace Node{
-        struct RenderGraphNodeGraph{
+        struct RenderGraphNodeGraph : public ImNodes::EWE::Editor {
             RenderGraph& renderGraph;
-            ImNodes::EWE::Editor editor;
 
             [[nodiscard]] explicit RenderGraphNodeGraph(RenderGraph& renderGraph)
                 : renderGraph{renderGraph},
-                editor{}
+                ImNodes::EWE::Editor{}
             {
-                editor.name = "render graph";
-                SetFunctionHooks();
+                name = "render graph";
             }
 
-            void TitleExtension(){
-                if(ImGui::Button("set from current")){
-                    for(auto iter = editor.nodes.begin(); iter != editor.nodes.end(); ++iter){
-                        editor.nodes.DestroyElement(iter);
-                    }
-                    editor.links.clear();
+            void RenderEditorTitle() override final{
 
-                    float horizontalPos = editor.node_editor_window_pos.x;
+                ImNodes::EWE::Editor::RenderEditorTitle();
+
+                if(ImGui::Button("set from current")){
+                    for(auto iter = nodes.begin(); iter != nodes.end(); ++iter){
+                        nodes.DestroyElement(iter);
+                    }
+                    links.clear();
+
+                    float horizontalPos = node_editor_window_pos.x;
                     for(auto& sub_group : renderGraph.execution_order){
-                        float verticalPos = editor.node_editor_window_pos.y;
+                        float verticalPos = node_editor_window_pos.y;
 
                         for(auto& ind_sub : sub_group){
-                            auto& added_node = editor.AddNode();
+                            auto& added_node = AddNode();
                             added_node.payload = ind_sub;
-                            added_node.nodePos.x = horizontalPos;
-                            added_node.nodePos.y = verticalPos;
+                            added_node.pos.x = horizontalPos;
+                            added_node.pos.y = verticalPos;
                             verticalPos += 60.f;
 
                             float pin_starting = 0.3f;
                             for(auto& wait : ind_sub->submitInfo[0].waitSemaphores){
+                                //currently a mem leak
                                 added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{0.f, pin_starting}, .payload = wait});
                                 pin_starting += 0.1f;
                             }
                             pin_starting = 0.3f;
                             for(auto& signal : ind_sub->submitInfo[0].signalSemaphores){
+                                //currently a mem leak
                                 added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, pin_starting}, .payload = &signal});
                                 pin_starting += 0.1f;
                             }
@@ -55,7 +58,7 @@ namespace EWE{
                 
             }
 
-            bool AddNodeMenu(ImVec2 menu_pos){
+            bool RenderAddMenu(ImVec2 menu_pos){
                 //printf("iterating add node menu\n");
 
                 bool wantsClose = false;
@@ -83,7 +86,7 @@ namespace EWE{
                 return wantsClose;
             }
 
-            void RenderNode(ImNodes::EWE::Node& node){
+            void RenderNode(ImNodes::EWE::Node& node) override final{
                 EWE::SubmissionTask* payload = reinterpret_cast<EWE::SubmissionTask*>(node.payload);
 
                 ImNodes::BeginNodeTitleBar();
@@ -93,7 +96,7 @@ namespace EWE{
                 ImGui::Text("queue family index : %u", payload->queue.FamilyIndex());
             }
 
-            void PinRender(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index){
+            void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final{
                 auto& pin = node.pins[pin_index];
                 auto* payload = reinterpret_cast<VkSemaphoreSubmitInfo*>(pin->payload);
 
@@ -104,21 +107,6 @@ namespace EWE{
                     ImGui::Text("%zu", static_cast<uint64_t>(payload->stageMask));
                 }
                 ImNodes::EndPinAttribute();
-            }
-
-            void SetFunctionHooks(){
-                editor.render_add_menu = [&](ImVec2 menu_pos){
-                    return AddNodeMenu(menu_pos);
-                };
-                editor.title_extension = [&]{
-                    TitleExtension();
-                };
-                editor.node_renderer = [&](ImNodes::EWE::Node& node){
-                    RenderNode(node);
-                };
-                editor.pin_renderer = [&](ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index){
-                    PinRender(node, pin_index);
-                };
             }
 
         };

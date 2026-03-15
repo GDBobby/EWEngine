@@ -25,11 +25,14 @@ namespace ImNodes{
         };
         struct Node{
             NodeID id; //changed every render, internal usage only
-            ImVec2 nodePos;
+            ImVec2 pos;
             bool snapToGrid = false;
 
             void* payload = nullptr;
             std::vector<Pin*> pins{}; //i dont want to move the pins from here, hence the pointer
+
+            //negative is doesn't contain
+            int CheckPin(PinID globalPinID); 
         };
         struct Link{
             LinkID id;
@@ -38,6 +41,7 @@ namespace ImNodes{
         };
 
         struct NodePair {
+            LinkID id;
             Node* start;
             PinOffset start_offset;
             Node* end;
@@ -46,9 +50,11 @@ namespace ImNodes{
 
         struct Editor {
             [[nodiscard]] explicit Editor();
+            [[nodiscard]] explicit Editor(bool saveFunc, bool loadFunc);
             std::string name;
 
             ImNodes::ImNodesEditorContext* context;
+
             ::EWE::Hive<Node, 32> nodes;
             std::vector<NodePair> links;
 
@@ -73,20 +79,33 @@ namespace ImNodes{
             
             */
 
-            std::function<void(Node&)> node_title_renderer = nullptr;
-            std::function<void(Node&)> node_renderer = nullptr;
-            std::function<void(Node&, PinOffset pin_index)> pin_renderer = nullptr;
-            std::function<void()> save = nullptr;
+            virtual void RenderNode(Node&) {}
+            virtual void RenderPin(Node&, PinOffset) {}
             //do I want IDs controlled externally or in here? 
             // if I control them internally, there's a lot of assumptions I can't make
-            std::function<void(Node&)> init_node = nullptr; 
+            virtual void InitNode(Node&){}
 
-            //returning true closes the menu
+            virtual void LinkEmptyDrop(Node&, PinOffset) {}
+
+            virtual void LinkCreated(NodePair&) {}
+            virtual void LinkDestroyed(NodePair&) {}
+
             bool add_menu_is_open = false;
             ImVec2 menu_pos;
-            std::function<bool(ImVec2)> render_add_menu = nullptr;
+            virtual void OpenAddMenu() {add_menu_is_open = true;}
+            //returning true closes the menu
+            virtual bool RenderAddMenu() {return true;}
 
-            std::function<void()> title_extension = nullptr;
+            virtual void RenderEditorTitle();
+
+            bool has_save_func = false;
+            bool has_load_func = false;
+            bool save_open = false;
+            bool load_open = false;
+            //if true is returned, the func will no longer be called
+            virtual bool SaveFunc() {return true;}
+            virtual bool LoadFunc() {return true;}
+
         };
     } //namepsacde EWE
 } //namespace ImNodes

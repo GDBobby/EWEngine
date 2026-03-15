@@ -27,7 +27,7 @@ namespace EWE{
         Swapchain swapchain;
         STC_Manager stcManager;
         RenderGraph renderGraph;
-        TextOverlay textOverlay;
+        //TextOverlay textOverlay;
 
         uint64_t totalFramesSubmitted = 0;
 

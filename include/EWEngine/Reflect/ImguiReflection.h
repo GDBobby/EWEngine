@@ -13,6 +13,7 @@
 #include <typeinfo>
 
 #ifdef EWE_IMGUI
+#include "imgui.h"
 
 
     /*

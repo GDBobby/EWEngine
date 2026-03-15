@@ -1,9 +1,13 @@
 #pragma once
 
 #include <meta>
-#include <ranges>
 
 #include "EWEngine/Preprocessor.h"
+
+
+#if EWE_IMGUI
+#include "imgui.h"
+#endif
 
 namespace Reflect {
 

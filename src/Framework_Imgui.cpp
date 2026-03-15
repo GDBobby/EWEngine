@@ -409,7 +409,7 @@ namespace EWE{
 
     template<> void ImguiExtension::Imgui(Command::Record& obj) {
         for (std::size_t i = 0; i < obj.records.size(); i++) {
-            ImGui::Text("%zu\t:%s:%zu", i, Reflect::enum_to_string(obj.records[i].type).data(), obj.records[i].paramOffset);
+            ImGui::Text("%zu\t:%s", i, Reflect::enum_to_string(obj.records[i].type).data());
         }
     }
 

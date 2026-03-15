@@ -59,7 +59,7 @@ namespace EWE{
                 .config = objectConfig
             };
 
-            rasterTask.AddDraw(node_config, drawData);
+            rasterTask.AddDraw(node_config, &drawData);
 
             //task raster config isn't gonna pla ynicely with labels, unless I allow the user to input arbitrary commands
         }

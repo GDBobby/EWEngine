@@ -161,7 +161,7 @@ namespace EWE {
 		void Record(RasterTask& task){
 			objectConfig.config.SetDefaults();
 
-			task.Add_Vert_IndirectCountDraw(objectConfig, indirect_vert_raw);
+			//task.Add_Vert_IndirectCountDraw(objectConfig, indirect_vert_raw);
 		}
 	};
 }

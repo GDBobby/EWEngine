@@ -13,7 +13,16 @@
 #include <string_view>
 
 namespace EWE{
+
 	struct ExplorerContext{
+
+		enum class State{
+			Load,
+			Save,
+			Exploring
+		};
+		State state = State::Exploring;
+
 		std::filesystem::path current_path{};
 
 		//only for internal closing
@@ -32,8 +41,41 @@ namespace EWE{
 		const float TEXT_BASE_WIDTH = 24.f;
 		
 		std::vector<std::string> acceptable_extensions{};
+
+		std::filesystem::path CreateFullFilePath(std::string_view extension);
 		
 		void Imgui();
+
+		bool AcceptableEntry(std::filesystem::path const& entry, bool is_dir) const noexcept;
+		bool ProcessDirectoryEntry(std::filesystem::path const& entry, bool isSelected, bool is_dir);
+
+		private:
+			std::optional<std::filesystem::path> save_path{};
+			char file_create_buf[64] = "";
+
+			int selection_index = -1;
+			bool popup_opened = false;
 	};
+
+	/*
+	struct SaveExplorer{
+		ExplorerContext context;
+
+		[[nodiscard]] explicit SaveExplorer(std::string_view path) : context{path} {}
+		[[nodiscard]] explicit SaveExplorer(std::filesystem::path path) : context{path} {}
+
+		std::string extension;
+
+		void SaveFile(std::filesystem::path path);
+		void SaveFile(std::string_view path){
+			std::filesystem::path fwd_path{path};
+			SaveFile(fwd_path);
+		}
+
+		void Imgui(){
+			context.Imgui();
+		}
+	};
+	*/
 }
 #endif

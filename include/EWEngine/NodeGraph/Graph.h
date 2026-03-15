@@ -54,30 +54,6 @@ namespace EWE{
             void ImNodes_NodeRender();//includes node title
             void ImNodes_PinRender();
 
-            void SetupWithImNodes(ImNodes::EWE::Editor& editor){
-                editor.node_renderer = [&](ImNodes::EWE::Node& node) -> void {
-                    Node& internal_node = *reinterpret_cast<Node*>(node.payload);
-                    ImNodes::BeginNodeTitleBar();
-                    ImGui::TextUnformatted(internal_node.name.c_str());
-                    ImNodes::EndNodeTitleBar();
-                };
-
-                editor.pin_renderer = [&](ImNodes::EWE::Node& node, PinOffset pin) -> void{
-/*
-                    Node& internal_node = *reinterpret_cast<Node*>(node.payload);
-                    Pin& internal_pin = *reinterpret_cast<Pin*>(pin.payload);
-                    
-                    if (ImNodes::BeginPinAttribute(pin.globalPinID, ImVec2(pin.position.x, pin.position.y))) {
-                        ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), pin.name.c_str());
-                    }
-                    else {
-                        ImGui::TextUnformatted(pin.name.c_str());
-                    }
-                    ImNodes::EndPinAttribute();
-                    */
-                };
-            }
-
 
             VertexDrawData drawData;
 
@@ -125,9 +101,7 @@ namespace EWE{
                 Stream::Operator<StreamObj> stream{ streamObj };
                 std::size_t temp_buffer = graph_version;
                 stream.Process(temp_buffer);
-#if EWE_DEBUG
-                assert(temp_buffer == graph_version);
-#endif
+                EWE_ASSERT(temp_buffer == graph_version);
                 stream.Process(settings);
                 temp_buffer = nodes.size();
                 stream.Process(temp_buffer);
