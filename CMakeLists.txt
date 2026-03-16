@@ -202,6 +202,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 	${imgui_SOURCE_DIR}
 )
 
+target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
+
+target_precompile_headers(${PROJECT_NAME} PUBLIC 
+    <imgui.h>
+	<imgui_internal.h>
+)
+
 message(STATUS "linking directories")
 
 target_link_directories(${PROJECT_NAME} PUBLIC

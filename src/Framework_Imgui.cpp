@@ -170,6 +170,22 @@ namespace EWE{
         }
         ImGui::PopID();
     }
+
+    template<> void ImguiExtension::Imgui(Command::Executor& obj) {
+        
+        std::size_t current_memory_offset = 0;
+        for(auto& inst : obj.record.records){
+            
+
+            current_memory_offset += Instruction::GetParamSize(inst.type);
+        }
+        /*
+        for (std::size_t i = 0; i < obj.records.size(); i++) {
+            ImGui::Text("%zu\t:%s", i, Reflect::enum_to_string(obj.records[i].type).data());
+        }
+        */
+    }
+
     FUNC_ENTRY(GPUTask) {
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
@@ -179,6 +195,16 @@ namespace EWE{
         if(ImGui::TreeNode("resources")){
             ImguiExtension::Imgui(obj.resources);
             ImGui::TreePop();
+        }
+
+        if(obj.commandExecutor.has_value()){
+            if(ImGui::TreeNode("executor")){
+                ImguiExtension::Imgui(obj.commandExecutor.value());
+                ImGui::TreePop();
+            }
+        }
+        else{
+            ImGui::Text("executor has no value");
         }
 
         ImGui::PopID();
@@ -411,6 +437,48 @@ namespace EWE{
         for (std::size_t i = 0; i < obj.records.size(); i++) {
             ImGui::Text("%zu\t:%s", i, Reflect::enum_to_string(obj.records[i].type).data());
         }
+    }
+
+
+    void ImguiExpandInstruction(void* mem_addr, Instruction::Type itype){
+        switch (itype) {
+            case Instruction::Type::BindPipeline: ImguiReflectParamStruct(reinterpret_cast<ParamPack::Pipeline*>(mem_addr)); break;
+            /*
+            case Type::BindDescriptor: return sizeof(VkDescriptorSet);
+            case Type::Push: return sizeof(GlobalPushConstant_Raw);
+            case Type::BeginRender: return sizeof(VkRenderingInfo);
+            case Type::EndRender: return 0;
+            
+            case Type::Draw: return sizeof(ParamPack::VertexDraw);
+            case Type::DrawIndexed: return sizeof(ParamPack::IndexDraw);
+            case Type::Dispatch: return sizeof(ParamPack::Dispatch);
+            case Type::DrawMeshTasks: return sizeof(ParamPack::DrawMeshTasks);
+            //raytracing here
+            
+            case Type::DrawIndirect: return sizeof(ParamPack::DrawIndirect);
+            case Type::DrawIndexedIndirect: return sizeof(ParamPack::DrawIndirect);
+            case Type::DispatchIndirect: return sizeof(ParamPack::DispatchIndirect);
+            case Type::DrawMeshTasksIndirect: return sizeof(ParamPack::DrawIndirect);
+            
+            case Type::DrawIndirectCount: return sizeof(ParamPack::DrawIndirectCount);
+            case Type::DrawIndexedIndirectCount: return sizeof(ParamPack::DrawIndirectCount);
+            case Type::DrawMeshTasksIndirectCount: return sizeof(ParamPack::DrawIndirectCount);
+            //case Type::PipelineBarrier: return 0;
+            case Type::DS_Viewport: return sizeof(ParamPack::Viewport);
+            case Type::DS_Scissor: return sizeof(ParamPack::Scissor);
+            case Type::DS_ViewportCount: return sizeof(ParamPack::ViewportCount);
+            case Type::DS_ScissorCount: return sizeof(ParamPack::ScissorCount);
+            case Type::BeginLabel: return sizeof(ParamPack::Label);
+            case Type::EndLabel: return 0;
+            case Type::If: return sizeof(bool);
+            //other loop controls
+            case Type::EndIf: return 0;
+            */
+
+            //bunch of dynamic state that i havent got to yet
+        }
+        //EWE_UNREACHABLE;
+        
     }
 
 #undef FUNC_ENTRY

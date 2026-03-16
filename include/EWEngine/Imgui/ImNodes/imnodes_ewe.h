@@ -66,6 +66,8 @@ namespace ImNodes{
 
             void RenderNodes();
 
+            virtual void ImGuiNodeDebugPrint(Node& node) const;
+
             bool attemptingToSave = false;
             bool submissionReady = false;
 
@@ -88,7 +90,28 @@ namespace ImNodes{
             virtual void LinkEmptyDrop(Node&, PinOffset) {}
 
             virtual void LinkCreated(NodePair&) {}
-            virtual void LinkDestroyed(NodePair&) {}
+            virtual void LinkDestroyed(NodePair& link) {
+                const auto ptr_diff = &link - links.data();
+                links.erase(links.begin() + ptr_diff);
+            }
+
+            virtual void DestroyPressedOnNode(Node& node) {
+                Node* node_ptr = &node;
+                for (auto& link : links){
+                    if(link.start == node_ptr || link.end == node_ptr){
+                        LinkDestroyed(link);
+                        break;
+                    }
+                }
+                nodes.DestroyElement(node_ptr);
+
+            }
+            virtual void DestroyPressedOnPin(Node& node, PinOffset) {
+                //i dont want to default this, pins beign deleted is abnormal
+            }
+            virtual void DestroyPressedOnLink(NodePair& link) {
+                LinkDestroyed(link);
+            }
 
             bool add_menu_is_open = false;
             ImVec2 menu_pos;

@@ -609,7 +609,9 @@ int main() {
         std::chrono::nanoseconds elapsedTime = std::chrono::nanoseconds(0);
         constexpr auto frameDuration = std::chrono::duration<double>(1.0 / 60.0); // seconds per frame
 
-        while (true) {
+
+
+        while (!glfwWindowShouldClose(EWE::Global::window->window)) {
             const auto timeEnd = std::chrono::high_resolution_clock::now();
             elapsedTime += timeEnd - timeBegin;
             timeBegin = timeEnd;
@@ -651,6 +653,6 @@ int main() {
     printf("returning successfully\n");
 #endif
 
-    std::this_thread::sleep_for(std::chrono::seconds(5)); 
+    std::this_thread::sleep_for(std::chrono::seconds(2)); 
     return 0;
 }

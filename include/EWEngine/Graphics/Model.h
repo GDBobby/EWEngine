@@ -7,7 +7,7 @@
 namespace EWE{
     struct RasterTask;
 
-    struct Model{
+    struct ModelBuffers{
         struct Layout{
             struct Member{
                 uint8_t size;
@@ -23,6 +23,7 @@ namespace EWE{
 
 
         template<typename T, std::integral U>
+        requires(std::is_same_v<uint16_t, U> || std::is_same_v<uint32_t, U>)
         [[nodiscard]] explicit Model(const std::span<T> vertices, const std::span<U>indices);
 
         template<typename T>

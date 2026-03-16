@@ -94,6 +94,13 @@ namespace ImNodes{
         }
         */
 
+        void Editor::ImGuiNodeDebugPrint(Node& node) const {
+            if(node.id != 0){
+                auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
+                ImGui::Text("node : %d - pos : %.2f:%.2f", node.id, temp_pos.x, temp_pos.y);
+            }
+        }
+
         void Editor::RenderEditorTitle(){
             ImGui::Text("node count : %zu", nodes.Size());
 
@@ -101,14 +108,12 @@ namespace ImNodes{
             ImGui::Text("window size  : %.2f:%.2f", node_editor_window_size.x, node_editor_window_size.y);
             //ImGui::Text("mouse in editor coords : %.2f:%.2f", ImNodes::Get)
             
-            for(auto& node : nodes){
-                if(node.id != 0){
-                    auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
-                    ImGui::Text("node : %d - pos : %.2f:%.2f", node.id, temp_pos.x, temp_pos.y);
+            if(ImGui::TreeNode("node data (debugging)")){
+
+                for(auto& node : nodes){
+                    ImGuiNodeDebugPrint(node);
                 }
-                //ImGui::PushID(node.id);
-                //ImGui::SliderFloat2("node pos", &node.nodePos.x, -1000.f, 1000.f);
-                //ImGui::PopID();
+                ImGui::TreePop();
             }
                 
 
@@ -121,10 +126,7 @@ namespace ImNodes{
         void Editor::RenderNodes() {
             ImNodes::EditorContextSet(context);
 
-            int deletedNode;
-
             RenderEditorTitle();
-
 
             //title bar here, save and whatever else
             if(has_save_func){
@@ -219,8 +221,7 @@ namespace ImNodes{
                 ImNodes::Link(link.id, link.start->id + link.start_offset + 1, link.end->id + link.end_offset + 1);
             }
 
-
-            deletedNode = ImNodes::EndNodeEditor();
+            int returned_deleted_node = ImNodes::EndNodeEditor();
 
             { //link start and drop
                 PinID link_pin_id = -1;
@@ -289,6 +290,39 @@ namespace ImNodes{
 
             if(add_menu_is_open){
                 add_menu_is_open = !RenderAddMenu();
+            }
+
+            bool delete_pressed = ImGui::IsKeyPressed(ImGuiKey_Delete);
+            if(delete_pressed){
+                int deleted_pin = -1; 
+                NodePair* deleted_link = nullptr;
+
+                int hovered_id;
+                if(ImNodes::IsLinkHovered(&hovered_id)){
+                    for(auto& link : links){
+                        if(hovered_id == link.id){
+                            DestroyPressedOnLink(link);
+                            break;
+                        }
+                    }
+                }
+                if(ImNodes::IsPinHovered(&hovered_id)){
+                    for(auto& node : nodes){
+                        int pin_check = node.CheckPin(hovered_id);
+                        if(pin_check >= 0){
+                            DestroyPressedOnPin(node, pin_check);
+                            break;
+                        }
+                    }
+                }
+                else if (ImNodes::IsNodeHovered(&hovered_id)){
+                    for(auto& node : nodes){
+                        if(node.id == hovered_id){
+                            DestroyPressedOnNode(node);
+                            break;
+                        }
+                    }
+                }
             }
         }
     } //namespace EWE
