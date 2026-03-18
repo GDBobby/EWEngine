@@ -41,8 +41,12 @@ namespace EWE{
 	FWD_DEC_IMGUI(PipeLayout);
 	FWD_DEC_IMGUI(Shader);
 	FWD_DEC_IMGUI(AttachmentInfo);
+
+    //putting these in the macro leads to weird compiler behavior (as of gcc 16.0.1 20260217 (experimental))
 	template<> void ImguiExtension::Imgui(VkAttachmentLoadOp&);
 	template<> void ImguiExtension::Imgui(VkAttachmentStoreOp&);
+	template<> void ImguiExtension::Imgui(VkSamplerCreateInfo&);
+    
 
 	namespace Command {
 		struct Record;

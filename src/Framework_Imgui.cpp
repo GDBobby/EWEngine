@@ -417,6 +417,16 @@ namespace EWE{
         ImGui::SliderInt("store op", reinterpret_cast<int*>(&obj), 0, s_vs.size(), s_vs[temp]);
     }
 
+    template<> void ImguiExtension::Imgui(VkSamplerCreateInfo& obj) {
+        int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
+        ImGui::PushID(temp_id);
+        
+        Reflect::ImguiEnum_Combo("mag filter", obj.magFilter);
+        Reflect::ImguiEnum_Combo("min filter", obj.minFilter);
+
+        ImGui::PopID();
+    }
+
     template<> void ImguiExtension::Imgui(VkStencilOpState& obj) {
         //imgui_enum("fail op", obj.failOp, 0, 8);
         //imgui_enum("pass op", obj.passOp, 0, 8);

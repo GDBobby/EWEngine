@@ -33,9 +33,7 @@ namespace EWE{
 		void FreeBuffer(CommandBuffer& commandBuffer) {
 			for (std::size_t i = 0; i < size; i++) {
 				if (commandPools[i] == commandBuffer.commandPool) {
-#if EWE_DEBUG
-					assert(usage[i]);
-#endif
+					EWE_ASSERT(usage[i]);
 					usage[i] = false;
 					pool.Reset(0);
 					return;

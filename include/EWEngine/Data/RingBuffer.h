@@ -43,9 +43,7 @@ namespace EWE{
 		void Return(T* obj){
 			for(std::size_t i = 0; i < Size; i++){
 				if(obj == &data[i]){
-#if EWE_DEBUG
-					assert(usage[i]);
-#endif
+					EWE_ASSERT(usage[i]);
 					usage[i] = false;
 					return;
 				}

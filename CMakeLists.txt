@@ -29,7 +29,6 @@ option(EWE_PROJECTS "Build projects" ${is_project_root})
 
 Message(STATUS "Cmake Generator : ${CMAKE_GENERATOR}")
 
-
 option(USING_ASAN "address sanitizer" OFF)
 if(USING_ASAN)
 	message(STATUS "using asan ${PROJECT_NAME}")
@@ -130,6 +129,33 @@ else()
 	set(EWFramework_LIB EWFramework)
 endif()
 
+
+set(XXHASH_BUILD_XXHSUM OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+	xxhash
+	GIT_REPOSITORY https://github.com/GDBobby/xxHash-constexpr.git
+	GIT_TAG        dev
+)
+FetchContent_MakeAvailable(xxhash)
+#i dont currently have time to make xxHash constexpr compatible
+#if(DEFINED XXHASH_PATH)
+	#add_subdirectory(${XXHASH_PATH}/build/cmake "${XXHASH_PATH}/build")
+	#set(xxhash_LIB xxhash)
+#else()
+	#message(STATUS "XXHASH_PATH - ${XXHASH_PATH}")
+  	#message(FATAL_ERROR "!!!!FAILED!!!! to find XXHASH_PATH in .env.cmake, using FetchContent. until the framework is a git submodule, this is an error")
+	
+	#FetchContent_Declare(
+	#	xxhash
+	#	GIT_REPOSITORY https://github.com/GDBobby/xxHash-constexpr.git
+	#	GIT_TAG        dev
+	#)
+
+	#FetchContent_MakeAvailable(xxhash)
+#endif()
+
+
+
 if(NOT TARGET LinearAlgebra)
 	if(DEFINED LAB_PATH AND EXISTS "${LAB_PATH}/CMakeLists.txt")
 		message(STATUS "~~~~FOUND~~~~ Using local LAB from ${LAB_PATH}")
@@ -165,8 +191,6 @@ FetchContent_Declare(
     BINARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
 )
 FetchContent_MakeAvailable(imgui)
-
-message(STATUS "imgui location - ${imgui_SOURCE_DIR}")
 
 set(IMGUI_SOURCES
 	${imgui_SOURCE_DIR}/imgui.cpp
@@ -207,6 +231,7 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
 target_precompile_headers(${PROJECT_NAME} PUBLIC 
     <imgui.h>
 	<imgui_internal.h>
+	"include/EWEngine/Global.h"
 )
 
 message(STATUS "linking directories")
@@ -227,6 +252,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	marl
 	harfbuzz
 	freetype
+	xxhash
 )
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)

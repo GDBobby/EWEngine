@@ -1,9 +1,6 @@
 #pragma once
 
-#include "EWEngine/Preprocessor.h"
-
 #ifdef EWE_IMGUI
-#include <cstdint>
 #include "imgui.h"
 
 #include <filesystem>

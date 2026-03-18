@@ -49,3 +49,7 @@ cmake_install.cmake
 imgui.ini
 
 compile_commands.json
+
+.clangd
+
+*.ewrg

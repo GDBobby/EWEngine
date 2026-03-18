@@ -1,6 +1,5 @@
 #pragma once
 
-#include "EightWinds/Data/KeyValueContainer.h"
 #include "EightWinds/VulkanHeader.h"
 #include "EightWinds/Backend/Semaphore.h"
 #include "EightWinds/Backend/StagingBuffer.h"
@@ -8,15 +7,10 @@
 #include "EightWinds/CommandBuffer.h"
 #include "EightWinds/Backend/STC_Helper.h"
 
-#include "EightWinds/Data/RuntimeArray.h"
-
 #include "EWEngine/Data/RingBuffer.h"
 
-#include <cassert>
-#include <thread>
 #include <mutex>
 #include <array>
-#include <vector>
 
 /*
 * 

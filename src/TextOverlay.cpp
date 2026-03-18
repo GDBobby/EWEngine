@@ -200,7 +200,7 @@ namespace EWE {
 		if (textWidth < 0.0f) {
 
 			printf("width less than 0, what  was the string? : %s:%u \n", string.c_str(), Global::window->screenDimensions.width);
-			assert(false);
+			EWE_ASSERT(false);
 		}
 		return textWidth;
 #else
@@ -364,7 +364,7 @@ namespace EWE {
 		if (mapped == nullptr) {
 			mapped = reinterpret_cast<Font::CharacterData::Vert*>(textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[Global::frameIndex].Map());
 			textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped = mapped;
-			assert(mapped != nullptr);
+			EWE_ASSERT(mapped != nullptr);
 		}
 		mapped = mapped + (4 * textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount);
 		const float charW = 1.5f * textOverlayPtr->scale * scaleX * textStruct.scale / textOverlayPtr->framebuffer_width;

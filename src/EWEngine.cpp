@@ -107,8 +107,8 @@ namespace EWE{
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        assert(glfwExtensionCount > 0 && "not supporting headless");
-        assert(glfwExtensions != nullptr);
+        EWE_ASSERT(glfwExtensionCount > 0 && "not supporting headless");
+        EWE_ASSERT(glfwExtensions != nullptr);
 
         for (uint32_t i = 0; i < glfwExtensionCount; ++i) {
             requiredExtensions.push_back(glfwExtensions[i]);
@@ -247,7 +247,7 @@ namespace EWE{
         }
         */
     {
-        Global::Create(logicalDevice, window, stcManager);
+        Global::Create(logicalDevice, window, stcManager, "/home/Projects/EWEngine/examples/common");
     }
 
 #if EWE_IMGUI

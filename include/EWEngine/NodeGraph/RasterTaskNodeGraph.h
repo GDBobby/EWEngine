@@ -6,7 +6,7 @@
 #include "EightWinds/Pipeline/TaskRasterConfig.h"
 #include "EightWinds/RenderGraph/RasterTask.h"
 
-#include "EWEngine/Tools/FileResource.h"
+#include "EWEngine/Assets/FileResource.h"
 
 #include "EWEngine/Global.h"
 

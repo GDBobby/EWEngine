@@ -1,10 +1,5 @@
 #include "EWEngine/Global.h"
 
-#include "EightWinds/LogicalDevice.h"
-#include "EightWinds/Window.h"
-#include "EWEngine/STC_Manager.h"
-
-#include "EWEngine/Tools/FileResource.h"
 
 #include <thread>
 
@@ -13,13 +8,30 @@ namespace EWE{
         const std::thread::id mainThreadID;
 
         LogicalDevice& logicalDevice;
-        PhysicalDevice& physicalDevice;
-        Instance& instance;
         Window& window;
         marl::Scheduler scheduler;
         STC_Manager& stcManager;
 
-        ShaderFileSystem shaderFS;
+        Asset::Manager<Shader> shaderManager;
+        Asset::Manager<Sampler> samplerManager;
+        Asset::Manager<Image> images;
+        Asset::Manager<ImageView> views;
+        Asset::Manager<DescriptorImageInfo> diis;
+
+        [[nodiscard]] explicit GlobalData(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager, std::filesystem::path const& root_path)
+        : logicalDevice{logicalDevice},
+            window{window},
+            scheduler{marl::Scheduler::Config::allCores()},
+            stcManager{stcManager},
+            shaderManager{logicalDevice, root_path / "shaders"},
+            samplerManager{logicalDevice},
+            images{logicalDevice, root_path},
+            views{logicalDevice, images},
+            diis{logicalDevice, samplerManager, views, root_path}
+
+        {
+
+        }
     };
 
     GlobalData* globalData = nullptr;
@@ -39,31 +51,28 @@ namespace EWE{
         marl::Scheduler* scheduler;
         STC_Manager* stcManager;
 
-        ShaderFileSystem* shaderFS;
+        Asset::Manager<Shader>* shaders;
+        Asset::Manager<Sampler>* samplers;
+        Asset::Manager<Image>* images;
+        Asset::Manager<ImageView>* views;
+        Asset::Manager<DescriptorImageInfo>* diis;
 
         
-        bool Create(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager) {
-#if EWE_DEBUG_BOOL
-            assert(globalData == nullptr);
-#endif
-            globalData = new GlobalData{
-                .mainThreadID = std::this_thread::get_id(),
-                .logicalDevice = logicalDevice,
-                .physicalDevice = logicalDevice.physicalDevice,
-                .instance = logicalDevice.instance,
-                .window = window,
-                .scheduler{marl::Scheduler::Config::allCores()},
-                .stcManager = stcManager,
-                .shaderFS{logicalDevice, "/home/Projects/EWEngine/examples/common/shaders"}
-            };
+        bool Create(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager, std::filesystem::path const& root_path) {
+            EWE_ASSERT(globalData == nullptr);
+            globalData = new GlobalData{logicalDevice, window, stcManager, root_path};
 
             ::EWE::Global::logicalDevice = &globalData->logicalDevice;
-            physicalDevice = &globalData->physicalDevice;
-            instance = &globalData->instance;
+            physicalDevice = &logicalDevice.physicalDevice;
+            instance = &logicalDevice.instance;
             ::EWE::Global::window = &globalData->window;
             frameIndex = 0; 
             ::EWE::Global::scheduler = &globalData->scheduler;
-            ::EWE::Global::shaderFS = &globalData->shaderFS;
+            ::EWE::Global::shaders = &globalData->shaderManager;
+            ::EWE::Global::samplers = &globalData->samplerManager;
+            ::EWE::Global::images = &globalData->images;
+            ::EWE::Global::views = &globalData->views;
+            ::EWE::Global::diis = &globalData->diis;
 
             return true;
         }

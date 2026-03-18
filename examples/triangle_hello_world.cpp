@@ -29,16 +29,13 @@
 #include "EWEngine/NodeGraph/RasterTaskNodeGraph.h"
 #include "EWEngine/NodeGraph/RecordNodeGraph.h"
 
-#include "EWEngine/Tools/FileResource.h"
+#include "EWEngine/Assets/FileResource.h"
 
 #include "EWEngine/InputData.h"
 #include "imgui.h"
 
 #include <cstdint>
 #include <cstdio>
-#if EWE_DEBUG_BOOL
-#include <cassert>
-#endif
 #include <filesystem>
 #include <chrono>
 #include <array>
@@ -89,6 +86,9 @@ int main() {
     printf("compiled with asan\n");
 #endif
 
+    std::hash<std::filesystem::path> hash{};
+    hash(std::filesystem::current_path());
+
     //need to fix htis. its something with my windows debugger
     auto current_working_directory = std::filesystem::current_path();
     if (current_working_directory.parent_path().parent_path().stem() == "build") {
@@ -136,8 +136,8 @@ int main() {
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
-    EWE::Shader* triangle_vert = EWE::Global::shaderFS->GetShader("basic.vert.spv");
-    EWE::Shader* triangle_frag = EWE::Global::shaderFS->GetShader("basic.frag.spv");
+    EWE::Shader* triangle_vert = EWE::Global::shaders->Get("basic.vert.spv");
+    EWE::Shader* triangle_frag = EWE::Global::shaders->Get("basic.frag.spv");
 
     EWE::PipeLayout triangle_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ triangle_vert, triangle_frag });
     //passconfig should be using a full rendergraph setup
@@ -244,7 +244,7 @@ int main() {
 #if EWE_DEBUG_BOOL
             printf("size comparison - %zu : %zu\n", str.size, sizeof(TriangleVertex));
             //im getting fucked by spv. its forcing 32bit alignment, even tho spirvcross says 20bit
-            //assert(str.size == sizeof(TriangleVertex));
+            //EWE_ASSERT(str.size == sizeof(TriangleVertex));
 #endif
         }
     }
@@ -294,8 +294,8 @@ int main() {
     }
 
     passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
-    EWE::Shader* merge_vert = EWE::Global::shaderFS->GetShader("merge.vert.spv");
-    EWE::Shader* merge_frag = EWE::Global::shaderFS->GetShader("merge.frag.spv");
+    EWE::Shader* merge_vert = EWE::Global::shaders->Get("merge.vert.spv");
+    EWE::Shader* merge_frag = EWE::Global::shaders->Get("merge.frag.spv");
     EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
 
     EWE::Command::Record mergeRecord{};
@@ -464,10 +464,26 @@ int main() {
         }
 
         if(ImGui::TreeNode("shaders")){
-            EWE::Global::shaderFS->Imgui();
+            EWE::Global::shaders->Imgui();
 
             ImGui::TreePop();
         }
+        if(ImGui::TreeNode("dii")){
+            EWE::Global::diis->Imgui();
+
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("images")){
+            EWE::Global::images->Imgui();
+
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("samplers")){
+            EWE::Global::samplers->Imgui();
+
+            ImGui::TreePop();
+        }
+
   
         if(ImGui::TreeNode("reflect TEST")){
             static constexpr auto hb_i_info = ^^EWE::HeapBlock<EWE::Image>;
@@ -546,15 +562,16 @@ int main() {
         .unnormalizedCoordinates = VK_FALSE
     };
 
-    EWE::Sampler attachmentSampler{ logicalDevice, samplerCreateInfo };
+    EWE::Sampler& attachmentSampler = EWE::Global::samplers->Get(samplerCreateInfo);
+
 
     EWE::PerFlight<EWE::DescriptorImageInfo> world_attachment_descriptor(
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, triangle_raster_task.renderInfo->full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, triangle_raster_task.renderInfo->full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+        EWE::DescriptorImageInfo{attachmentSampler, triangle_raster_task.renderInfo->full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        EWE::DescriptorImageInfo{attachmentSampler, triangle_raster_task.renderInfo->full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
     );
     EWE::PerFlight<EWE::DescriptorImageInfo> imgui_attachment_descriptor(
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-        EWE::DescriptorImageInfo{logicalDevice, attachmentSampler, imguiHandler.renderInfo.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+        EWE::DescriptorImageInfo{attachmentSampler, imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        EWE::DescriptorImageInfo{attachmentSampler, imguiHandler.renderInfo.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
     );
 
     std::size_t currentMergeTaskIndex = 0;
@@ -643,9 +660,7 @@ int main() {
     }
     catch (EWE::EWEException& except) {
         logicalDevice.HandleVulkanException(except);
-#if EWE_DEBUG_BOOL
-        assert(false && "caught exception");
-#endif
+        EWE_ASSERT(false && "caught exception");
     }
 
 
