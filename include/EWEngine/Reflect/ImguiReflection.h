@@ -6,11 +6,7 @@
 #include "EWEngine/Reflect/Reflect.h"
 #include "EWEngine/Reflect/Enum.h"
 
-#include <meta>
-
-#include <ranges>
 #include <filesystem>
-#include <typeinfo>
 
 #ifdef EWE_IMGUI
 #include "imgui.h"
@@ -113,7 +109,7 @@ namespace Reflect{
             ImGui::Text("%s", RefInfo::name.data());
 
             ImGui::TableNextColumn();
-            ImGui::Text("%s", enum_to_string(RefInfo::Props::meta_type).data());
+            ImGui::Text("%s", Enum::ToString(RefInfo::Props::meta_type).data());
 
             ImGui::TableNextColumn();
             bool temp_boolean = false;
@@ -138,9 +134,9 @@ namespace Reflect{
             }
 
             ImGui::TableNextColumn();
-            ImGui::Text("%s", enum_to_string(RefInfo::Props::function_type).data());
+            ImGui::Text("%s", Enum::ToString(RefInfo::Props::function_type).data());
             ImGui::TableNextColumn();
-            ImGui::Text("%s", enum_to_string(RefInfo::Props::template_type).data());
+            ImGui::Text("%s", Enum::ToString(RefInfo::Props::template_type).data());
 
             ImGui::TableNextColumn();
             static constexpr auto source_loc = std::meta::source_location_of(T);

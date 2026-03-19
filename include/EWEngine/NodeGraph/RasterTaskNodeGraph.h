@@ -138,11 +138,11 @@ namespace EWE{
 
                 auto& payload_header = *reinterpret_cast<RasterPackageHeader*>(node.payload);
                 ImNodes::BeginNodeTitleBar();
-                ImGui::Text("Raster type : %d", Reflect::enum_to_string(payload_header.rasterType));
+                ImGui::Text("Raster type : %d", Reflect::Enum::ToString(payload_header.rasterType));
                 ImNodes::EndNodeTitleBar();
 
                 for(uint8_t i = 0; i < Shader::Stage::COUNT; i++){
-                    ImGui::Text("%s : %s", Reflect::enum_to_string(static_cast<Shader::Stage::Bits>(i)).data(), payload_header.shaders[i].c_str());
+                    ImGui::Text("%s : %s", Reflect::Enum::ToString(static_cast<Shader::Stage::Bits>(i)).data(), payload_header.shaders[i].c_str());
                     if(ImGui::BeginDragDropTarget()){
                         if (const ImGuiPayload* dragdrop_payload = ImGui::AcceptDragDropPayload("SHADER")){
                             payload_header.shaders[i] = reinterpret_cast<const char*>(dragdrop_payload->Data);

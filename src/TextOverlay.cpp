@@ -82,20 +82,20 @@ namespace EWE {
 		}
 	{
 		image.name = "";
-		image.extent = VkExtent3D{
+		image.data.extent = VkExtent3D{
 			.width = width,
 			.height = height,
 			.depth = 1
 		};
-		image.arrayLayers = 1;
-		image.mipLevels = 1;
-		image.format = VK_FORMAT_B8G8R8A8_UNORM;
-		image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		image.createFlags = 0;
-		image.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		image.type = VK_IMAGE_TYPE_2D;
-		image.samples = VK_SAMPLE_COUNT_1_BIT;
-		image.tiling = VK_IMAGE_TILING_OPTIMAL;
+		image.data.arrayLayers = 1;
+		image.data.mipLevels = 1;
+		image.data.format = VK_FORMAT_B8G8R8A8_UNORM;
+		image.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		image.data.createFlags = 0;
+		image.data.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		image.data.type = VK_IMAGE_TYPE_2D;
+		image.data.samples = VK_SAMPLE_COUNT_1_BIT;
+		image.data.tiling = VK_IMAGE_TILING_OPTIMAL;
 
 		VmaAllocationCreateInfo vmaAllocCreateInfo{
 			.flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) |

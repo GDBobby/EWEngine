@@ -2,6 +2,8 @@
 
 #include <meta>
 
+#include "EWEngine/Reflect/Enum.h"
+
 namespace Reflect{
 
   /*
@@ -398,7 +400,7 @@ namespace Reflect{
     else{
       static constexpr auto func_type = GetFunctionType<T>();
       if constexpr(func_type != FunctionType::None){
-        return enum_to_string(func_type);
+        return Enum::ToString(func_type);
       }
       return null_str_v;
     }

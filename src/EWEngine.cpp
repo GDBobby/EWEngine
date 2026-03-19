@@ -254,12 +254,12 @@ namespace EWE{
 
     bool DrawPresentModes(Swapchain& swapchain) {
 
-        std::string_view currentName = Reflect::enum_to_string(swapchain.swapCreateInfo.presentMode);
+        std::string_view currentName = Reflect::Enum::ToString(swapchain.swapCreateInfo.presentMode);
 
         static std::vector<const char*> available_presents{};
         if (available_presents.size() == 0) {
             for (auto& present : swapchain.available_presentModes) {
-                available_presents.push_back(Reflect::enum_to_string(present).data());
+                available_presents.push_back(Reflect::Enum::ToString(present).data());
             }
         }
 
@@ -289,8 +289,8 @@ namespace EWE{
         if (available_surfaces.size() == 0) {
             for (auto& surface_format : swapchain.available_surface_formats) {
                 available_surfaces.push_back(
-                    std::string(Reflect::enum_to_string(surface_format.format).data()) + " : " +
-                    Reflect::enum_to_string(surface_format.colorSpace).data()
+                    std::string(Reflect::Enum::ToString(surface_format.format).data()) + " : " +
+                    Reflect::Enum::ToString(surface_format.colorSpace).data()
                 );
             }
             for (auto const& cstr : available_surfaces) {

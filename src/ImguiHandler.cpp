@@ -25,15 +25,15 @@ namespace EWE{
 			.usage = VMA_MEMORY_USAGE_AUTO
 		};
 		for (auto& cai : ret) {
-			cai.arrayLayers = 1;
-			cai.extent = { EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height, 1 };
-			cai.mipLevels = 1;
+			cai.data.arrayLayers = 1;
+			cai.data.extent = { EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height, 1 };
+			cai.data.mipLevels = 1;
 			cai.owningQueue = &queue;
-			cai.samples = sampleCount;
-			cai.tiling = VK_IMAGE_TILING_OPTIMAL;
-			cai.type = VK_IMAGE_TYPE_2D;
-			cai.format = colorFormats[0];
-			cai.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			cai.data.samples = sampleCount;
+			cai.data.tiling = VK_IMAGE_TILING_OPTIMAL;
+			cai.data.type = VK_IMAGE_TYPE_2D;
+			cai.data.format = colorFormats[0];
+			cai.data.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			cai.Create(vmaAllocCreateInfo);
 		}

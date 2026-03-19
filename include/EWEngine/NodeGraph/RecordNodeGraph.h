@@ -55,14 +55,14 @@ namespace EWE{
             void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final{
                 if(node.id != 0){
                     auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
-                    ImGui::Text("node.id[%d] : inst[%s] - pos[%.2f:%.2f]", node.id, Reflect::enum_to_string(GetInstructionFromNode(node)).data(), temp_pos.x, temp_pos.y);
+                    ImGui::Text("node.id[%d] : inst[%s] - pos[%.2f:%.2f]", node.id, Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), temp_pos.x, temp_pos.y);
                 }
             }
 
             void PrintNode(ImNodes::EWE::Node& node) const{
                 printf("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
                     node.id, 
-                    Reflect::enum_to_string(GetInstructionFromNode(node)).data(), 
+                    Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
                     node.pins[0]->payload, 
                     node.pins[1]->payload
                 );
@@ -109,7 +109,7 @@ namespace EWE{
                             if(current_node == limit_node){
                                 //printf("early limit return - %zu :  %s\n", ret.size(), __FUNCTION__);
                                 //for(auto& inst : ret){
-                                //    printf("\t%s\n", Reflect::enum_to_string(inst).data());
+                                //    printf("\t%s\n", Reflect::Enum::ToString(inst).data());
                                 //}
                                 return ret;
                             }
@@ -128,7 +128,7 @@ namespace EWE{
 
                 //printf("ret - %zu : %s\n", ret.size(), __FUNCTION__);
                 //for(auto& inst : ret){
-                //    printf("\t%s\n", Reflect::enum_to_string(inst).data());
+                //    printf("\t%s\n", Reflect::Enum::ToString(inst).data());
                 //}
                 return ret;
             }
@@ -150,7 +150,7 @@ namespace EWE{
             }
 
             bool AddInstructionButton(Instruction::Type itype){
-                if(ImGui::Button(Reflect::enum_to_string(itype).data())){
+                if(ImGui::Button(Reflect::Enum::ToString(itype).data())){
                     auto& added_node = CreateRGNode(itype);
                     if(link_empty_drop_srcNode != nullptr){
                         const uint16_t start_offset = link_empty_drop_srcNode == headNode ? 0 : 1;
@@ -213,7 +213,7 @@ namespace EWE{
                     ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "head node");
                 }
                 else{
-                    ImGui::Text("%s", Reflect::enum_to_string(static_cast<Instruction::Type>(inst_index)).data());
+                    ImGui::Text("%s", Reflect::Enum::ToString(static_cast<Instruction::Type>(inst_index)).data());
                 }
                 ImNodes::EndNodeTitleBar();
 

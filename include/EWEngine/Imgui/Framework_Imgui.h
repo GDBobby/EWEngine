@@ -23,6 +23,7 @@ namespace EWE{
 	//forward declared specializations
 	#define FWD_DEC_IMGUI(Type) struct Type; template<> void ImguiExtension::Imgui(Type& obj);
 	
+	FWD_DEC_IMGUI(Image);
 	FWD_DEC_IMGUI(RenderGraph);
 	FWD_DEC_IMGUI(RasterTask);
 	FWD_DEC_IMGUI(TaskRasterConfig);

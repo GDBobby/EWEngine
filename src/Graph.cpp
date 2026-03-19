@@ -308,7 +308,7 @@ namespace EWE{
                     ImGui::Text("node : {%d} - innner coord : {%.2f:%.2f} : %s", 
                         current_mouse_coverage.index, 
                         current_mouse_coverage.coord_within_node.x, current_mouse_coverage.coord_within_node.y, 
-                        Reflect::enum_to_string(current_mouse_coverage.selection).data()
+                        Reflect::Enum::ToString(current_mouse_coverage.selection).data()
                     );
 
                 }

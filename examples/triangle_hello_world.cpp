@@ -638,7 +638,7 @@ int main() {
 
                 if (renderGraph.Acquire(EWE::Global::frameIndex)) {
                     auto& swapImage = engine.swapchain.GetCurrentImage();
-                    swapImage.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+                    swapImage.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
                     mouseData.UpdatePosition(EWE::Global::window->window);
                     //nodeGraph.UpdateRender(mouseData, EWE::Global::frameIndex);

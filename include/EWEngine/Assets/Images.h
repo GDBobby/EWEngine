@@ -12,7 +12,8 @@ namespace Asset{
     template<>
     struct Manager<Image>{
         LogicalDevice& logicalDevice;
-        FileSystem filesystem;
+        FileSystem image_files;
+        FileSystem meta_files;
 
         Hive<Image, 64> data_arena;
         KeyValueContainer<AssetHash, Image*> association_container{};
@@ -23,15 +24,20 @@ namespace Asset{
             return CrossPlatformPathHash(img.name);
         }
 
+        Image::Data LoadMetaData(AssetHash hash);
+
+        void UpdateMetaFile(AssetHash hash);
+        void UpdateMetaFile(AssetHash hash, Image& img);
+
         void Destroy(AssetHash hash);
         void Destroy(Image* sampler);
 
         Image* Get(AssetHash hash);
         Image* Get(std::string_view name);
 
-//#ifdef EWE_IMGUI
+#ifdef EWE_IMGUI
         void Imgui();
-//#endif
+#endif
     };
 } //namespace Asset
 } //namespace EWE

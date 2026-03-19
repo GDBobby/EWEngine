@@ -59,148 +59,31 @@ if(POLICY CMP0077)
 	cmake_policy(SET CMP0077 NEW)
 endif()
 
-FetchContent_Declare(
-	marl
-	GIT_REPOSITORY https://github.com/google/marl.git
-	GIT_TAG main
-	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/marl"
-)
-FetchContent_MakeAvailable(marl)
-
-FetchContent_Declare(
-	rapidjson
-	GIT_REPOSITORY https://github.com/Tencent/rapidjson
-	GIT_TAG 24b5e7a
-	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/rapidjson"
-)
-set(RAPIDJSON_BUILD_DOC OFF CACHE BOOL "")
-set(RAPIDJSON_BUILD_EXAMPLES OFF CACHE BOOL "")
-set(RAPIDJSON_BUILD_TESTS OFF CACHE BOOL "")
-set(RAPIDJSON_BUILD_CXX11 OFF CACHE BOOL "")
-set(RAPIDJSON_BUILD_CXX17 ON CACHE BOOL "")
-set(RAPIDJSON_BUILD_THIRDPARTY_GTEST OFF CACHE BOOL "")
-
-FetchContent_MakeAvailable(rapidjson)
-
-FetchContent_Declare(
-	freetype
-	GIT_REPOSITORY https://gitlab.freedesktop.org/freetype/freetype.git
-	GIT_TAG master
-)
-FetchContent_MakeAvailable(freetype)
-
-set(HB_HAVE_FREETYPE ON CACHE BOOL "" FORCE)
-set(HB_BUILD_UTILS OFF CACHE BOOL "" FORCE)
-set(HB_BUILD_SUBSET OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-  harfbuzz
-  GIT_REPOSITORY https://github.com/harfbuzz/harfbuzz.git
-  GIT_TAG main
-)
-FetchContent_MakeAvailable(harfbuzz)
-
-FetchContent_Declare(
-	tinyobj
-	GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader
-	GIT_TAG 2945a96
-	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/include/tinyobjloader"
-)
-FetchContent_MakeAvailable(tinyobj)
-
-if(DEFINED EWFRAMEWORK_PATH)
-	if(EXISTS "${EWFRAMEWORK_PATH}/CMakeLists.txt")
-		message(STATUS "~~~~FOUND~~~~ Using local EWFramework from ${EWFRAMEWORK_PATH}")
-		add_subdirectory(${EWFRAMEWORK_PATH} "${EWFRAMEWORK_PATH}/build")
-		set(EWFramework_LIB EWFramework)
-	else()
-		message(ERROR "${EWFRAMEWORK_PATH} does not contain CMakeLists.txt")
-	endif()
-else()
-	message(STATUS "EWFRAMEWORK_PATH - ${EWFRAMEWORK_PATH}")
-  	message(FATAL_ERROR "!!!!FAILED!!!! to find ewe_framework_path in .env.cmake, using FetchContent. until the framework is a git submodule, this is an error")
-	FetchContent_Declare(
-		EWFramework
-		GIT_REPOSITORY https://github.com/GDBobby/VulkanFramework
-		SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ewf"
-		GIT_TAG main
-	)
-	FetchContent_MakeAvailable(EWFramework)
-
-	set(EWFramework_LIB EWFramework)
-endif()
-
-
-set(XXHASH_BUILD_XXHSUM OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-	xxhash
-	GIT_REPOSITORY https://github.com/GDBobby/xxHash-constexpr.git
-	GIT_TAG        dev
-)
-FetchContent_MakeAvailable(xxhash)
-#i dont currently have time to make xxHash constexpr compatible
-#if(DEFINED XXHASH_PATH)
-	#add_subdirectory(${XXHASH_PATH}/build/cmake "${XXHASH_PATH}/build")
-	#set(xxhash_LIB xxhash)
-#else()
-	#message(STATUS "XXHASH_PATH - ${XXHASH_PATH}")
-  	#message(FATAL_ERROR "!!!!FAILED!!!! to find XXHASH_PATH in .env.cmake, using FetchContent. until the framework is a git submodule, this is an error")
-	
-	#FetchContent_Declare(
-	#	xxhash
-	#	GIT_REPOSITORY https://github.com/GDBobby/xxHash-constexpr.git
-	#	GIT_TAG        dev
-	#)
-
-	#FetchContent_MakeAvailable(xxhash)
-#endif()
-
-
-
-if(NOT TARGET LinearAlgebra)
-	if(DEFINED LAB_PATH AND EXISTS "${LAB_PATH}/CMakeLists.txt")
-		message(STATUS "~~~~FOUND~~~~ Using local LAB from ${LAB_PATH}")
-		add_subdirectory(${LAB_PATH} ${LAB_PATH})
-		set(lab_LIB lab)
-	else()
-	Message(STATUS "!!!!FAILED!!!! to find lab_path in .env.cmake, using FetchContent")
-		FetchContent_Declare(
-			lab
-			GIT_REPOSITORY https://github.com/GDBobby/LAB
-			SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/lab"
-			GIT_TAG main
-		)
-		FetchContent_MakeAvailable(lab)
-	endif()
-endif()
-
-FetchContent_Declare(
-    imguizmo
-    GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imguizmo"
-    BINARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imguizmo"
-)
-FetchContent_MakeAvailable(imguizmo)
+include(cmake/framework.cmake)
+include(cmake/harfbuzz.cmake)
+include(cmake/imguizmo.cmake)
+include(cmake/lab.cmake)
+include(cmake/marl.cmake)
+include(cmake/rapidjson.cmake)
+include(cmake/tinyobj.cmake)
+include(cmake/xxhash.cmake)
+include(cmake/imageprocessor.cmake)
 
 option(EWE_IMGUI "imgui" ON)
 
 if(EWE_IMGUI)
-FetchContent_Declare(
-    imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
-    BINARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
-)
-FetchContent_MakeAvailable(imgui)
 
-set(IMGUI_SOURCES
-	${imgui_SOURCE_DIR}/imgui.cpp
-	${imgui_SOURCE_DIR}/imgui_draw.cpp
-	${imgui_SOURCE_DIR}/imgui_tables.cpp
-	${imgui_SOURCE_DIR}/imgui_widgets.cpp
-	${imgui_SOURCE_DIR}/imgui_demo.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-)
+	include(cmake/imgui.cmake)
+
+	set(IMGUI_SOURCES
+		${imgui_SOURCE_DIR}/imgui.cpp
+		${imgui_SOURCE_DIR}/imgui_draw.cpp
+		${imgui_SOURCE_DIR}/imgui_tables.cpp
+		${imgui_SOURCE_DIR}/imgui_widgets.cpp
+		${imgui_SOURCE_DIR}/imgui_demo.cpp
+		${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+		${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+	)
 else()
 	set(IMGUI_SOURCES)
 endif()
@@ -224,6 +107,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 	${LinearAlgebra_SOURCE_DIR}
     ${EWFramework_SOURCE_DIR}/include
 	${imgui_SOURCE_DIR}
+	${ImageProcessor_SOURCE_DIR}/include
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
@@ -253,6 +137,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	harfbuzz
 	freetype
 	xxhash
+	ImageProcessor
 )
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)

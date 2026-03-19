@@ -177,7 +177,7 @@ namespace EWE {
 				event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
 			}
 			transferContext.resource.resource[0]->readyForUsage = true;
-			transferContext.resource.resource[0]->layout = transferContext.resource.usage.layout;
+			transferContext.resource.resource[0]->data.layout = transferContext.resource.usage.layout;
 			stc_command_pools[dstQueue].Return(current_stc->cmdPool);
 			delete current_stc;
 		}
@@ -188,7 +188,7 @@ namespace EWE {
 				event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
 			}
 			transferContext.resource.resource[0]->readyForUsage = true;
-			transferContext.resource.resource[0]->layout = transferContext.resource.usage.layout;
+			transferContext.resource.resource[0]->data.layout = transferContext.resource.usage.layout;
 			stc_command_pools[Queue::Transfer].Return(current_stc->cmdPool);
 			delete current_stc;
 		}
