@@ -8,6 +8,7 @@
 
 #include "EWEngine/Assets/Samplers.h"
 #include "EWEngine/Assets/ImageViews.h"
+#include <vulkan/vulkan_core.h>
 
 namespace EWE{
 namespace Asset{
@@ -33,21 +34,32 @@ namespace Asset{
         [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice);
         
         Hive<DescriptorImageInfo, 64> data_arena;
-        KeyValueContainer<uint64_t, DescriptorImageInfo*> association_container;
+        KeyValueContainer<AssetHash, DescriptorImageInfo*> association_container;
 
         void Destroy(AssetHash hash);
         void Destroy(DescriptorImageInfo* dii);
 
-        DescriptorImageInfo* Get(AssetHash hash);
-        DescriptorImageInfo* Get(std::string_view name);
+        DescriptorImageInfo& Get(AssetHash hash);
+        DescriptorImageInfo& Get(std::string_view name);
 
+        void Read(std::filesystem::path const& file_name);
+        void Write(DescriptorImageInfo const& dii, std::filesystem::path const& file_name);
 
-        void Read(std::string_view file_name);
-        void Write(DescriptorImageInfo const& dii, std::string_view file_name);
+        struct Creation{
+            Sampler* sampler;
+            ImageView* view;
+            DescriptorType type = DescriptorType::Combined;
+            VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        };
 
-//#ifdef EWE_IMGUI
+        DescriptorImageInfo& Get(Creation params);
+
+#ifdef EWE_IMGUI
+        KeyValueContainer<DescriptorImageInfo*, ImTextureRef> imgui_texture_refs;
+        Creation creation_params;
+        bool showCreation = false;
         void Imgui();
-//#endif
+#endif
     };
 } //namespace Asset
 } //namespace EWE

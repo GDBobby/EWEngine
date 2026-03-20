@@ -45,8 +45,7 @@ namespace EWE{
     struct CommandBuffer;
 
     class STC_Manager{
-    private:
-        LogicalDevice& logicalDevice;
+    public:
         Queue& renderQueue;
         Queue& computeQueue; //potentially same as renderQueue
         Queue& transferQueue; //potentially same as renderQueue
@@ -56,9 +55,12 @@ namespace EWE{
                 case Queue::Graphics: return renderQueue;
                 case Queue::Compute: return computeQueue;
                 case Queue::Transfer: return transferQueue;
+                default: EWE_UNREACHABLE;
             }
             EWE_UNREACHABLE;
         }
+    private:
+        LogicalDevice& logicalDevice;
 
         RingBuffer<CommandPool, max_frames_in_flight * 2> renderCommandPools;
         //idk count, i want like 2 per fiber but i wont know fiber count at compile time
@@ -80,32 +82,12 @@ namespace EWE{
             SingleTimeCommand& operator=(SingleTimeCommand&& moveSrc);
         };
 
-        SingleTimeCommand* GetSTC(Queue::Type requested_queue) {
-            Queue::Type actualQueueType = requested_queue;
-            switch (requested_queue) {
-
-                case Queue::Transfer:
-                    if (transferQueue == renderQueue) {
-                        actualQueueType = Queue::Graphics;
-                    }
-                    else if (transferQueue == computeQueue) {
-                        //if the compute queue is also the transfer queue, it will behave the same as tranfer->render
-                        //if the destination queue is compute, it will be considered a 1 queue transfer
-                        actualQueueType = Queue::Compute; 
-                    }
-                    break;
-                case Queue::Compute:
-                    if (computeQueue == renderQueue) {
-                        actualQueueType = Queue::Graphics;
-                    }
-                    break;
-                case Queue::Graphics:
-                    break;
-            }
-            return new SingleTimeCommand(actualQueueType, stc_command_pools[requested_queue].GetNext());
-        }
+        SingleTimeCommand* GetSTC(Queue::Type requested_queue);
 
     public:
+
+        Queue::Type GetQueueType(Queue& queue) const;
+
         [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& renderQueue);
         ~STC_Manager();
 
@@ -121,6 +103,7 @@ namespace EWE{
         void CheckFencesForCallbacks();
 
         //this will ONLY work in a fiber
+        void AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue& rh_queue);
         void AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue::Type dstQueue);
         void AsyncTransferToCompute(std::function<void(CommandBuffer& cmdBuf)> transfer, std::function<void(CommandBuffer& cmdBuf)> compute);
     };

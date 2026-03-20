@@ -15,7 +15,7 @@
 #include "imgui.h"
 #endif
 
-#include "EWEngine/Reflect/Enum.h"
+#include "EightWinds/Reflect/Enum.h"
 
 namespace EWE{
     constexpr ConstEvalStr swapchainExt{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };

@@ -9,8 +9,46 @@
 
 
 #include "marl/event.h"
+#include <vulkan/vulkan_core.h>
 
 namespace EWE {
+
+	Queue::Type STC_Manager::GetQueueType(Queue& queue) const{
+		if(queue == renderQueue){
+			return Queue::Graphics;
+		}
+		else if (queue == computeQueue){
+			return Queue::Compute;
+		}
+		else if (queue == transferQueue){
+			return Queue::Transfer;
+		}
+		EWE_UNREACHABLE;
+	}
+
+	STC_Manager::SingleTimeCommand* STC_Manager::GetSTC(Queue::Type requested_queue) {
+		Queue::Type actualQueueType = requested_queue;
+		switch (requested_queue) {
+
+			case Queue::Transfer:
+				if (transferQueue == renderQueue) {
+					actualQueueType = Queue::Graphics;
+				}
+				else if (transferQueue == computeQueue) {
+					//if the compute queue is also the transfer queue, it will behave the same as tranfer->render
+					//if the destination queue is compute, it will be considered a 1 queue transfer
+					actualQueueType = Queue::Compute; 
+				}
+				break;
+			case Queue::Compute:
+				if (computeQueue == renderQueue) {
+					actualQueueType = Queue::Graphics;
+				}
+				break;
+			default: break;
+		}
+		return new SingleTimeCommand(actualQueueType, stc_command_pools[requested_queue].GetNext());
+	}
 
 	Queue& GetComputeQueue(LogicalDevice& logicalDevice, Queue& renderQueue) {
 		for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
@@ -65,16 +103,32 @@ namespace EWE {
 		
     }
     
+    void STC_Manager::AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue& rh_queue){
+		AsyncTransfer(transferContext, GetQueueType(rh_queue));
+	}
+
     //fiber focused
     void STC_Manager::AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue::Type dstQueue){
 
-        VkImageLayout firstLayout = transferContext.generatingMipMaps ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        Queue& lh_queue = transferQueue;
+		EWE_ASSERT(!CheckMainThread());
+		std::string thread_name = std::string("AT:") + transferContext.resource.resource[0]->name;
+		NameCurrentThread(thread_name);
+
         Queue& rh_queue = GetQueue(dstQueue);
+
+        Queue& lh_queue = transferQueue;
 		bool async_transfer = lh_queue != rh_queue;
 
-        SingleTimeCommand* first_stc = GetSTC(Queue::Transfer);
+        VkImageLayout firstLayout = transferContext.generatingMipMaps ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		VkCommandBufferBeginInfo const cmdBeginInfo{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.pInheritanceInfo = nullptr
+		};
 
+        SingleTimeCommand* first_stc = GetSTC(Queue::Transfer);
+		first_stc->cmdBuf.Begin(cmdBeginInfo);
 
 		UsageData<Image> usage{
 			.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -101,23 +155,16 @@ namespace EWE {
 
 		Command_Helper::CopyBufferToImage(first_stc->cmdBuf, transferContext.stagingBuffer->buffer, *transferContext.resource.resource[0], transferContext.image_region, usage.layout);
 
-		SingleTimeCommand* current_stc = first_stc;
 		TimelineSemaphore* first_sem = semaphores.GetNext();
-		TimelineSemaphore* current_sem = first_sem;
 
 		VkCommandBufferSubmitInfo cmdInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
 			.pNext = nullptr,
-			.commandBuffer = current_stc->cmdBuf,
+			.commandBuffer = first_stc->cmdBuf,
 			.deviceMask = 0
 		};
-		VkSemaphoreSubmitInfo semInfo{
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.pNext = nullptr,
-			.semaphore = first_sem->vkSemaphore,
-			.value = 1,
-			.stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT
-		};
+
+		VkSemaphoreSubmitInfo semInfo = first_sem->GetSignalSubmitInfo(VK_PIPELINE_STAGE_2_TRANSFER_BIT);
 
 		VkSubmitInfo2 submitInfo{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
@@ -128,6 +175,10 @@ namespace EWE {
 			.signalSemaphoreInfoCount = 1,
 			.pSignalSemaphoreInfos = &semInfo
 		};
+
+
+		SingleTimeCommand* current_stc = first_stc;
+		TimelineSemaphore* current_sem = first_sem;
 
 		if ((lh_queue.FamilyIndex() != rh_queue.FamilyIndex()) || (usage.layout != transferContext.resource.usage.layout)) { //ownership and potentially layout transition
 			auto ownershipBarrier = Barrier::Transition_Image(lh_queue, lh_resource, rh_queue, transferContext.resource, 0);
@@ -147,6 +198,11 @@ namespace EWE {
 				first_stc->cmdPool->queue.Submit2(1, &submitInfo, VK_NULL_HANDLE);
 				current_stc = GetSTC(Queue::Graphics);
 
+				cmdInfo.commandBuffer = current_stc->cmdBuf;
+				auto current_sem = semaphores.GetNext();
+				semInfo = current_sem->GetSignalSubmitInfo(VK_PIPELINE_STAGE_2_TRANSFER_BIT);
+				current_stc->cmdBuf.Begin(cmdBeginInfo);
+
 				vkCmdPipelineBarrier2(current_stc->cmdBuf, &dependency_info);
 			}
 		}
@@ -155,13 +211,12 @@ namespace EWE {
 		}
 
 		current_stc->cmdBuf.End();
-		cmdInfo.commandBuffer = current_stc->cmdBuf;
-		semInfo.semaphore = current_sem->vkSemaphore;
 		current_stc->cmdPool->queue.Submit2(submitInfo, VK_NULL_HANDLE);
 
 		if (async_transfer) {
-			first_sem->WaitOn(1);
-			while (!first_sem->Check(1)) {
+
+			first_sem->WaitOn(first_sem->value);
+			while (!first_sem->Check(first_sem->value)) {
 				marl::Event event{ marl::Event::Mode::Manual };
 				event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
 			}
@@ -172,7 +227,7 @@ namespace EWE {
 			stc_command_pools[Queue::Transfer].Return(first_stc->cmdPool);
 			delete first_stc;
 			EWE_ASSERT(first_sem != current_sem);
-			while (!current_sem->Check(1)) {
+			while (!current_sem->Check(current_sem->value)) {
 				marl::Event event{ marl::Event::Mode::Manual };
 				event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
 			}

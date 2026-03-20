@@ -10,7 +10,7 @@ namespace Asset{
     association_container{}
     {}
 
-    void Manager<Sampler>::Destroy(uint64_t condensed_val){
+    void Manager<Sampler>::Destroy(Sampler::CondensedType condensed_val){
         for(auto iter = association_container.begin(); iter != association_container.end(); iter++){
             if(iter->key == condensed_val){
                 data_arena.DestroyElement(iter->value);
@@ -31,7 +31,7 @@ namespace Asset{
         EWE_UNREACHABLE;
     }
 
-    Sampler& Manager<Sampler>::Get(uint64_t condensed_val){
+    Sampler& Manager<Sampler>::Get(Sampler::CondensedType condensed_val){
         for(auto& kvp : association_container){
             if(kvp.key == condensed_val){
                 return *kvp.value;

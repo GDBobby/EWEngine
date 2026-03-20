@@ -1,12 +1,43 @@
 #include "EWEngine/Assets/DII.h"
 
+#include "EWEngine/Assets/Hash.h"
+#include "EWEngine/Imgui/Framework_Imgui.h"
+#include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/DescriptorImageInfo.h"
 #include "EightWinds/Sampler.h"
 
 #include "EWEngine/Global.h"
 
+#if EWE_IMGUI
+    #include "imgui.h"
+    #include "backends/imgui_impl_vulkan.h"
+#endif
+
 namespace EWE{
 namespace Asset{
+
+    
+    
+#if EWE_IMGUI
+    ImTextureRef GetTextureRef(DescriptorImageInfo& dii){
+        if(!dii.view.image.owningQueue){
+            return ImTextureID_Invalid;
+        }
+        if(*dii.view.image.owningQueue != Global::stcManager->GetQueue(Queue::Graphics)){
+            return ImTextureID_Invalid;
+        }
+        if(dii.type != DescriptorType::Combined){
+            return ImTextureID_Invalid;
+        }
+        if(dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_GENERAL){
+            return ImGui_ImplVulkan_AddTexture(dii.sampler != nullptr ? dii.sampler->sampler : VK_NULL_HANDLE, dii.view.view, dii.imageInfo.imageLayout);
+        }
+        else{
+            return ImTextureID_Invalid;
+        }
+
+        }
+#endif
 
     Manager<DescriptorImageInfo>::Manager(
         LogicalDevice& logicalDevice,
@@ -24,9 +55,9 @@ namespace Asset{
 
     static constexpr std::size_t dii_version = 0;
 
-    void Manager<DescriptorImageInfo>::Read(std::string_view file_name){
+    void Manager<DescriptorImageInfo>::Read(std::filesystem::path const& file_name){
 
-        std::ifstream stream{file_name.data(), std::ios::binary};
+        std::ifstream stream{file_name, std::ios::binary};
         EWE_ASSERT(stream.is_open());
 
         Stream::Operator streamHandler{stream};
@@ -70,9 +101,9 @@ namespace Asset{
         }
     }
 
-    void Manager<DescriptorImageInfo>::Write(DescriptorImageInfo const& dii, std::string_view file_name){
+    void Manager<DescriptorImageInfo>::Write(DescriptorImageInfo const& dii, std::filesystem::path const& file_name){
 
-        std::ofstream stream{file_name.data(), std::ios::binary};
+        std::ofstream stream{file_name, std::ios::binary};
         EWE_ASSERT(stream.is_open());
 
         Stream::Operator streamHandler{stream};
@@ -97,11 +128,93 @@ namespace Asset{
         streamHandler.Process(dii.imageInfo.imageLayout);
     }
 
+    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(AssetHash hash){
+        auto found = association_container.find(hash);
+        if(found == association_container.end()){
+            //look into the file system
+        }
+        else{
+            return *found->value;
+        }
+    }
+    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(std::string_view name){
+        auto hash = CrossPlatformPathHash(name);
+        for(auto kvp : association_container){
+            if(kvp.value->name == name){
+                return *kvp.value;
+            }
+        }
+        //wasnt found, break into the file system
+    }
+
+    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(Creation params){
+        //search for a match, potentially, and return the existing one
+        DescriptorImageInfo* ret = nullptr;
+        if(params.sampler){
+            ret = &data_arena.AddElement(*params.sampler, *params.view, params.type, params.layout);
+        }
+        else{
+            ret = &data_arena.AddElement(*params.view, params.type, params.layout);
+        }
+        return *ret;
+    }
+
 
 
 #ifdef EWE_IMGUI
     void Manager<DescriptorImageInfo>::Imgui(){
-        filesystem.Imgui();
+        //filesystem.Imgui();
+        ImGui::Checkbox("show creation", &showCreation);
+        if(showCreation){
+            if(creation_params.sampler != nullptr){
+                ImGui::Text("sampler : %zu", Sampler::Condense(creation_params.sampler->info));
+            }
+            else{
+                ImGui::Text("no sampler");
+            }
+            if(creation_params.view != nullptr){
+                ImGui::Text("image view : %s", creation_params.view->name.c_str());
+            }
+            else{
+                ImGui::Text("no image view");
+            }
+            Reflect::Enum::Imgui_Combo_Selectable("descriptor type", creation_params.type);
+            Reflect::Enum::Imgui_Combo_Selectable("layout", creation_params.layout);
+        }
+
+        for(auto& kvp : association_container){
+            ImGui::PushID(kvp.key);
+            if(ImGui::TreeNode(kvp.value->name.c_str())){
+                auto found_image = imgui_texture_refs.find(kvp.value);
+                if(found_image != imgui_texture_refs.end()){
+                    ImVec2 image_size{
+                        static_cast<float>(found_image->key->view.image.data.extent.width),
+                        static_cast<float>(found_image->key->view.image.data.extent.height)
+                    };
+                    ImGui::Image(found_image->value, image_size);
+                }
+
+
+                if(kvp.value->sampler != nullptr){
+                    if(ImGui::TreeNode("sampler")){
+                        VkSamplerCreateInfo samplerInfo = kvp.value->sampler->info;
+                        ImguiExtension::Imgui(samplerInfo);
+                        ImGui::TreePop();
+                    }
+                }
+                else{
+                    ImGui::Text("no sampler");
+                }
+                if(ImGui::TreeNode("image view")){
+                    ImguiExtension::Imgui(kvp.value->view);
+                    ImGui::TreePop();
+                }
+                ImGui::Text("descriptor type : %s", Reflect::Enum::ToString(kvp.value->type).data());
+                ImGui::Text("layout : %s", Reflect::Enum::ToString(kvp.value->imageInfo.imageLayout).data());
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
     }
 #endif
 

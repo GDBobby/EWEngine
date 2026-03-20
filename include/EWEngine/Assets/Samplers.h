@@ -22,12 +22,12 @@ namespace Asset{
         [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice);
         
         Hive<Sampler, 64> data_arena;
-        KeyValueContainer<uint64_t, Sampler*> association_container;
+        KeyValueContainer<Sampler::CondensedType, Sampler*> association_container;
 
-        void Destroy(uint64_t condensed_val);
+        void Destroy(Sampler::CondensedType condensed_val);
         void Destroy(Sampler* sampler);
 
-        Sampler& Get(uint64_t condensed_val);
+        Sampler& Get(Sampler::CondensedType condensed_val);
         Sampler& Get(VkSamplerCreateInfo const& samplerInfo);
 
 #ifdef EWE_IMGUI

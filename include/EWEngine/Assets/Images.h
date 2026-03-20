@@ -13,7 +13,7 @@ namespace Asset{
     struct Manager<Image>{
         LogicalDevice& logicalDevice;
         FileSystem image_files;
-        FileSystem meta_files;
+        //FileSystem meta_files;
 
         Hive<Image, 64> data_arena;
         KeyValueContainer<AssetHash, Image*> association_container{};
@@ -24,7 +24,7 @@ namespace Asset{
             return CrossPlatformPathHash(img.name);
         }
 
-        Image::Data LoadMetaData(AssetHash hash);
+        //Image::Data LoadMetaData(KeyValuePair<AssetHash, std::filesystem::path> const& img_kvp);
 
         void UpdateMetaFile(AssetHash hash);
         void UpdateMetaFile(AssetHash hash, Image& img);

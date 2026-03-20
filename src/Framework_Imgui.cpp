@@ -5,6 +5,7 @@
 #include "imgui.h"
 
 #include "EightWinds/Image.h"
+#include "EightWinds/ImageView.h"
 #include "EightWinds/RenderGraph/RenderGraph.h"
 #include "EightWinds/RenderGraph/RasterTask.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
@@ -16,7 +17,7 @@
 
 #include <string>
 
-#include "EWEngine/Reflect/Enum.h"
+#include "EightWinds/Reflect/Enum.h"
 
 void imgui_bool_check(std::string_view name, VkBool32& vk_bool) {
     bool temp_bool = vk_bool;
@@ -80,6 +81,19 @@ namespace EWE{
         Reflect::Enum::Imgui_Combo_Selectable("type", obj.data.type);
         Reflect::Enum::Imgui_Combo_Selectable("samples", obj.data.samples);
         Reflect::Enum::Imgui_Combo_Selectable("tiling", obj.data.tiling);
+    }
+    template<> void ImguiExtension::Imgui(ImageView& obj){
+        ImGui::Text("name : %s", obj.name.c_str());
+        if(ImGui::TreeNode("image")){
+            ImguiExtension::Imgui(obj.image);
+            ImGui::TreePop();
+        }
+
+        //this assumes aspect flags won't be combined, which I've never done
+        VkImageAspectFlagBits aspect_flag_bits = static_cast<VkImageAspectFlagBits>(obj.subresource.aspectMask);
+        ImGui::Text("aspect mask : %s", Reflect::Enum::ToString(aspect_flag_bits).data());
+        ImGui::Text("base array layer[%u] : layer count[%u]", obj.subresource.baseArrayLayer, obj.subresource.layerCount);
+        ImGui::Text("base mip level[%u] : level count[%u]", obj.subresource.baseMipLevel, obj.subresource.levelCount);
     }
 
     template<> void ImguiExtension::Imgui(RenderGraph& obj){

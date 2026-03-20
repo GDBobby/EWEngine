@@ -28,7 +28,6 @@ namespace EWE{
             images{logicalDevice, root_path},
             views{logicalDevice, images},
             diis{logicalDevice, samplerManager, views, root_path}
-
         {
 
         }
@@ -37,9 +36,6 @@ namespace EWE{
     GlobalData* globalData = nullptr;
 
 
-    bool CheckMainThread() {
-        return std::this_thread::get_id() == globalData->mainThreadID;
-    }
 
     namespace Global{
         LogicalDevice* logicalDevice;
@@ -68,6 +64,7 @@ namespace EWE{
             ::EWE::Global::window = &globalData->window;
             frameIndex = 0; 
             ::EWE::Global::scheduler = &globalData->scheduler;
+            ::EWE::Global::stcManager = &globalData->stcManager;
             ::EWE::Global::shaders = &globalData->shaderManager;
             ::EWE::Global::samplers = &globalData->samplerManager;
             ::EWE::Global::images = &globalData->images;
@@ -77,4 +74,30 @@ namespace EWE{
             return true;
         }
     } //namespace Global
+
+#ifdef _WIN32
+#defien WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <processthreadsapi.h>
+#elif defined(__linux__) || defined(__APPLE__)
+#include <pthread.h>
+#endif
+
+    bool CheckMainThread() {
+        return std::this_thread::get_id() == globalData->mainThreadID;
+    }
+    void NameCurrentThread(std::string_view name){
+#ifdef _WIN32
+        std::wstring wname(name.begin(), name.end());
+        SetThreadDescription(GetCurrentThread(), wname.c_str());
+
+#elif defined(__linux__)
+        //linux has a 16 char limit for thread name?
+        char buf[16];
+        auto len = std::min(name.size(), (size_t)15);
+        std::copy_n(name.begin(), len, buf);
+        buf[len] = '\0';
+        pthread_setname_np(pthread_self(), buf);
+#endif
+    }
 } //namespace EWE

@@ -23,13 +23,9 @@
 
 #include "EWEngine/Reflect/ImguiReflection.h"
 
-#include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
-
 #include "EWEngine/NodeGraph/RenderGraphNodeGraph.h"
 #include "EWEngine/NodeGraph/RasterTaskNodeGraph.h"
 #include "EWEngine/NodeGraph/RecordNodeGraph.h"
-
-#include "EWEngine/Assets/FileResource.h"
 
 #include "EWEngine/InputData.h"
 #include "imgui.h"

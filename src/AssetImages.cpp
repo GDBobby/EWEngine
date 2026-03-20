@@ -3,6 +3,7 @@
 
 #include "EWEngine/Assets/ImageLoader.h"
 #include "EWEngine/Imgui/Framework_Imgui.h"
+#include "EightWinds/Data/KeyValueContainer.h"
 #include "EightWinds/Data/StreamHelper.h"
 #include <vulkan/vulkan_core.h>
 
@@ -10,8 +11,8 @@ namespace EWE{
 namespace Asset{
     Manager<Image>::Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path)
     : logicalDevice{logicalDevice},
-        image_files{root_path, std::vector<std::string>{".png", ".jpg"}},
-        meta_files{root_path, std::vector<std::string>{".mie"}}
+        image_files{root_path, std::vector<std::string>{".png", ".jpg"}}//,
+        //meta_files{root_path, std::vector<std::string>{".mie"}}
     {
 
     }
@@ -20,7 +21,7 @@ namespace Asset{
     static constexpr std::size_t meta_version = 0;
 
     void Manager<Image>::UpdateMetaFile(AssetHash hash, Image& img){
-        const std::filesystem::path meta_path = (meta_files.root_directory / img.name).replace_extension("mie");
+        const std::filesystem::path meta_path = (image_files.root_directory / img.name).replace_extension("mie");
 
         std::ofstream outFile{meta_path, std::ios::binary};
         if(!outFile.is_open()){
@@ -35,6 +36,12 @@ namespace Asset{
         out_stream.Process(img.data);
         outFile.close();
     }
+    void Manager<Image>::UpdateMetaFile(AssetHash hash){
+        auto found = association_container.find(hash);
+        EWE_ASSERT(found != association_container.end());
+        auto& img = *found->value;
+        UpdateMetaFile(hash, img);
+    }
 
     Image::Data GetDefaultMetaData(){
         return Image::Data{
@@ -48,17 +55,10 @@ namespace Asset{
         };
     }
 
-    Image::Data Manager<Image>::LoadMetaData(AssetHash hash){
-        auto found = meta_files.hashed_path.find(hash);
-        if(found == meta_files.hashed_path.end()){
-            return GetDefaultMetaData();
-        }
-        //EWE_ASSERT(found != meta_files.hashed_path.end());
-        const std::filesystem::path meta_path = (meta_files.root_directory / found->value);
-
-        std::ifstream inFile{meta_path, std::ios::binary};
+    Image::Data ReadMetaFile(std::filesystem::path const& path){
+        std::ifstream inFile{path, std::ios::binary};
         if(!inFile.is_open()){
-            inFile.open(meta_path);
+            inFile.open(path);
             if(!inFile.is_open()){
                 return GetDefaultMetaData();
                 //EWE_ASSERT(inFile.is_open());
@@ -72,13 +72,12 @@ namespace Asset{
         inFile.close();
         return img_data;
     }
-    
 
-    void Manager<Image>::UpdateMetaFile(AssetHash hash){
-        auto found = association_container.find(hash);
-        EWE_ASSERT(found != association_container.end());
-        auto& img = *found->value;
-        UpdateMetaFile(hash, img);
+    Image::Data LoadMetaData(std::filesystem::path const& root_directory, KeyValuePair<AssetHash, std::filesystem::path> const& img_kvp){
+        auto meta_file_path = img_kvp.value;
+        meta_file_path.replace_extension(".mie");
+        meta_file_path = root_directory / meta_file_path;
+        return ReadMetaFile(meta_file_path);
     }
 
     void Manager<Image>::Destroy(AssetHash hash){
@@ -98,23 +97,30 @@ namespace Asset{
             return iter->value;
         }
         else{
-            auto const& fs_path = image_files.hashed_path.at(hash).value;
+            auto image_path_hash_data = image_files.hashed_path.at(hash);
+            auto const& fs_path = image_path_hash_data.value;
             Image& img = data_arena.AddElement(logicalDevice);
-
-            InitializeImage(img, image_files.root_directory / fs_path);
-
-            auto old_extent = img.data.extent;
-            auto old_format = img.data.format;
-            //do a comparison here on values that will get overwritten, possibly
-            //thats extent, format, miplevels
-            img.data = LoadMetaData(hash);
-
-            img.data.extent = old_extent;
-            img.data.format = old_format;
-
             img.name = fs_path;
-
             association_container.push_back(hash, &img);
+
+            auto full_img_load_path = image_files.root_directory / fs_path;
+            
+
+            auto load_img_fiber = marl::Task{[&img, img_kvp = image_path_hash_data, full_img_load_path, root_dir = image_files.root_directory](){
+                img.data = LoadMetaData(root_dir, img_kvp);
+                auto old_extent = img.data.extent;
+                auto old_format = img.data.format;
+                auto old_miplevels = img.data.mipLevels;
+                InitializeImage(img, full_img_load_path);
+
+
+            }};
+            Global::scheduler->enqueue(std::move(load_img_fiber));
+
+            //do a comparison here on overwritten values, possibly
+            //thats extent, format, miplevels
+
+
             return &img;
         }
     }

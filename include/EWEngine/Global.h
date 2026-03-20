@@ -42,4 +42,5 @@ namespace EWE{
     }
 
     bool CheckMainThread();
+    void NameCurrentThread(std::string_view name);
 } //namespace EWE

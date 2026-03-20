@@ -10,13 +10,12 @@
 
 namespace EWE{
 
-	//this is gonna be shitty until i get c++26 reflection
-
 	struct ImguiExtension{
 		template<typename T>
         static void Imgui(T& obj);
 	};
 	struct Image;
+	struct ImageView;
 	struct Buffer;
 	
 	
@@ -24,6 +23,7 @@ namespace EWE{
 	#define FWD_DEC_IMGUI(Type) struct Type; template<> void ImguiExtension::Imgui(Type& obj);
 	
 	FWD_DEC_IMGUI(Image);
+	FWD_DEC_IMGUI(ImageView);
 	FWD_DEC_IMGUI(RenderGraph);
 	FWD_DEC_IMGUI(RasterTask);
 	FWD_DEC_IMGUI(TaskRasterConfig);
@@ -74,29 +74,29 @@ namespace EWE{
 
 
 
-        template<typename T>
-        void ImguiDefaultParamReflect(T* mem_addr){
-            static constexpr std::size_t member_count = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()).size();
-            static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+	template<typename T>
+	void ImguiDefaultParamReflect(T* mem_addr){
+		static constexpr std::size_t member_count = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()).size();
+		static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
 
-            template for(constexpr auto mem : members){
-				static constexpr auto name = std::meta::identifier_of(mem);
-				auto* mem_ptr = &mem_addr->[:mem:];
-                ImGui::DragFloat(name.data(), reinterpret_cast<float*>(mem_ptr), -1000.f, 1000.f);
-            }
-        }
+		template for(constexpr auto mem : members){
+			static constexpr auto name = std::meta::identifier_of(mem);
+			auto* mem_ptr = &mem_addr->[:mem:];
+			ImGui::DragFloat(name.data(), reinterpret_cast<float*>(mem_ptr), -1000.f, 1000.f);
+		}
+	}
 
-        template<typename T>
-        void ImguiReflectParamStruct(T* mem_addr){
-            if constexpr(std::is_same_v<VkRenderingInfo, T>){
+	template<typename T>
+	void ImguiReflectParamStruct(T* mem_addr){
+		if constexpr(std::is_same_v<VkRenderingInfo, T>){
 
-            }
-            else{
-                ImguiDefaultParamReflect(mem_addr);
-            }
-        }
+		}
+		else{
+			ImguiDefaultParamReflect(mem_addr);
+		}
+	}
 
-        void ImguiExpandInstruction(void* mem_addr, Instruction::Type itype);
+	void ImguiExpandInstruction(void* mem_addr, Instruction::Type itype);
 
 
 		
