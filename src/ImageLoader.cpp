@@ -1,5 +1,6 @@
 #include "EWEngine/Assets/ImageLoader.h"
 #include "EWEngine/Global.h"
+#include "EWEngine/STC_Manager.h"
 #include <vulkan/vulkan_core.h>
 
 #define USING_VULKAN_CONVERSION
@@ -77,8 +78,7 @@ namespace EWE{
                 );
                 EWE_ASSERT(*img.owningQueue == Global::stcManager->transferQueue && "not ready for single queue uploads yet");
                 Global::stcManager->AsyncTransfer(transferContext, dstQueueType);
-
-                //now, upload the data to the GPU
+                img.owningQueue = &Global::stcManager->GetQueue(dstQueueType);
                 return true;
             }
             else{

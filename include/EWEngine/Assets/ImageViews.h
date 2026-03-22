@@ -29,6 +29,10 @@ namespace Asset{
         ImageView& Get(AssetHash hash);
 
         ImageView& Get(Image& image);
+
+#if EWE_IMGUI
+        void Imgui();
+#endif
     };
 } //namespace Asset
 } //namespace EWE

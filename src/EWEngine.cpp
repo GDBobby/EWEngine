@@ -5,6 +5,7 @@
 #include "EightWinds/Backend/DeviceSpecialization/FeatureProperty.h"
 
 #include "EWEngine/Global.h"
+#include "GLFW/glfw3.h"
 #include <filesystem>
 
 #ifdef USING_NVIDIA_AFTERMATH
@@ -98,16 +99,21 @@ namespace EWE{
     #endif
             VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME
         };
+
+        glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
         if (!glfwInit()) {
     #if EWE_DEBUG_BOOL
-            printf("failed to glfw init\n");
+            Logger::Print<Logger::Debug>("failed to init glfw wayland\n");
     #endif
-            throw std::runtime_error("failed to init glfw");
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+            if(!glfwInit()){
+                throw std::runtime_error("failed to init glfw x11 or glfw");
+            }
         }
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        EWE_ASSERT(glfwExtensionCount > 0 && "not supporting headless");
+        EWE_ASSERT(glfwExtensionCount > 0, "not supporting headless");
         EWE_ASSERT(glfwExtensions != nullptr);
 
         for (uint32_t i = 0; i < glfwExtensionCount; ++i) {
@@ -166,27 +172,27 @@ namespace EWE{
         auto evaluatedDevices = specDev.ScorePhysicalDevices(instance);
 
 #if EWE_DEBUG_BOOL
-        printf("evaluated %zu devices\n", evaluatedDevices.size());
-        printf("if the first device failed, none are available\n");
+        Logger::Print<Logger::Debug>("evaluated %zu devices\n", evaluatedDevices.size());
+        Logger::Print<Logger::Debug>("if the first device failed, none are available\n");
         for(auto& dev : evaluatedDevices){
-            printf("device name : %s\n", dev.name.c_str());
-            printf("\trequirements : score : %d:%zu\n", dev.passedRequirements, dev.score);
+            Logger::Print<Logger::Debug>("device name : %s\n", dev.name.c_str());
+            Logger::Print<Logger::Debug>("\trequirements : score : %d:%zu\n", dev.passedRequirements, dev.score);
             auto& props12 = dev.properties.properties.Get<VkPhysicalDeviceVulkan12Properties>();
-            printf("\tdriver\n");
-            printf("\t\tid:%zu\n", props12.driverID);
-            printf("\t\tname:%s\n", props12.driverName);
-            printf("\t\tinfo:%s\n", props12.driverInfo);
+            Logger::Print<Logger::Debug>("\tdriver\n");
+            Logger::Print<Logger::Debug>("\t\tid:%zu\n", props12.driverID);
+            Logger::Print<Logger::Debug>("\t\tname:%s\n", props12.driverName);
+            Logger::Print<Logger::Debug>("\t\tinfo:%s\n", props12.driverInfo);
 
             const uint32_t variant_version = dev.api_version >> 29;
             const uint32_t major_version = (dev.api_version - (variant_version << 29)) >> 22;
             const uint32_t minor_version = (dev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
             const uint32_t patch_version = (dev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
 
-            printf("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
+            Logger::Print<Logger::Debug>("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
             if (dev.failureReport.size() > 0){
-                printf("\tfailure report-\n");
+                Logger::Print<Logger::Debug>("\tfailure report-\n");
                 for(auto& fp : dev.failureReport){
-                    printf("\t\tfp - %s\n", fp.c_str());
+                    Logger::Print<Logger::Debug>("\t\tfp - %s\n", fp.c_str());
                 }
             }
         }
@@ -271,7 +277,7 @@ namespace EWE{
         }
 
         if (ImGui::Combo("present mode", &index, available_presents.data(), available_presents.size())) {
-            printf("present mode changed\n");
+            Logger::Print<Logger::Debug>("present mode changed\n");
 
             swapchain.swapCreateInfo.presentMode = swapchain.available_presentModes[index];
             swapchain.wantsToRecreate = true;
@@ -321,11 +327,23 @@ namespace EWE{
 
             ImGui::Text(logicalDevice.physicalDevice.name.c_str());
             
+            switch (glfwGetPlatform()) {
+                case GLFW_PLATFORM_WIN32:   ImGui::Text("glfw platform : Win32\n"); break;
+                case GLFW_PLATFORM_COCOA:   ImGui::Text("glfw platform : Cocoa (macOS)\n"); break;
+                case GLFW_PLATFORM_WAYLAND: ImGui::Text("glfw platform : Wayland\n"); break;
+                case GLFW_PLATFORM_X11:     ImGui::Text("glfw platform : X11\n"); break;
+                default:                    ImGui::Text("glfw platform : Unknown\n"); break;
+            }
+            if(ImGui::Checkbox("window resizeable", &window.resizeable)) {
+                window.SetResizeable(window.resizeable);
+            }
+
             if (DrawPresentModes(swapchain) || DrawSurfaceFormats(swapchain)) {
-                printf("recreating swap at frame : %zu\n", totalFramesSubmitted);
+                Logger::Print<Logger::Debug>("recreating swap at frame : %zu\n", totalFramesSubmitted);
             }
 
             ImGui::Text("working directory : %s", std::filesystem::current_path().string().c_str());
+
 
             static bool draw_demo = false;
             ImGui::Checkbox("draw demo", &draw_demo);

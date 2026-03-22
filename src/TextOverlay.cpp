@@ -135,18 +135,9 @@ namespace EWE {
 
 
 	TextOverlay::~TextOverlay() {
-		// Free up all Vulkan resources requested by the text overlay
-#if DECONSTRUCTION_DEBUG
-		printf("deconstrructing textoverlay \n");
-#endif
 		for (auto& font : fonts) {
 			delete font;
 		}
-
-#if DECONSTRUCTION_DEBUG
-		printf("end deconstruction textoverlay \n");
-#endif
-
 	}
 
 
@@ -157,7 +148,7 @@ namespace EWE {
 
 		const Font* font = textOverlayPtr->fonts[textOverlayPtr->currentFont];
 #if EWE_DEBUG
-		printf("xpos get selection index - %.1f \n", xpos);
+		Logger::Print<Logger::Debug>("xpos get selection index - %.1f \n", xpos);
 #endif
 		switch (align) {
 			case TA_left:break;
@@ -169,7 +160,7 @@ namespace EWE {
 		for (uint16_t i = 0; i < string.length(); i++) {
 			currentPos += font->GetCharWidth(string[i], charW) * Global::window->screenDimensions.width / 8.f;
 #if EWE_DEBUG
-			printf("currentPos : %.2f \n", currentPos);
+			Logger::Print<Logger::Debug>("currentPos : %.2f \n", currentPos);
 #endif
 			if (xpos <= currentPos) { return i; }
 			currentPos += font->GetCharWidth(string[i], charW) * Global::window->screenDimensions.width * 3.f / 8.f;
@@ -194,12 +185,12 @@ namespace EWE {
 	float TextStruct::GetWidth() {
 		//std::cout << "yo? : " << frameBufferWidth << std::endl;
 		const float charW = 1.5f * scale / Global::window->screenDimensions.width;
-		//printf("text struct get width : %.5f \n", textWidth);
+		//Logger::Print<Logger::Debug>("text struct get width : %.5f \n", textWidth);
 #if EWE_DEBUG
 		const float textWidth = textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetStringWidth(string, charW);
 		if (textWidth < 0.0f) {
 
-			printf("width less than 0, what  was the string? : %s:%u \n", string.c_str(), Global::window->screenDimensions.width);
+			Logger::Print<Logger::Debug>("width less than 0, what  was the string? : %s:%u \n", string.c_str(), Global::window->screenDimensions.width);
 			EWE_ASSERT(false);
 		}
 		return textWidth;
@@ -391,7 +382,7 @@ namespace EWE {
 		const std::size_t startingLetterCount = textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount;
 		for (auto const& letter : textStruct.string) {
 			if (textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount >= TEXTOVERLAY_MAX_CHAR_COUNT) {
-				printf("trying to add more letters than allowed in textoverlay. consider expanding the TEXTOVERLAY_MAX_CHAR_COUNT constant - (drawn/max) (%zu/%u) \n", textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount, TEXTOVERLAY_MAX_CHAR_COUNT);
+				Logger::Print<Logger::Debug>("trying to add more letters than allowed in textoverlay. consider expanding the TEXTOVERLAY_MAX_CHAR_COUNT constant - (drawn/max) (%zu/%u) \n", textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount, TEXTOVERLAY_MAX_CHAR_COUNT);
 				textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount++;
 				break;
 			}
@@ -480,7 +471,7 @@ namespace EWE {
 		}
 		else {
 #if EWE_DEBUG
-			//printf("trying to set current font to %d, but only %d fonts available \n", whichFont, textOverlayPtr->fonts.size());
+			//Logger::Print<Logger::Debug>("trying to set current font to %d, but only %d fonts available \n", whichFont, textOverlayPtr->fonts.size());
 			EWE_ASSERT(whichFont < textOverlayPtr->fonts.size(), "trying to set current font to %d, but only %d fonts available");
 #endif
 			return false;

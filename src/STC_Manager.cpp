@@ -9,6 +9,7 @@
 
 
 #include "marl/event.h"
+#include <chrono>
 #include <vulkan/vulkan_core.h>
 
 namespace EWE {
@@ -196,8 +197,8 @@ namespace EWE {
 			if (async_transfer) {
 				first_stc->cmdBuf.End();
 				first_stc->cmdPool->queue.Submit2(1, &submitInfo, VK_NULL_HANDLE);
-				current_stc = GetSTC(Queue::Graphics);
 
+				current_stc = GetSTC(dstQueue);
 				cmdInfo.commandBuffer = current_stc->cmdBuf;
 				auto current_sem = semaphores.GetNext();
 				semInfo = current_sem->GetSignalSubmitInfo(VK_PIPELINE_STAGE_2_TRANSFER_BIT);
@@ -215,11 +216,14 @@ namespace EWE {
 
 		if (async_transfer) {
 
+			Logger::Print("before marl event\n");
 			first_sem->WaitOn(first_sem->value);
 			while (!first_sem->Check(first_sem->value)) {
-				marl::Event event{ marl::Event::Mode::Manual };
-				event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
+				//marl::Event event{ marl::Event::Mode::Auto };
+				//event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
+				std::this_thread::sleep_for(std::chrono::microseconds(1));
 			}
+			Logger::Print("after marl's event\n");
 			if (transferContext.stagingBuffer) {
 				transferContext.stagingBuffer->Free();
 				delete transferContext.stagingBuffer;

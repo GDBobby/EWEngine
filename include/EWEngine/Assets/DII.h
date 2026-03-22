@@ -46,8 +46,8 @@ namespace Asset{
         void Write(DescriptorImageInfo const& dii, std::filesystem::path const& file_name);
 
         struct Creation{
-            Sampler* sampler;
-            ImageView* view;
+            Sampler* sampler = nullptr;
+            ImageView* view = nullptr;
             DescriptorType type = DescriptorType::Combined;
             VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         };

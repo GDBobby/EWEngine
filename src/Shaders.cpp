@@ -35,7 +35,7 @@ namespace Asset{
             }
         }
 
-        printf("returning nullptr from GetShader : %s\n", file_name.data());
+        Logger::Print<Logger::Error>("returning nullptr from GetShader : %s\n", file_name.data());
         return nullptr;
     }
 
@@ -52,7 +52,7 @@ namespace Asset{
 
                     ImGui::SetDragDropPayload("SHADER", file.value.string().c_str(), file.value.string().size() + 1);
                     ImGui::PushID(6942068);
-                    ImGui::Text("Drop handle");
+                    ImGui::Text("%s",file.value.string().c_str());
                     ImGui::PopID();
                     ImGui::EndDragDropSource();
                 }

@@ -59,7 +59,6 @@ namespace EWE{
             }
 
             bool RenderAddMenu(ImVec2 menu_pos){
-                //printf("iterating add node menu\n");
 
                 bool wantsClose = false;
 

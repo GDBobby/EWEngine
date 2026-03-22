@@ -31,7 +31,6 @@ namespace EWE{
         }
 
         void Graph::Record(RasterTask& rasterTask) {
-           // printf("label addr - %zu\n"), def_label->data;
 
             node_vert_shader = new Shader(*Global::logicalDevice, "common/shaders/node.vert.spv");
             node_frag_shader = new Shader(*Global::logicalDevice, "common/shaders/node.frag.spv");
@@ -126,7 +125,7 @@ namespace EWE{
                         mousePos.y - old_mouse_pos.y
                     };
                     const lab::vec2 transDiff = UI::Position_Difference(mouse_diff, Global::window->screenDimensions.width, Global::window->screenDimensions.height);
-                    printf("trans diff : %.2f:%.2f\n", transDiff.x, transDiff.y);
+                    Logger::Print<Logger::Debug>("trans diff : %.2f:%.2f\n", transDiff.x, transDiff.y);
                     nodes[current_mouse_coverage.index].buffer->position.x += transDiff.x;
                     nodes[current_mouse_coverage.index].buffer->position.y += transDiff.y;
                     break;
@@ -138,7 +137,7 @@ namespace EWE{
                         mousePos.y - old_mouse_pos.y
                     };
                     const lab::vec2 transDiff = UI::Position_Difference(mouse_diff, Global::window->screenDimensions.width, Global::window->screenDimensions.height);
-                    printf("scale diff : %.2f:%.2f\n", transDiff.x, transDiff.y);
+                    Logger::Print<Logger::Debug>("scale diff : %.2f:%.2f\n", transDiff.x, transDiff.y);
                     nodes[current_mouse_coverage.index].buffer->scale += transDiff;
                     break;
                 }
@@ -272,7 +271,6 @@ namespace EWE{
                     }
                     ImGui::EndMenu();
                 }
-                //printf("after ?? \n");
                 ImGui::EndMainMenuBar();
             }
         }

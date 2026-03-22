@@ -13,10 +13,6 @@
 
 #include "EWEngine/TextOverlay.h"
 
-#ifdef EWE_IMGUI
-#include "Imgui/Framework_Imgui.h"
-#endif
-
 #include <string_view>
 
 namespace EWE{

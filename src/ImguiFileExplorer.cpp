@@ -241,12 +241,10 @@ namespace EWE{
 
 				if(!popup_opened && save_path.has_value()){
 					ImGui::OpenPopup("save file popup");
-					//printf("opening popup\n");
 					popup_opened = true;
 					//selected_file = save_path;
 				}
 				if(ImGui::BeginPopup("save file popup")){
-					//printf("inside popup\n");
 					static char file_save_buf[64] = "";
 					ImGui::PushID(696970);
 					ImGui::InputText("file name", file_save_buf, 64, ImGuiInputTextFlags_CallbackCharFilter, FileFilter);
@@ -257,7 +255,6 @@ namespace EWE{
 							save_path.reset();
 							ImGui::CloseCurrentPopup();
 							popup_opened = false;
-							//printf("closing popup\n");
 						}
 					}
 					ImGui::PopID();

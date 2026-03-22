@@ -43,9 +43,9 @@ void PrintAllExtensions(VkPhysicalDevice physicalDevice) {
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, nullptr);
     std::vector<VkExtensionProperties> extProps(extCount);
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, extProps.data());
-    printf("available extensions --\n");
+    EWE::Logger::Print<EWE::Logger::Debug>("available extensions --\n");
     for (auto& prop : extProps) {
-        printf("\t%s\n", prop.extensionName);
+        EWE::Logger::Print<EWE::Logger::Debug>("\t%s\n", prop.extensionName);
     }
 }
 #endif
@@ -71,15 +71,15 @@ int main() {
 
 
 #if EWE_DEBUG_BOOL
-    printf("starting working dir - %s\n", std::filesystem::current_path().string().c_str());
+    EWE::Logger::Print<EWE::Logger::Debug>("starting working dir - %s\n", std::filesystem::current_path().string().c_str());
 #endif
 
 #ifdef USING_NVIDIA_AFTERMATH
-    printf("using nvidia aftermath - %s\n", std::filesystem::current_path().string().c_str());
+    EWE::Logger::Print<EWE::Logger::Debug>("using nvidia aftermath - %s\n", std::filesystem::current_path().string().c_str());
 #endif
 
 #if defined(__SANITIZE_ADDRESS__)
-    printf("compiled with asan\n");
+    EWE::Logger::Print<EWE::Logger::Debug>("compiled with asan\n");
 #endif
 
     std::hash<std::filesystem::path> hash{};
@@ -90,7 +90,7 @@ int main() {
     if (current_working_directory.parent_path().parent_path().stem() == "build") {
         current_working_directory = current_working_directory.parent_path().parent_path().parent_path();
 #if EWE_DEBUG_BOOL
-        printf("build redacted working dir - %s\n", current_working_directory.string().c_str());
+        EWE::Logger::Print<EWE::Logger::Normal>("build redacted working dir - %s\n", current_working_directory.string().c_str());
 #endif
     }
     else if (current_working_directory.parent_path().stem() == "build") {
@@ -101,8 +101,13 @@ int main() {
     }
     std::filesystem::current_path(current_working_directory);
 #if EWE_DEBUG_BOOL
-    printf("current dir - %s\n", std::filesystem::current_path().string().c_str());
+    EWE::Logger::Print<EWE::Logger::Normal>("current dir - %s\n", std::filesystem::current_path().string().c_str());
 #endif
+
+    uint32_t extensionCount = 0;
+    EWE::EWE_VK(vkEnumerateInstanceExtensionProperties, nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> extensions(extensionCount);
+    EWE::EWE_VK(vkEnumerateInstanceExtensionProperties, nullptr, &extensionCount, extensions.data());
 
     EWE::EWEngine engine{ "triangle hello world" };
     EWE::LogicalDevice& logicalDevice = engine.logicalDevice;
@@ -116,7 +121,7 @@ int main() {
     }
     if (renderQueue == nullptr) {
 #if EWE_DEBUG_BOOL
-        printf("failed to find a render queue, exiting\n");
+        EWE::Logger::Print<EWE::Logger::Error>("failed to find a render queue, exiting\n");
 #endif
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return -1;
@@ -238,7 +243,7 @@ int main() {
         if (str.name == "Vertex") {
 
 #if EWE_DEBUG_BOOL
-            printf("size comparison - %zu : %zu\n", str.size, sizeof(TriangleVertex));
+            EWE::Logger::Print<EWE::Logger::Debug>("size comparison - %zu : %zu\n", str.size, sizeof(TriangleVertex));
             //im getting fucked by spv. its forcing 32bit alignment, even tho spirvcross says 20bit
             //EWE_ASSERT(str.size == sizeof(TriangleVertex));
 #endif
@@ -612,7 +617,7 @@ int main() {
     for (auto iter = renderGraph.tasks.begin(); iter != renderGraph.tasks.end(); iter.operator++()) { //why am i manually calling the operator
         //testing hive iterator
         auto& task = *iter;
-        printf("Task name - %s\n", task.name.c_str());
+        EWE::Logger::Print<EWE::Logger::Debug>("Task name - %s\n", task.name.c_str());
     }
 
     renderGraph.InitializeSemaphores();
@@ -661,7 +666,7 @@ int main() {
 
 
 #if EWE_DEBUG_BOOL
-    printf("returning successfully\n");
+    EWE::Logger::Print<EWE::Logger::Debug>("returning successfully\n");
 #endif
 
     std::this_thread::sleep_for(std::chrono::seconds(2)); 

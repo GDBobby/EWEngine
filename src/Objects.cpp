@@ -1,5 +1,7 @@
-#include "EWEngine/Imgui/Framework_Imgui.h"
+#include "EWEngine/Imgui/Objects.h"
 
+#include "EWEngine/Global.h"
+#include "EWEngine/Imgui/Params.h"
 
 #ifdef EWE_IMGUI
 #include "imgui.h"
@@ -12,12 +14,12 @@
 #include "EightWinds/RenderGraph/Resources.h"
 #include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/Pipeline/TaskRasterConfig.h"
-
 #include "EightWinds/Pipeline/Graphics.h"
 
 #include <string>
 
 #include "EightWinds/Reflect/Enum.h"
+
 
 void imgui_bool_check(std::string_view name, VkBool32& vk_bool) {
     bool temp_bool = vk_bool;
@@ -56,6 +58,14 @@ namespace EWE{
 
     template<> void ImguiExtension::Imgui(Image& obj){
         ImGui::Text("name : %s", obj.name.c_str());
+        if(obj.owningQueue != nullptr){
+            ImGui::Text("owning Queue : %s", Reflect::Enum::ToString(Global::stcManager->GetQueueType(*obj.owningQueue)).data());
+        }
+        else{
+            ImGui::Text("owning queue : nullptr");
+            }
+
+
         ImGui::Text("extent : width[%u] height[%u] depth[%u]", obj.data.extent.width, obj.data.extent.height, obj.data.extent.depth);
         //ImGui::Text("Array Layers[%u] - Mip Levels[%u]", obj.data.arrayLayers, obj.data.mipLevels);
         ImGui::DragInt("array layers", reinterpret_cast<int*>(&obj.data.arrayLayers), 1.f, 0, 256);
@@ -466,6 +476,31 @@ namespace EWE{
         
         Reflect::Enum::Imgui_Combo_Selectable("mag filter", obj.magFilter);
         Reflect::Enum::Imgui_Combo_Selectable("min filter", obj.minFilter);
+        Reflect::Enum::Imgui_Combo_Selectable("mipmap mode", obj.mipmapMode);
+        Reflect::Enum::Imgui_Combo_Selectable("address mode U", obj.addressModeU);
+        Reflect::Enum::Imgui_Combo_Selectable("address mode V", obj.addressModeV);
+        Reflect::Enum::Imgui_Combo_Selectable("address mode W", obj.addressModeW);
+        ImGui::DragFloat("mip lod bias", &obj.mipLodBias, 1.f, obj.minLod, obj.maxLod);
+        bool vk_bool = obj.anisotropyEnable;
+        ImGui::Checkbox("enable anisotropy", &vk_bool);
+        obj.anisotropyEnable = vk_bool;
+        if(obj.anisotropyEnable){
+            ImGui::DragFloat("max anisotropy", &obj.maxAnisotropy, 1.f, 0.f, 100.f);
+        }
+        vk_bool = obj.compareEnable;
+        ImGui::Checkbox("enable compare", &vk_bool);
+        obj.compareEnable = vk_bool;
+        if(obj.compareEnable){
+            Reflect::Enum::Imgui_Combo_Selectable("compare op", obj.compareOp);
+        }
+        ImGui::DragFloat("min lod", &obj.minLod, 1.f, 0.f, obj.maxLod);
+        ImGui::DragFloat("max lod", &obj.maxLod, 1.f, obj.minLod, 100.f);
+        Reflect::Enum::Imgui_Combo_Selectable("border color", obj.borderColor);
+        vk_bool = obj.unnormalizedCoordinates;
+        ImGui::Checkbox("unnormalized coordinates", &vk_bool);
+        obj.unnormalizedCoordinates = vk_bool;
+    
+
 
         ImGui::PopID();
     }

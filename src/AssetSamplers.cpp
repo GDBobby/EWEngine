@@ -1,6 +1,8 @@
 #include "EWEngine/Assets/Samplers.h"
 
-#include "EWEngine/Imgui/Framework_Imgui.h"
+#include "EWEngine/Imgui/Objects.h"
+#include "EWEngine/Imgui/DragDrop.h"
+#include "imgui.h"
 
 namespace EWE{
 namespace Asset{
@@ -51,12 +53,18 @@ namespace Asset{
 
 
 #ifdef EWE_IMGUI
+
     void Manager<Sampler>::Imgui(){
         for(auto& kvp : association_container){
             if(ImGui::TreeNode(std::to_string(kvp.key).c_str())){
+                DragDropPtr::Source<Sampler>(*kvp.value);
+
                 VkSamplerCreateInfo samplerInfo{kvp.value->info};
                 ImguiExtension::Imgui(samplerInfo);
                 ImGui::TreePop();
+            }
+            else{
+                DragDropPtr::Source<Sampler>(*kvp.value);
             }
         }
     }

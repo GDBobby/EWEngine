@@ -1,5 +1,6 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/ImageViews.h"
+#include "EWEngine/Imgui/Objects.h"
 
 
 namespace EWE{
@@ -18,7 +19,6 @@ namespace Asset{
             }
         }
         //doesn't already exist
-
         Image* img = images.Get(hash);
         ImageView& view = data_arena.AddElement(*img);
         association_container.push_back(hash, &view);
@@ -26,5 +26,13 @@ namespace Asset{
         return view;
     }
 
+
+#if EWE_IMGUI
+    void Manager<ImageView>::Imgui(){
+        for(auto& kvp : association_container){
+            ImguiExtension::Imgui(*kvp.value);
+        }
+    }
+#endif
 }
 }

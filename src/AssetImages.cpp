@@ -2,10 +2,13 @@
 #include "EWEngine/Assets/Images.h"
 
 #include "EWEngine/Assets/ImageLoader.h"
-#include "EWEngine/Imgui/Framework_Imgui.h"
+#include "EWEngine/Imgui/DragDrop.h"
+#include "EWEngine/Imgui/Objects.h"
 #include "EightWinds/Data/KeyValueContainer.h"
 #include "EightWinds/Data/StreamHelper.h"
+#include "imgui.h"
 #include <vulkan/vulkan_core.h>
+
 
 namespace EWE{
 namespace Asset{
@@ -104,7 +107,6 @@ namespace Asset{
             association_container.push_back(hash, &img);
 
             auto full_img_load_path = image_files.root_directory / fs_path;
-            
 
             auto load_img_fiber = marl::Task{[&img, img_kvp = image_path_hash_data, full_img_load_path, root_dir = image_files.root_directory](){
                 img.data = LoadMetaData(root_dir, img_kvp);
@@ -112,7 +114,7 @@ namespace Asset{
                 auto old_format = img.data.format;
                 auto old_miplevels = img.data.mipLevels;
                 InitializeImage(img, full_img_load_path);
-
+                img.readyForUsage = true;
 
             }};
             Global::scheduler->enqueue(std::move(load_img_fiber));
@@ -142,11 +144,15 @@ namespace Asset{
             else{
                 ImGui::PushID(kvp.key);
                 if(ImGui::TreeNode(kvp.value.string().c_str())){
+                    DragDropPtr::Source<Image>(*found->value);
                     ImguiExtension::Imgui(*found->value);
                     if(ImGui::Button("update meta values")){
                         UpdateMetaFile(kvp.key, *found->value);
                     }
                     ImGui::TreePop();
+                }
+                else{
+                    DragDropPtr::Source<Image>(*found->value);
                 }
                 ImGui::PopID();
             }

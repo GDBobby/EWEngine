@@ -60,7 +60,7 @@ namespace EWE{
             }
 
             void PrintNode(ImNodes::EWE::Node& node) const{
-                printf("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
+                Logger::Print<Logger::Debug>("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
                     node.id, 
                     Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
                     node.pins[0]->payload, 
@@ -88,7 +88,7 @@ namespace EWE{
                     PrintNode(*current_node);
                     ret.push_back(GetInstructionFromNode(*current_node));
                     if(current_node == limit_node){
-                        //printf("early early return - %s\n", __FUNCTION__);
+                        //Logger::Print<Logger::Debug>("early early return - %s\n", __FUNCTION__);
                         return ret;
                     }
 
@@ -107,10 +107,6 @@ namespace EWE{
                             auto const current_inst = GetInstructionFromNode(*current_node);
                             ret.push_back(current_inst);
                             if(current_node == limit_node){
-                                //printf("early limit return - %zu :  %s\n", ret.size(), __FUNCTION__);
-                                //for(auto& inst : ret){
-                                //    printf("\t%s\n", Reflect::Enum::ToString(inst).data());
-                                //}
                                 return ret;
                             }
                         }
@@ -121,15 +117,9 @@ namespace EWE{
                     //if the limit_node wasn't in the chain, an empty vector will be returned
                     //if it was in the chain, it was the last node
                     if(current_node != limit_node){
-                        //printf("empty return, current_node not equal to limit_node in %s\n", __FUNCTION__);
                         return {};
                     }
                 }
-
-                //printf("ret - %zu : %s\n", ret.size(), __FUNCTION__);
-                //for(auto& inst : ret){
-                //    printf("\t%s\n", Reflect::Enum::ToString(inst).data());
-                //}
                 return ret;
             }
 
@@ -192,8 +182,6 @@ namespace EWE{
 
                 acceptable_add_instructions = Instruction::GetValidInstructionsAtBackOf(instructions);
 
-                //printf("link empty dropped : %d : %d\n", src_node.id, pin_offset);
-
                 menu_pos = ImGui::GetMousePos();
                 add_menu_is_open = true;
                 link_empty_drop_srcNode = &src_node;
@@ -238,7 +226,7 @@ namespace EWE{
                     if(explorer.selected_file.has_value()){
                         const std::filesystem::path saved_path = *explorer.selected_file;
                         auto const& collected_instructions = CollectInstructions();
-                        printf("collected inst count : %zu\n", collected_instructions.size());
+                        Logger::Print<Logger::Debug>("collected inst count : %zu\n", collected_instructions.size());
                         Command::Record::WriteInstructions(saved_path.string(), collected_instructions);
                         explorer.enabled = false;
                         explorer.selected_file.reset();
@@ -315,7 +303,7 @@ namespace EWE{
 
                         CreateFromInstructions(std::span{loaded_instructions.Data(), loaded_instructions.Size()});
 
-                        printf("loaded instructions size : %zu\n", loaded_instructions.Size());
+                        Logger::Print<Logger::Debug>("loaded instructions size : %zu\n", loaded_instructions.Size());
                         explorer.enabled = false;
                         explorer.selected_file.reset();
                     }

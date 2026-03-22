@@ -1,7 +1,8 @@
 #include "EWEngine/Assets/DII.h"
 
 #include "EWEngine/Assets/Hash.h"
-#include "EWEngine/Imgui/Framework_Imgui.h"
+#include "EWEngine/Imgui/Objects.h"
+#include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/DescriptorImageInfo.h"
 #include "EightWinds/Sampler.h"
@@ -36,7 +37,7 @@ namespace Asset{
             return ImTextureID_Invalid;
         }
 
-        }
+    }
 #endif
 
     Manager<DescriptorImageInfo>::Manager(
@@ -65,16 +66,11 @@ namespace Asset{
         std::size_t buffer;
         streamHandler.Process(buffer);
         EWE_ASSERT(buffer == dii_version);
-
-        streamHandler.Process(buffer);
-
         //this assumes that only the default view can be used
         //otherwise, i would need to store a handle for the view
-        std::string image_name{};
-        image_name.resize(buffer);
-        streamHandler.Process(image_name.data(), image_name.size());
-
         AssetHash view_hash;
+        streamHandler.Process(view_hash);
+
         ImageView& view = views.Get(view_hash);
 
         Sampler* sampler = nullptr;
@@ -124,7 +120,6 @@ namespace Asset{
         }
 
         streamHandler.Process(dii.type);
-
         streamHandler.Process(dii.imageInfo.imageLayout);
     }
 
@@ -152,10 +147,20 @@ namespace Asset{
         DescriptorImageInfo* ret = nullptr;
         if(params.sampler){
             ret = &data_arena.AddElement(*params.sampler, *params.view, params.type, params.layout);
+            ret->name = params.view->image.name + std::to_string(Sampler::Condense(params.sampler->info)) + ".dii";
         }
         else{
             ret = &data_arena.AddElement(*params.view, params.type, params.layout);
+            ret->name = params.view->image.name + ".dii";
         }
+        association_container.push_back(CrossPlatformPathHash(ret->name), ret);
+#if EWE_IMGUI
+        auto tex_ref = GetTextureRef(*ret);
+        if(tex_ref != ImTextureID_Invalid){
+            imgui_texture_refs.push_back(ret, tex_ref);
+        }
+#endif
+        
         return *ret;
     }
 
@@ -172,14 +177,47 @@ namespace Asset{
             else{
                 ImGui::Text("no sampler");
             }
+            if(DragDropPtr::Target(creation_params.sampler)){
+                auto rehashed = Sampler::Condense(creation_params.sampler->info);
+                auto found = samplers.association_container.find(rehashed);
+                if(found == samplers.association_container.end()){
+                    samplers.association_container.push_back(rehashed, creation_params.sampler);
+                }
+            }
+
             if(creation_params.view != nullptr){
-                ImGui::Text("image view : %s", creation_params.view->name.c_str());
+                ImGui::Text("image view : %s", creation_params.view->image.name.c_str());
             }
             else{
                 ImGui::Text("no image view");
             }
+            DragDropPtr::Target(creation_params.view);
+
+            Image* img_target = nullptr;
+            if(DragDropPtr::Target(img_target)){
+                AssetHash img_hash = Asset::INVALID_HASH;
+                for(auto& img_kvp : Global::images->association_container){
+                    if(img_kvp.value == img_target){
+                        img_hash = img_kvp.key;
+                        break;
+                    }
+                }
+                EWE_ASSERT(img_hash != Asset::INVALID_HASH);
+                creation_params.view = &views.Get(img_hash);
+            }
+
             Reflect::Enum::Imgui_Combo_Selectable("descriptor type", creation_params.type);
             Reflect::Enum::Imgui_Combo_Selectable("layout", creation_params.layout);
+
+            if(creation_params.view != nullptr){
+                if(ImGui::Button("create")){
+                    Get(creation_params);
+                }
+            }
+        }
+
+        if(association_container.size() > 0){
+            ImGui::Separator();
         }
 
         for(auto& kvp : association_container){

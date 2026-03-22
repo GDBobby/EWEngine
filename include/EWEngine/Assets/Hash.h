@@ -3,10 +3,9 @@
 #include <filesystem>
 
 namespace EWE{
-namespace Asset{
-
-    static constexpr uint64_t INVALID_HASH = UINT64_MAX; 
     using AssetHash = uint64_t;
+namespace Asset{
+    static constexpr AssetHash INVALID_HASH = UINT64_MAX; 
 
     AssetHash CrossPlatformPathHash(std::filesystem::path const& path);
 
