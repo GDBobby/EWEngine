@@ -158,7 +158,7 @@ namespace EWE{
             parent_node.pins.emplace_back(pins.size());
             return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, node_index);
         }
-        Pin& Graph::AddPin(std::string_view name, NodeID node_index) {
+        Pin& Graph::AddPin(std::string_view _name, NodeID node_index) {
             const uint32_t index = nodes.size() + pins.size();
             auto& parent_node = nodes[node_index];
             parent_node.pins.emplace_back(pins.size());
@@ -169,7 +169,7 @@ namespace EWE{
             parent_node.pins.emplace_back(pins.size());
             return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, parent_node.index);
         }
-        Pin& Graph::AddPin(std::string_view name, Node& parent_node) {
+        Pin& Graph::AddPin(std::string_view _name, Node& parent_node) {
             const uint32_t index = nodes.size() + pins.size();
             parent_node.pins.emplace_back(pins.size());
             return pins.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, parent_node.index);
@@ -179,7 +179,7 @@ namespace EWE{
             const uint32_t index = nodes.size() + pins.size();
             return nodes.emplace_back(reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, pins);
         }
-        Node& Graph::AddNode(std::string_view name) {
+        Node& Graph::AddNode(std::string_view _name) {
             const uint32_t index = nodes.size();
             return nodes.emplace_back(name, reinterpret_cast<NodeBuffer*>(gp_buffer.GetMapped()) + index, index, pins);
         }
@@ -196,8 +196,8 @@ namespace EWE{
             pins.clear();
             //nothing else? links?
         }
-        void Graph::OpenFile(std::string_view name) {
-            Deserialize(name);
+        void Graph::OpenFile(std::string_view _name) {
+            Deserialize(_name);
         }
 
         void Graph::Serialize() {
@@ -205,10 +205,10 @@ namespace EWE{
             ProcessStream(outFile);
             outFile.close();
         }
-        void Graph::Deserialize(std::string_view name) {
-            std::ifstream inFile{ name.data(), std::ios::binary };
+        void Graph::Deserialize(std::string_view _name) {
+            std::ifstream inFile{ _name.data(), std::ios::binary };
             if (!inFile.is_open()) {
-                inFile.open(name.data());
+                inFile.open(_name.data());
             }
             if (!inFile.is_open()) {
                 throw std::runtime_error("failed to load graph file");

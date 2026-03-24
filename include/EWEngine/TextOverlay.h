@@ -35,11 +35,11 @@ namespace EWE {
 		uint8_t align{ TA_left };
 		float scale{ 1.f };
 		[[nodiscard]] TextStruct() {}
-		[[nodiscard]] TextStruct(std::string string, float x, float y, uint8_t align, float scale)
-			: string{ string }, x{ x }, y{ y }, align{ align }, scale{ scale }
+		[[nodiscard]] TextStruct(std::string _string, float _x, float _y, uint8_t _align, float _scale)
+			: string{ _string }, x{ _x }, y{ _y }, align{ _align }, scale{ _scale }
 		{}
-		[[nodiscard]] TextStruct(std::string string, float x, float y, TextAlign align, float scale)
-			: string{ string }, x{ x }, y{ y }, align{ static_cast<uint8_t>(align) }, scale{ scale }
+		[[nodiscard]] TextStruct(std::string _string, float _x, float _y, TextAlign _align, float _scale)
+			: string{ _string }, x{ _x }, y{ _y }, align{ static_cast<uint8_t>(_align) }, scale{ _scale }
 		{}
 		uint16_t GetSelectionIndex(double xpos);
 		float GetWidth();

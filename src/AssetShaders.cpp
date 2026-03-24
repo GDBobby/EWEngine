@@ -6,8 +6,8 @@ namespace Asset{
 
 
 
-    Manager<Shader>::Manager(LogicalDevice& logicalDevice, std::filesystem::path root_directory)
-    : logicalDevice{logicalDevice},
+    Manager<Shader>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path root_directory)
+    : logicalDevice{_logicalDevice},
         files{root_directory, {".spv"}}
     {
 

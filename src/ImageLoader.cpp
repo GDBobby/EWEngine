@@ -9,7 +9,7 @@
 #include <fstream>
 
 namespace EWE{
-    bool InitializeImage(Image& img, std::filesystem::path const& img_path){
+    bool InitializeImage(Image& img, std::filesystem::path const& img_path, Queue::Type dstQueueType){
         std::ifstream inFile{img_path, std::ios::binary | std::ios::ate};
         if(!inFile.is_open()){
             return false;
@@ -31,9 +31,20 @@ namespace EWE{
 
                 StagingBuffer* stagingBuffer = new StagingBuffer{img.logicalDevice, rawImg.raw_data.size()};
 
-                Queue::Type dstQueueType = Queue::Graphics;
+                VkImageLayout dstLayout;
+
+                Logger::Print<Logger::Level::Warning>("mipmaps aren't setup yet\n");
+                switch(dstQueueType){
+                    case Queue::Type::Graphics: dstLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; break;
+                    case Queue::Type::Compute: dstLayout = VK_IMAGE_LAYOUT_GENERAL; break;
+                    //case Queue::Type::Transfer: //should be invalid, potentially for additional transfering? idk
+                    default: EWE_UNREACHABLE;
+
+                }
                 if(img.owningQueue != nullptr){
-                    dstQueueType = Global::stcManager->GetQueueType(*img.owningQueue);
+                    //potentially do a assert here to make sure the queue type is the same as the owning queue?
+                    //or just dont set the owning queue
+                    //dstQueueType = Global::stcManager->GetQueueType(*img.owningQueue);
                 }
                 else{
                     img.owningQueue = &Global::stcManager->transferQueue;
@@ -44,7 +55,7 @@ namespace EWE{
                         UsageData<Image>{
                             .stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                             .accessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                            .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                            .layout = dstLayout
                         }
                     },
                     .stagingBuffer = stagingBuffer,

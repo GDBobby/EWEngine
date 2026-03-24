@@ -18,9 +18,9 @@ namespace EWE{
 
         struct Node{
             std::string name;
+            NodeBuffer* buffer;
             NodeID index; //into the contiguous buffer that owns this memory
 
-            NodeBuffer* buffer;
 
             std::vector<uint32_t> pins{};
             //i dont know how I want to store links yet

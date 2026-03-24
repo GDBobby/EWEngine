@@ -244,7 +244,7 @@ namespace EWE{
         logicalDevice{CreateLogicalDevice(instance, window)},
         swapchain{logicalDevice, window, GetPresentQueue(logicalDevice)},
         renderGraph{logicalDevice, swapchain},
-        stcManager{logicalDevice, GetPresentQueue(logicalDevice)}//,
+        stcManager{logicalDevice, GetPresentQueue(logicalDevice), renderGraph}//,
         /*
         textOverlay{ 
             logicalDevice, 

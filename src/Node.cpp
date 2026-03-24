@@ -6,19 +6,19 @@
 
 namespace EWE{
     namespace Node {
-        Node::Node(std::string_view name, NodeBuffer* buffer, uint32_t index, ContiguousContainer<Pin>& upper_pins)
-            : name{ name },
-            buffer{ buffer },
-            index{ index },
-            upper_pins{ upper_pins }
+        Node::Node(std::string_view _name, NodeBuffer* _buffer, uint32_t _index, ContiguousContainer<Pin>& _upper_pins)
+            : name{ _name },
+            buffer{ _buffer },
+            index{ _index },
+            upper_pins{ _upper_pins }
         {
             buffer->Init();
         }
-        Node::Node(NodeBuffer* buffer, uint32_t index, ContiguousContainer<Pin>& upper_pins)
+        Node::Node(NodeBuffer* _buffer, uint32_t _index, ContiguousContainer<Pin>& _upper_pins)
             : name{},
-            buffer{ buffer },
-            index{ index },
-            upper_pins{ upper_pins }
+            buffer{ _buffer },
+            index{ _index },
+            upper_pins{ _upper_pins }
         {
             buffer->Init();
         }
@@ -57,7 +57,7 @@ namespace EWE{
 #ifdef EWE_IMGUI
         void Node::Imgui() {
             const std::string extension = std::string("##") + std::to_string(reinterpret_cast<uint64_t>(this));
-            std::string name = std::string("name") + extension;
+            std::string _name = std::string("name") + extension;
 
             static constexpr std::size_t name_length = 128;
             static char name_buffer[name_length];

@@ -136,7 +136,7 @@ namespace EWE{
 		ImGui::PushID(raster_task_id);
 		ImGui::Text("Raster Task : %s", obj.name.c_str());
         if (ImGui::TreeNode("config")) {
-            ImguiExtension::Imgui(obj.config);
+            ImguiExtension::Imgui(obj.task_config);
             ImGui::TreePop();
         }
         ImGui::Checkbox("owns attachment lifetime", &obj.ownsAttachmentLifetime);
@@ -562,6 +562,7 @@ namespace EWE{
             //other loop controls
             case Type::EndIf: return 0;
             */
+            default: break;
 
             //bunch of dynamic state that i havent got to yet
         }

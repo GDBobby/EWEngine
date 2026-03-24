@@ -314,7 +314,7 @@ int main() {
     };
     EWE::RasterTask mergeRaster{ "merge raster", logicalDevice, *renderQueue, passConfig, &merge_render_info };
     color_temp.format = engine.swapchain.swapCreateInfo.imageFormat;
-    mergeRaster.config.attachment_set_info.colors.push_back(color_temp);
+    mergeRaster.task_config.attachment_set_info.colors.push_back(color_temp);
 
     mergeRaster.scissor = triangle_raster_task.scissor;
     mergeRaster.viewport = triangle_raster_task.viewport;

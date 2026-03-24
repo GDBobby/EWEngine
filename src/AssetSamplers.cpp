@@ -6,8 +6,8 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<Sampler>::Manager(LogicalDevice& logicalDevice) 
-    : logicalDevice{logicalDevice}, 
+    Manager<Sampler>::Manager(LogicalDevice& _logicalDevice) 
+    : logicalDevice{_logicalDevice}, 
     data_arena{}, 
     association_container{}
     {}

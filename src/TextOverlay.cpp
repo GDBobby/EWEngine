@@ -21,8 +21,8 @@ namespace EWE {
 	TextOverlay* textOverlayPtr{ nullptr };
 
 
-	TextOverlay::TextOverlay(LogicalDevice& logicalDevice, float screenWidth, float screenHeight)
-		: logicalDevice{ logicalDevice }, 
+	TextOverlay::TextOverlay(LogicalDevice& _logicalDevice, float screenWidth, float screenHeight)
+		: logicalDevice{ _logicalDevice }, 
 		framebuffer_width {screenWidth},
 		framebuffer_height{ screenHeight },
 		scale{ framebuffer_width / DEFAULT_WIDTH },
@@ -40,11 +40,11 @@ namespace EWE {
 		vkDestroySampler(*Global::logicalDevice, sampler, nullptr);
 	}
 
-	Font::Font(std::unordered_map<wchar_t, CharacterData>& vertData, std::unordered_map<wchar_t, float>& advanceData, uint16_t width, uint16_t height, void* imgdata)
-		: vertData{ std::move(vertData) },
-		advanceData{ std::move(advanceData) },
-		width{ width },
-		height{ height },
+	Font::Font(std::unordered_map<wchar_t, CharacterData>& _vertData, std::unordered_map<wchar_t, float>& _advanceData, uint16_t _width, uint16_t _height, void* imgdata)
+		: vertData{ std::move(_vertData) },
+		advanceData{ std::move(_advanceData) },
+		width{ _width },
+		height{ _height },
 		image{ *Global::logicalDevice },
 		image_view{ image, false },
 		buffers{

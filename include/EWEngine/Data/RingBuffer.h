@@ -38,6 +38,7 @@ namespace EWE{
 				}
 			}
 			starting_index = (current_index + 1) % Size;
+			usage[current_index] = true;
 			return &data[current_index];
 		}
 		void Return(T* obj){

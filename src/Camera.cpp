@@ -46,12 +46,12 @@ namespace EWE {
 		UpdateBuffer(Global::frameIndex);
 	}
 
-	void Camera::UpdateViewData(lab::vec3 const& position, lab::vec3 const& target, lab::vec3 const& cameraUp) {
+	void Camera::UpdateViewData(lab::vec3 const& _position, lab::vec3 const& _target, lab::vec3 const& _cameraUp) {
 		//probably store a position, target, and camera up variable in this class, then hand out a pointer to those variables
 		//being lazy rn
-		this->target = target;
-		this->cameraUp = cameraUp;
-		data.cameraPos = position;
+		this->target = _target;
+		this->cameraUp = _cameraUp;
+		data.cameraPos = _position;
 		dataHasBeenUpdated = max_frames_in_flight;
 	}
 	
@@ -96,16 +96,16 @@ namespace EWE {
 		return GetFrustumPlanes_Impl(data.projView);
 	}
 		
-	std::array<lab::vec4, 6> Camera::GetConservativeFrustumPlanes(const lab::vec3 position, const lab::vec3 rotation) {
+	std::array<lab::vec4, 6> Camera::GetConservativeFrustumPlanes(const lab::vec3 _position, const lab::vec3 _rotation) {
 
-		const float c3 = lab::Cos(rotation.z);
-		const float s3 = lab::Sin(rotation.z);
-		const float c2 = lab::Cos(rotation.x);
-		const float s2 = lab::Sin(rotation.x);
-		const float c1 = lab::Cos(rotation.y);
-		const float s1 = lab::Sin(rotation.y);
+		const float c3 = lab::Cos(_rotation.z);
+		const float s3 = lab::Sin(_rotation.z);
+		const float c2 = lab::Cos(_rotation.x);
+		const float s2 = lab::Sin(_rotation.x);
+		const float c1 = lab::Cos(_rotation.y);
+		const float s1 = lab::Sin(_rotation.y);
 		const lab::vec3 forwardDir = lab::Normalized(lab::vec3{ s1, -s2, c1 });
-		const lab::vec3 conversativePosition = position + forwardDir * 5.f;
+		const lab::vec3 conversativePosition = _position + forwardDir * 5.f;
 		const lab::vec3 u{ (c1 * c3 + s1 * s2 * s3), (c2 * s3), (c1 * s2 * s3 - c3 * s1)};
 		const lab::vec3 v{ (c3 * s1 * s2 - c1 * s3), (c2 * c3), (c1 * c3 * s2 + s1 * s3)};
 		const lab::vec3 w{ (c2 * s1), (-s2), (c1 * c2)};

@@ -8,6 +8,7 @@
 #include "EightWinds/Sampler.h"
 
 #include "EWEngine/Global.h"
+#include <vulkan/vulkan_core.h>
 
 #if EWE_IMGUI
     #include "imgui.h"
@@ -41,14 +42,14 @@ namespace Asset{
 #endif
 
     Manager<DescriptorImageInfo>::Manager(
-        LogicalDevice& logicalDevice,
-        Manager<Sampler>& samplers,
-        Manager<ImageView>& views,
+        LogicalDevice& _logicalDevice,
+        Manager<Sampler>& _samplers,
+        Manager<ImageView>& _views,
         std::filesystem::path const& root_path
     )
-    : logicalDevice{logicalDevice},
-        samplers{samplers},
-        views{views},
+    : logicalDevice{_logicalDevice},
+        samplers{_samplers},
+        views{_views},
         filesystem{root_path, std::vector<std::string>{".dii"}}
     {
 
@@ -224,7 +225,7 @@ namespace Asset{
             ImGui::PushID(kvp.key);
             if(ImGui::TreeNode(kvp.value->name.c_str())){
                 auto found_image = imgui_texture_refs.find(kvp.value);
-                if(found_image != imgui_texture_refs.end()){
+                if(found_image != imgui_texture_refs.end() && found_image->key->view.image.data.layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL){
                     ImVec2 image_size{
                         static_cast<float>(found_image->key->view.image.data.extent.width),
                         static_cast<float>(found_image->key->view.image.data.extent.height)

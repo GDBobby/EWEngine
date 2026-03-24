@@ -43,19 +43,19 @@ namespace EWE {
         }
 
 
-        Pin::Pin(std::string_view name, NodeBuffer* buffer, PinID index, NodeID parentNode)
-            :name{ name },
-            buffer{ buffer },
-            parentNode{parentNode},
+        Pin::Pin(std::string_view _name, NodeBuffer* _buffer, PinID index, NodeID _parentNode)
+            :name{ _name },
+            buffer{ _buffer },
+            parentNode{_parentNode},
             globalPinID{ index }
 
         {}
 
-        Pin::Pin(NodeBuffer* buffer, PinID index, NodeID parentNode)
+        Pin::Pin(NodeBuffer* _buffer, PinID _index, NodeID _parentNode)
             :name{},
-            buffer{ buffer },
-            parentNode{ parentNode },
-            globalPinID{ index } 
+            buffer{ _buffer },
+            parentNode{ _parentNode },
+            globalPinID{ _index } 
         {}
 
         bool Pin::Update(Input::Mouse const& mouseData) {

@@ -18,11 +18,11 @@ namespace EWE{
         Asset::Manager<ImageView> views;
         Asset::Manager<DescriptorImageInfo> diis;
 
-        [[nodiscard]] explicit GlobalData(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager, std::filesystem::path const& root_path)
-        : logicalDevice{logicalDevice},
-            window{window},
+        [[nodiscard]] explicit GlobalData(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& root_path)
+        : logicalDevice{_logicalDevice},
+            window{_window},
             scheduler{marl::Scheduler::Config::allCores()},
-            stcManager{stcManager},
+            stcManager{_stcManager},
             shaderManager{logicalDevice, root_path / "shaders"},
             samplerManager{logicalDevice},
             images{logicalDevice, root_path},
@@ -54,13 +54,13 @@ namespace EWE{
         Asset::Manager<DescriptorImageInfo>* diis;
 
         
-        bool Create(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager, std::filesystem::path const& root_path) {
+        bool Create(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& _root_path) {
             EWE_ASSERT(globalData == nullptr);
-            globalData = new GlobalData{logicalDevice, window, stcManager, root_path};
+            globalData = new GlobalData{_logicalDevice, _window, _stcManager, _root_path};
 
             ::EWE::Global::logicalDevice = &globalData->logicalDevice;
-            physicalDevice = &logicalDevice.physicalDevice;
-            instance = &logicalDevice.instance;
+            physicalDevice = &_logicalDevice.physicalDevice;
+            instance = &_logicalDevice.instance;
             ::EWE::Global::window = &globalData->window;
             frameIndex = 0; 
             ::EWE::Global::scheduler = &globalData->scheduler;

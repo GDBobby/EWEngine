@@ -30,18 +30,18 @@ namespace EWE {
 
 		template<typename CoordinateSystem>
 		requires(lab::IsCoordinateSystem<CoordinateSystem>::value)
-		void ViewDirection(const lab::vec3 position, const lab::vec3 direction, const lab::vec3 up = lab::vec3{ 0.0f,1.0f, 0.0f }) {
-			lab::ViewDirection<CoordinateSystem>(data.view, position, direction);
+		void ViewDirection(const lab::vec3 _position, const lab::vec3 _direction, const lab::vec3 up = lab::vec3{ 0.0f,1.0f, 0.0f }) {
+			lab::ViewDirection<CoordinateSystem>(data.view, _position, _direction);
 			data.projView = data.proj * data.view;
-			data.cameraPos = position;
+			data.cameraPos = _position;
 		}
 
 		template<typename CoordinateSystem>
 		requires(lab::IsCoordinateSystem<CoordinateSystem>::value)
-		void ViewRotation(const lab::vec3 position, const lab::vec3 rotation) {
-			lab::ViewRotation<CoordinateSystem>(data.view, position, rotation);
+		void ViewRotation(const lab::vec3 _position, const lab::vec3 _rotation) {
+			lab::ViewRotation<CoordinateSystem>(data.view, _position, _rotation);
 			data.projView = data.proj * data.view;
-			data.cameraPos = position;
+			data.cameraPos = _position;
 		}
 
 		template<typename CoordinateSystem>

@@ -2,7 +2,7 @@
     "version": 8,
     "cmakeMinimumRequired": {
         "major": 3,
-        "minor": 24,
+        "minor": 25,
         "patch": 0
     },
     "configurePresets": [
@@ -46,7 +46,8 @@
             "inherits": "msvc-debug",
             "cacheVariables": {
                 "USING_ASAN": true,
-                "OUTPUT_POSTFIX": "-da"
+                "OUTPUT_POSTFIX": "-da",
+                "CMAKE_CXX_FLAGS": "/DEWE_DEBUG"
             }
         },
         {
@@ -54,7 +55,8 @@
             "inherits": "msvc-relwithdeb",
             "cacheVariables": {
                 "USING_ASAN": true,
-                "OUTPUT_POSTFIX": "-rda"
+                "OUTPUT_POSTFIX": "-rda",
+                "CMAKE_CXX_FLAGS": "/DEWE_DEBUG"
             }
         },
         {
@@ -102,51 +104,6 @@
             }
         },
         {
-            "name": "ninja-clang-base",
-            "inherits": "base",
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_C_COMPILER": "clang",
-                "CMAKE_CXX_COMPILER": "clang++"
-            }
-        },
-        {
-            "name": "ninja-clang-debug",
-            "inherits": "ninja-clang-base",
-            "cacheVariables": {
-                "OUTPUT_POSTFIX": "-d",
-                "CMAKE_CXX_FLAGS": "-DEWE_DEBUG"
-            }
-        },
-        {
-            "name": "ninja-clang-relwithdeb",
-            "inherits": "ninja-clang-base",
-            "cacheVariables": {
-                "OUTPUT_POSTFIX": "-rd",
-                "CMAKE_CXX_FLAGS": "-DEWE_DEBUG"
-            }
-        },
-        {
-            "name": "ninja-clang-release",
-            "inherits": "ninja-clang-base"
-        },
-        {
-            "name": "ninja-clang-debug-asan",
-            "inherits": "ninja-clang-base",
-            "cacheVariables": {
-                "USING_ASAN": true,
-                "OUTPUT_POSTFIX": "-da"
-            }
-        },
-        {
-            "name": "ninja-clang-relwithdeb-asan",
-            "inherits": "ninja-clang-debug-asan",
-            "cacheVariables": {
-                "USING_ASAN": true,
-                "OUTPUT_POSTFIX": "-rda"
-            }
-        },
-        {
             "name": "Custom configure preset",
             "displayName": "Custom configure preset",
             "description": "Sets Ninja generator, build and install directory",
@@ -183,7 +140,8 @@
             "name": "gcc-trunk-release",
             "inherits": "gcc-trunk-base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS": "-freflection"
             }
         }
     ],
@@ -227,26 +185,6 @@
         {
             "name": "ninja-msvc-relwithdeb-asan",
             "configurePreset": "ninja-msvc-relwithdeb-asan"
-        },
-        {
-            "name": "ninja-clang-debug",
-            "configurePreset": "ninja-clang-debug"
-        },
-        {
-            "name": "ninja-clang-relwithdeb",
-            "configurePreset": "ninja-clang-relwithdeb"
-        },
-        {
-            "name": "ninja-clang-release",
-            "configurePreset": "ninja-clang-release"
-        },
-        {
-            "name": "ninja-clang-debug-asan",
-            "configurePreset": "ninja-clang-debug-asan"
-        },
-        {
-            "name": "ninja-clang-relwithdeb-asan",
-            "configurePreset": "ninja-clang-relwithdeb-asan"
         },
         {
             "name": "gcc-trunk-debug",

@@ -12,8 +12,8 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<Image>::Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path)
-    : logicalDevice{logicalDevice},
+    Manager<Image>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
+    : logicalDevice{_logicalDevice},
         image_files{root_path, std::vector<std::string>{".png", ".jpg"}}//,
         //meta_files{root_path, std::vector<std::string>{".mie"}}
     {
@@ -113,7 +113,7 @@ namespace Asset{
                 auto old_extent = img.data.extent;
                 auto old_format = img.data.format;
                 auto old_miplevels = img.data.mipLevels;
-                InitializeImage(img, full_img_load_path);
+                InitializeImage(img, full_img_load_path, Queue::Type::Graphics);
                 img.readyForUsage = true;
 
             }};

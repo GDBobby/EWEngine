@@ -1,7 +1,7 @@
 include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
 message(STATUS "Local .env.cmake: ${LOCAL_ENV}")
 
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 
 project(EWEngine VERSION 2.0.0)
 
@@ -92,6 +92,18 @@ endif()
 message(STATUS "found EWFramework [${EWFramework_SOURCE_DIR}]")
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES} ${HEADER_FILES} ${IMGUI_SOURCES})
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+	$<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:
+        -Wall 
+        -Wextra 
+        -Wshadow -Werror=shadow
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /W4 
+        /we4456 /we4457 /we4458 /we4459
+    >
+)
 
 if(EWE_IMGUI)
     target_compile_definitions(${PROJECT_NAME} PUBLIC EWE_IMGUI)

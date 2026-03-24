@@ -6,61 +6,28 @@
 #include "EightWinds/CommandPool.h"
 #include "EightWinds/CommandBuffer.h"
 #include "EightWinds/Backend/STC_Helper.h"
+#include "EightWinds/Backend/SingleTimeCommand.h"
 
 #include "EWEngine/Data/RingBuffer.h"
 
 #include <mutex>
 #include <array>
 
-/*
-* 
-    image process
-    step 1{
-    begin STC
-
-    barrier - undefined to either TRANSFER_DST_OPTIMAL, or LAYOUT_GENERAL
-    copy staging buffer to image
-
-    barrier - the former transfer layout to the destination layout, potentially with a queue ownership transfer. skip if same queue and same layout
-    
-    if(async, transfer){
-        end transfer STC
-        begin graphics STC
-        duplicate last barrier
-    }
-    if(generating mips){
-        generate mips
-    }
-    end last STC
-
-    on transfer STC ending {
-        destroy staging buffer
-        free command buffer
-        reset command pool (unless i can get this to work per fiber)
-    }
-
-*/
-
 namespace EWE{
     struct CommandBuffer;
+    struct RenderGraph;
 
     class STC_Manager{
+    private:
+        LogicalDevice& logicalDevice;
+        RenderGraph& renderGraph;
     public:
         Queue& renderQueue;
         Queue& computeQueue; //potentially same as renderQueue
         Queue& transferQueue; //potentially same as renderQueue
 
-        Queue& GetQueue(Queue::Type type) {
-            switch (type) {
-                case Queue::Graphics: return renderQueue;
-                case Queue::Compute: return computeQueue;
-                case Queue::Transfer: return transferQueue;
-                default: EWE_UNREACHABLE;
-            }
-            EWE_UNREACHABLE;
-        }
+        Queue& GetQueue(Queue::Type type);
     private:
-        LogicalDevice& logicalDevice;
 
         RingBuffer<CommandPool, max_frames_in_flight * 2> renderCommandPools;
         //idk count, i want like 2 per fiber but i wont know fiber count at compile time
@@ -71,24 +38,13 @@ namespace EWE{
         std::mutex semAcqMut{};
         RingBuffer<TimelineSemaphore, 32> semaphores; 
 
-        struct SingleTimeCommand {
-            Queue::Type queueType; //i dont think this is necessary (2/12)
-            CommandPool* cmdPool;
-            CommandBuffer cmdBuf;
-            SingleTimeCommand(Queue::Type queueType, CommandPool* cmdPool) : queueType{ queueType }, cmdPool { cmdPool }, cmdBuf{ cmdPool->AllocateCommand(VK_COMMAND_BUFFER_LEVEL_PRIMARY) } {} //construct the commandbuffer here
-            SingleTimeCommand(SingleTimeCommand const& copySrc) = delete;
-            SingleTimeCommand& operator=(SingleTimeCommand const& copySrc) = delete;
-            SingleTimeCommand(SingleTimeCommand&& moveSrc) noexcept;
-            SingleTimeCommand& operator=(SingleTimeCommand&& moveSrc);
-        };
-
         SingleTimeCommand* GetSTC(Queue::Type requested_queue);
 
     public:
 
         Queue::Type GetQueueType(Queue& queue) const;
 
-        [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& renderQueue);
+        [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& renderQueue, RenderGraph& _renderGraph);
         ~STC_Manager();
 
         STC_Manager(STC_Manager const& copySrc) = delete;
@@ -102,6 +58,8 @@ namespace EWE{
         bool CheckFencesForUsage();
         void CheckFencesForCallbacks();
 
+        void SingleQueueTransfer(AsyncTransferContext_Image& transferContext, Queue::Type dstQueueType);
+        void AsyncTransfer_Helper(AsyncTransferContext_Image& transferContext, Queue::Type dstQueueType);
         //this will ONLY work in a fiber
         void AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue& rh_queue);
         void AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue::Type dstQueue);

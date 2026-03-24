@@ -5,9 +5,9 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<ImageView>::Manager(LogicalDevice& logicalDevice, Manager<Image>& images)
-    : logicalDevice{logicalDevice},
-        images{images}
+    Manager<ImageView>::Manager(LogicalDevice& _logicalDevice, Manager<Image>& _images)
+    : logicalDevice{_logicalDevice},
+        images{_images}
     {
 
     }

@@ -9,8 +9,8 @@
 
 namespace EWE{
 namespace Asset{ 
-    FileSystem::FileSystem(std::filesystem::path const& root_directory, std::vector<std::string> const& acceptable_extensions)
-    : root_directory{root_directory}
+    FileSystem::FileSystem(std::filesystem::path const& _root_directory, std::vector<std::string> const& acceptable_extensions)
+    : root_directory{_root_directory}
     {
         if (!std::filesystem::exists(root_directory) || !std::filesystem::is_directory(root_directory)) {
             return; 

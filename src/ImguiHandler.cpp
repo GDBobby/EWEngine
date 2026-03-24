@@ -45,10 +45,10 @@ namespace EWE{
 	}
 
 	ImguiHandler::ImguiHandler(
-		Queue& queue,
+		Queue& _queue,
 		uint32_t imageCount, VkSampleCountFlagBits sampleCount
 	)
-		: queue{ queue },
+		: queue{ _queue },
 		//cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
 		//cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
 		renderInfo{

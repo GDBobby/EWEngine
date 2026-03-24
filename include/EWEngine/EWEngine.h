@@ -21,8 +21,8 @@ namespace EWE{
         Window window;
         LogicalDevice logicalDevice;
         Swapchain swapchain;
-        STC_Manager stcManager;
         RenderGraph renderGraph;
+        STC_Manager stcManager;
         //TextOverlay textOverlay;
 
         uint64_t totalFramesSubmitted = 0;
