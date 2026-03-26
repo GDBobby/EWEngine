@@ -236,15 +236,38 @@ namespace EWE{
         throw std::runtime_error("failed to find a present queue");
     }
 
+	Queue& GetComputeQueue(LogicalDevice& logicalDevice, Queue& renderQueue) {
+		for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
+			if (logicalDevice.queues[i].family.SupportsCompute() && (logicalDevice.queues[i] != renderQueue)) {
+				return logicalDevice.queues[i];
+			}
+		}
+		EWE_ASSERT(renderQueue.family.SupportsTransfer());
+		return renderQueue;
+	}
+	Queue& GetTransferQueue(LogicalDevice& logicalDevice, Queue& renderQueue, Queue& computeQueue) {
+		for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
+			if (logicalDevice.queues[i].family.SupportsTransfer() && (logicalDevice.queues[i] != computeQueue) && (logicalDevice.queues[i] != renderQueue)) {
+				return logicalDevice.queues[i];
+			}
+		}
+		if (computeQueue.family.SupportsTransfer()) {
+			return computeQueue;
+		}
+		EWE_ASSERT(renderQueue.family.SupportsTransfer());
+		return renderQueue;
+	}
+
     std::unordered_map<std::string, bool> optionalExtensions{};
 
     EWEngine::EWEngine(std::string_view application_name)
         : instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
         window{instance, 1280, 720, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
-        swapchain{logicalDevice, window, GetPresentQueue(logicalDevice)},
-        renderGraph{logicalDevice, swapchain},
-        stcManager{logicalDevice, GetPresentQueue(logicalDevice), renderGraph}//,
+        renderQueue{GetPresentQueue(logicalDevice)}, computeQueue{GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)}, 
+        swapchain{logicalDevice, window, renderQueue},
+        renderGraph{logicalDevice, swapchain, renderQueue, computeQueue},
+        stcManager{logicalDevice, transferQueue, renderGraph}//,
         /*
         textOverlay{ 
             logicalDevice, 

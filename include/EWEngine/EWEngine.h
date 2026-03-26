@@ -20,10 +20,14 @@ namespace EWE{
         Instance instance;
         Window window;
         LogicalDevice logicalDevice;
+        Queue& renderQueue;
+        Queue& computeQueue;
+        Queue& transferQueue;
         Swapchain swapchain;
         RenderGraph renderGraph;
         STC_Manager stcManager;
         //TextOverlay textOverlay;
+
 
         uint64_t totalFramesSubmitted = 0;
 

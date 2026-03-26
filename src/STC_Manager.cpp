@@ -59,35 +59,13 @@ namespace EWE {
 				break;
 			default: break;
 		}
-		return new SingleTimeCommand(actualQueueType, stc_command_pools[requested_queue].GetNext(), semaphores.GetNext());
+		return new SingleTimeCommand(stc_command_pools[requested_queue].GetNext(), semaphores.GetNext());
 	}
 
-	Queue& GetComputeQueue(LogicalDevice& logicalDevice, Queue& renderQueue) {
-		for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
-			if (logicalDevice.queues[i].family.SupportsCompute() && (logicalDevice.queues[i] != renderQueue)) {
-				return logicalDevice.queues[i];
-			}
-		}
-		EWE_ASSERT(renderQueue.family.SupportsTransfer());
-		return renderQueue;
-	}
-	Queue& GetTransferQueue(LogicalDevice& logicalDevice, Queue& renderQueue, Queue& computeQueue) {
-		for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
-			if (logicalDevice.queues[i].family.SupportsTransfer() && (logicalDevice.queues[i] != computeQueue) && (logicalDevice.queues[i] != renderQueue)) {
-				return logicalDevice.queues[i];
-			}
-		}
-		if (computeQueue.family.SupportsTransfer()) {
-			return computeQueue;
-		}
-		EWE_ASSERT(renderQueue.family.SupportsTransfer());
-		return renderQueue;
-	}
-
-    STC_Manager::STC_Manager(LogicalDevice& _logicalDevice, Queue& _renderQueue, RenderGraph& _renderGraph)
+    STC_Manager::STC_Manager(LogicalDevice& _logicalDevice, Queue& _transferQueue, RenderGraph& _renderGraph)
     : logicalDevice{_logicalDevice},
 		renderGraph{_renderGraph},
-		renderQueue{ _renderQueue }, computeQueue{ GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)},
+		renderQueue{ _renderGraph.renderQueue }, computeQueue{ _renderGraph.computeQueue}, transferQueue{_transferQueue},
         renderCommandPools{logicalDevice, renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
         stc_mutexes{},
         stc_command_pools{
@@ -95,8 +73,7 @@ namespace EWE {
             RingBuffer<CommandPool, 16>{logicalDevice, computeQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
             RingBuffer<CommandPool, 16>{logicalDevice, transferQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
         },
-        semAcqMut{},
-        semaphores{logicalDevice}
+		semaphores{logicalDevice}
     {
 #if EWE_DEBUG_NAMING
 		renderQueue.SetName("render queue");
@@ -200,7 +177,20 @@ namespace EWE {
 		first_stc->cmdPool->queue.Submit2(1, &submitInfo, VK_NULL_HANDLE);
 
 		//auto ownership_stc = GetSTC(dstQueueType);
-		renderGraph.ResourceOwnershipTransfer(dependency_info, transferContext.resource);
+
+		/*
+		UsageData<Image> finalUsage{
+			.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, //before anything else gets done?
+			.accessMask = VK_ACCESS_2_SHADER_READ_BIT,
+			.layout = transferContext.resource.usage.layout
+		};
+		*/
+		STCManagement::Helper<Image> stc_helper{
+			.barrier = ownershipBarrier,
+			.res = transferContext.resource,
+			.dstQueue = &rh_queue
+		};
+		renderGraph.ResourceOwnershipTransfer(stc_helper);
 
 		//ownership_stc = GetSTC(dstQueueType);
 		//cmdInfo.commandBuffer = ownership_stc->cmdBuf;
@@ -229,6 +219,8 @@ namespace EWE {
 		stc_command_pools[Queue::Transfer].Return(first_stc->cmdPool);
 		delete first_stc;
 		/*
+		the rendergraph is gonna handle this
+
 		while (!ownership_stc->semaphore.Check(ownership_stc->semaphore.value)) {
 			marl::Event event{ marl::Event::Mode::Manual };
 			event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
@@ -283,7 +275,9 @@ namespace EWE {
 
 		Command_Helper::CopyBufferToImage(first_stc->cmdBuf, transferContext.stagingBuffer->buffer, *transferContext.resource.resource[0], transferContext.image_region, initial_usage.layout);
 
+		semAcqMut.lock();
 		TimelineSemaphore* first_sem = semaphores.GetNext();
+		semAcqMut.unlock();
 #if EWE_DEBUG_BOOL
 		first_sem->debugName = "STC first";
 #endif

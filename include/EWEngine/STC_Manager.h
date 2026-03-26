@@ -8,7 +8,7 @@
 #include "EightWinds/Backend/STC_Helper.h"
 #include "EightWinds/Backend/SingleTimeCommand.h"
 
-#include "EWEngine/Data/RingBuffer.h"
+#include "EightWinds/Data/RingBuffer.h"
 
 #include <mutex>
 #include <array>
@@ -35,16 +35,18 @@ namespace EWE{
 
         std::array<std::mutex, Queue::COUNT> stc_mutexes;
         std::array<RingBuffer<CommandPool, 16>, Queue::COUNT> stc_command_pools;
-        std::mutex semAcqMut{};
-        RingBuffer<TimelineSemaphore, 32> semaphores; 
 
         SingleTimeCommand* GetSTC(Queue::Type requested_queue);
+
+
+        std::mutex semAcqMut{};
+        RingBuffer<TimelineSemaphore, 32> semaphores;
 
     public:
 
         Queue::Type GetQueueType(Queue& queue) const;
 
-        [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& renderQueue, RenderGraph& _renderGraph);
+        [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& _transferQueue, RenderGraph& _renderGraph);
         ~STC_Manager();
 
         STC_Manager(STC_Manager const& copySrc) = delete;
