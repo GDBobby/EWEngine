@@ -1,4 +1,3 @@
-
 if(DEFINED IMAGEPROC_PATH)
 	if(EXISTS "${IMAGEPROC_PATH}/CMakeLists.txt")
 		message(STATUS "~~~~FOUND~~~~ Using local ImageProcessor from ${IMAGEPROC_PATH}")

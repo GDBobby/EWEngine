@@ -72,9 +72,7 @@ include(cmake/imageprocessor.cmake)
 option(EWE_IMGUI "imgui" ON)
 
 if(EWE_IMGUI)
-
 	include(cmake/imgui.cmake)
-
 	set(IMGUI_SOURCES
 		${imgui_SOURCE_DIR}/imgui.cpp
 		${imgui_SOURCE_DIR}/imgui_draw.cpp

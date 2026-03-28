@@ -31,6 +31,6 @@ namespace EWE{
 		}
 	}
 
-	void ImguiExpandInstruction(void* mem_addr, Instruction::Type itype);
+	void ImguiExpandInstruction(void* mem_addr, Inst::Type itype);
 } //namespace EWE
 #endif

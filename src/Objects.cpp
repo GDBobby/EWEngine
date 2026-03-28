@@ -528,45 +528,19 @@ namespace EWE{
     }
 
 
-    void ImguiExpandInstruction(void* mem_addr, Instruction::Type itype){
-        switch (itype) {
-            case Instruction::Type::BindPipeline: ImguiReflectParamStruct(reinterpret_cast<ParamPack::Pipeline*>(mem_addr)); break;
-            /*
-            case Type::BindDescriptor: return sizeof(VkDescriptorSet);
-            case Type::Push: return sizeof(GlobalPushConstant_Raw);
-            case Type::BeginRender: return sizeof(VkRenderingInfo);
-            case Type::EndRender: return 0;
-            
-            case Type::Draw: return sizeof(ParamPack::VertexDraw);
-            case Type::DrawIndexed: return sizeof(ParamPack::IndexDraw);
-            case Type::Dispatch: return sizeof(ParamPack::Dispatch);
-            case Type::DrawMeshTasks: return sizeof(ParamPack::DrawMeshTasks);
-            //raytracing here
-            
-            case Type::DrawIndirect: return sizeof(ParamPack::DrawIndirect);
-            case Type::DrawIndexedIndirect: return sizeof(ParamPack::DrawIndirect);
-            case Type::DispatchIndirect: return sizeof(ParamPack::DispatchIndirect);
-            case Type::DrawMeshTasksIndirect: return sizeof(ParamPack::DrawIndirect);
-            
-            case Type::DrawIndirectCount: return sizeof(ParamPack::DrawIndirectCount);
-            case Type::DrawIndexedIndirectCount: return sizeof(ParamPack::DrawIndirectCount);
-            case Type::DrawMeshTasksIndirectCount: return sizeof(ParamPack::DrawIndirectCount);
-            //case Type::PipelineBarrier: return 0;
-            case Type::DS_Viewport: return sizeof(ParamPack::Viewport);
-            case Type::DS_Scissor: return sizeof(ParamPack::Scissor);
-            case Type::DS_ViewportCount: return sizeof(ParamPack::ViewportCount);
-            case Type::DS_ScissorCount: return sizeof(ParamPack::ScissorCount);
-            case Type::BeginLabel: return sizeof(ParamPack::Label);
-            case Type::EndLabel: return 0;
-            case Type::If: return sizeof(bool);
-            //other loop controls
-            case Type::EndIf: return 0;
-            */
-            default: break;
+    void ImguiExpandInstruction(void* mem_addr, Inst::Type itype){
+            static constexpr auto type_mems = std::define_static_array(std::meta::enumerators_of(^^Inst::Type));
 
-            //bunch of dynamic state that i havent got to yet
-        }
-        //EWE_UNREACHABLE;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+            template for(constexpr auto type_mem : type_mems){
+                if ([:type_mem:] == itype){
+                    if constexpr(std::meta::is_complete_type(^^ParamPack<([:type_mem:])>)){
+                        ImguiReflectParamStruct(reinterpret_cast<ParamPack<([:type_mem:])>*>(mem_addr));
+                    }
+                }
+            }
+#pragma GCC diagnostic pop
         
     }
 

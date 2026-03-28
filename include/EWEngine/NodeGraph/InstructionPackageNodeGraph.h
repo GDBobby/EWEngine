@@ -3,13 +3,12 @@
 
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/RenderGraph/Command/Record.h"
+#include "EightWinds/RenderGraph/Command/InstructionPackage.h"
+#include "EightWinds/RenderGraph/Command/RasterInstructionPackage.h"
 
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
-#include "imgui.h"
-
-#include <fstream>
 
 namespace EWE{
 namespace Node{
@@ -22,26 +21,29 @@ namespace Node{
         im putting that ^^^^ off for now
     */
 
-    struct RecordNodeGraph : ImNodes::EWE::Editor {
+    struct InstructionPackageNodeGraph : ImNodes::EWE::Editor {
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
         std::vector<Inst::Type> acceptable_add_instructions{};
         ImNodes::EWE::Node* link_empty_drop_srcNode = nullptr;
         ImGuiTextFilter filter;
 
-        [[nodiscard]] explicit RecordNodeGraph();
+
+        InstructionPackage::Type packageType = InstructionPackage::Base;
+        bool changing_package_type_allowed = true;
+
+        [[nodiscard]] explicit InstructionPackageNodeGraph();
 
         ImNodes::EWE::Node* CreateHeadNode();
         static Inst::Type GetInstructionFromNode(ImNodes::EWE::Node& node);
         void PrintNode(ImNodes::EWE::Node& node) const;
         ImNodes::EWE::Node& CreateRGNode(int inst_index);
         std::vector<Inst::Type> CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const;
-
         inline std::vector<Inst::Type> CollectInstructions() const{
             return CollectInstructionsUpTo(nullptr);
         }
-        void CreateFromInstructions(std::span<const Inst::Type> create_instructions);
         bool AddInstructionButton(Inst::Type itype);
+        void CreateFromInstructions(std::span<const Inst::Type> create_instructions);
 
         void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
         void OpenAddMenu() override final;
@@ -53,5 +55,5 @@ namespace Node{
         bool SaveFunc() override final;
         bool LoadFunc() override final;
     };
-} //namespace Node 
+} //namespace Node
 } //namespace EWE

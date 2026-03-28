@@ -164,20 +164,8 @@ namespace ImNodes{
                     submissionReady = true;
                 }
                 if(ImGui::IsKeyReleased(ImGuiKey_A) && submissionReady){
-                    //if(nodes.Size() > 0){
-                        //auto first_node_iter = nodes.begin();
-                        //first_node_iter->pos = ImGui::GetMousePos();
-                    //}
-
                     menu_pos = ImGui::GetMousePos();
                     OpenAddMenu();
-                    /*
-                    if(init_node != nullptr){
-                        Node& creation_node = AddNode();
-                        creation_node.nodePos = ImGui::GetMousePos();
-                        init_node(creation_node);
-                    }
-                    */
                     submissionReady = false;
                 }
 
@@ -192,30 +180,24 @@ namespace ImNodes{
                     ImNodes::SetNodeScreenSpacePos(current_index, node.pos);
                 }
                 node.id = current_index++;
+                ImGui::SetNextWindowSizeConstraints(ImVec2(50, -1), ImVec2(400, -1));
                 ImNodes::BeginNode(node.id);
-                //ImGui::Dummy(ImVec2(1.0f, 1.0f));
 
                 if(node.snapToGrid){
                     ImNodes::SnapNodeToGrid(node.id);
                 }
                 node.pos = ImNodes::GetNodeScreenSpacePos(node.id);
-                //ImGui::Dummy(ImVec2(1.0f, 1.0f));
-
                 RenderNode(node);
 
                 current_index += node.pins.size();
                 for (PinOffset i = 0; i < node.pins.size(); i++) {
-
                     RenderPin(node, i);
-
-                    //globalPinID can be calculated from node.id + i + 1 - pin[0].id == node.id + 1
                 }
                 
                 
                 ImNodes::EndNode();
             }
 
-            int link_id = INT32_MIN + 1;
             for (auto& link : links) {
                 link.id = current_index++;
                 ImNodes::Link(link.id, link.start->id + link.start_offset + 1, link.end->id + link.end_offset + 1);
@@ -239,6 +221,8 @@ namespace ImNodes{
                             break;
                         }
                     }
+                    EWE_ASSERT(starting_node != nullptr);
+
                     //this is releasing a pin
                     LinkEmptyDrop(*starting_node, (link_pin_id - starting_node->id) - 1);
                 }
@@ -294,8 +278,6 @@ namespace ImNodes{
 
             bool delete_pressed = ImGui::IsKeyPressed(ImGuiKey_Delete);
             if(delete_pressed){
-                int deleted_pin = -1; 
-                NodePair* deleted_link = nullptr;
 
                 int hovered_id;
                 if(ImNodes::IsLinkHovered(&hovered_id)){

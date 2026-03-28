@@ -188,11 +188,13 @@
         },
         {
             "name": "gcc-trunk-debug",
-            "configurePreset": "gcc-trunk-debug"
+            "configurePreset": "gcc-trunk-debug",
+            "jobs": 8
         },
         {
             "name": "gcc-trunk-release",
-            "configurePreset": "gcc-trunk-release"
+            "configurePreset": "gcc-trunk-release",
+            "jobs": 8
         }
     ]
 }

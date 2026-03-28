@@ -8,10 +8,11 @@
 
 
 #include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_vulkan.h"
 
 #include "EightWinds/Window.h"
+
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_vulkan.h"
 
 namespace EWE{
 
@@ -44,6 +45,9 @@ namespace EWE{
 		return ret;
 	}
 
+	//int current_imgui_handler_count = 0;
+
+
 	ImguiHandler::ImguiHandler(
 		Queue& _queue,
 		uint32_t imageCount, VkSampleCountFlagBits sampleCount
@@ -74,8 +78,9 @@ namespace EWE{
 					.clearValue = {0.f, 0.f, 0.f, 0.f}
 				}
 			}
-		}//,
-		//semaphores{ *Global::logicalDevice}
+		},
+		image_count{imageCount},
+		sample_count{sampleCount}
     {
 #if EWE_DEBUG_NAMING
 		for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
@@ -87,14 +92,35 @@ namespace EWE{
 		InitializeImages();
 
 		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
+		
+		auto& main_vp = viewports.emplace_back();
+		main_vp.context = InitializeContext();
+    }
 
-		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		ImGui::StyleColorsDark();
-        
-		ImGui_ImplGlfw_InitForVulkan(Global::window->window, true);
-		ImGui_ImplVulkan_InitInfo init_info{
+	ImguiHandler::~ImguiHandler() {
+		//if(current_imgui_handler_count == 1){
+			ImGui_ImplVulkan_Shutdown();
+			ImGui_ImplGlfw_Shutdown();
+		//}
+		//current_imgui_handler_count--;
+		for(auto& vp : viewports){
+			ImGui::DestroyContext(vp.context);
+		}
+	}
+
+	void ImguiHandler::InitializeImages() {
+
+	}
+
+	ImGuiContext* ImguiHandler::InitializeContext(){
+
+		auto* prev_context = ImGui::GetCurrentContext();
+
+		ImGuiContext* ret = ImGui::CreateContext();
+		//if another context is currently set, CreateContext takes the liberty of returning the context
+		ImGui::SetCurrentContext(ret); 
+
+        ImGui_ImplVulkan_InitInfo vulkan_init_info{
 			.ApiVersion = Global::instance->api_version,
 			.Instance = Global::logicalDevice->instance,
 			.PhysicalDevice = Global::logicalDevice->physicalDevice.device,
@@ -102,12 +128,12 @@ namespace EWE{
 			.QueueFamily = queue.family.index,
 			.Queue = queue,
 			.DescriptorPoolSize = 1024,
-			.MinImageCount = imageCount,
-			.ImageCount = imageCount,
+			.MinImageCount = image_count,
+			.ImageCount = image_count,
 			.PipelineCache = nullptr,
 			.PipelineInfoMain = ImGui_ImplVulkan_PipelineInfo{
 				.RenderPass = VK_NULL_HANDLE,
-				.MSAASamples = sampleCount,
+				.MSAASamples = sample_count,
 				.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
 					.pNext = nullptr,
@@ -123,19 +149,19 @@ namespace EWE{
 			.CheckVkResultFn = EWE_VK_RESULT,
 		};
 
-		ImGui_ImplVulkan_Init(&init_info);
 
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		ImGui::StyleColorsDark();
+	
+		ImGui_ImplGlfw_InitForVulkan(Global::window->window, prev_context == nullptr);
 
-    }
+		ImGui_ImplVulkan_Init(&vulkan_init_info);
 
-	ImguiHandler::~ImguiHandler() {
-		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
-	}
-
-	void ImguiHandler::InitializeImages() {
-
+		if(prev_context != nullptr){
+			ImGui::SetCurrentContext(prev_context);
+		}
+		return ret;
 	}
 
 	/*
@@ -152,55 +178,64 @@ namespace EWE{
 		currentCmdBuf.Begin(beginInfo);
 	}
 		*/
-	void ImguiHandler::BeginRender(CommandBuffer& cmdBuf) {
+	void ImguiHandler::Render(CommandBuffer& cmdBuf) {
 		//auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
 
+
+		if(viewports.size() > 0){
+			isRendering = true;
+
 #if EWE_DEBUG_NAMING
-		VkDebugUtilsLabelEXT labelUtil{
-			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-			.pNext = nullptr,
-			.pLabelName = "imgui",
-			.color = {0.f, 0.f, 0.f, 1.f}
-		};
-		Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
-#endif
-
-		isRendering = true;
-		vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-	}
-
-	void ImguiHandler::EndRender(CommandBuffer& cmdBuf) {
-		//auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
-		ImGui::Render();
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
-		isRendering = false;
-		vkCmdEndRendering(cmdBuf);
-#if EWE_DEBUG_NAMING
-		Global::logicalDevice->EndLabel(cmdBuf);
-#endif
-		//cmdBuf.End();
-		//cmdBuf.state = CommandBuffer::State::Pending;
-	}
-
-	/*
-	void ImguiHandler::SetSubmissionData(PerFlight<Backend::SubmitInfo>& subInfo) {
-		for (uint8_t i = 0; i < max_frames_in_flight; i++) {
-			subInfo[i].AddCommandBuffer(cmdBuffers[i]);
-
-			VkSemaphoreSubmitInfo semSubmitInfo{
-				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+			VkDebugUtilsLabelEXT labelUtil{
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
 				.pNext = nullptr,
-				.semaphore = semaphores[i].vkSemaphore,
-				.value = 0,
-				.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-				.deviceIndex = 0
+				.pLabelName = "imgui",
+				.color = {0.f, 0.f, 0.f, 1.f}
 			};
-			subInfo[i].signalSemaphores.push_back(semSubmitInfo);
+			Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
+#endif
+
+			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
+
+			//im doing a index based approached because i want to allow the creation/removal of viewports from within the exec_func
+			for(std::size_t i = 0; i < viewports.size(); i++) {
+				auto& vp = viewports[i];
+				if(vp.exec_func != nullptr){
+					ImGui::SetCurrentContext(vp.context);
+					ImGui_ImplVulkan_NewFrame();
+					ImGui_ImplGlfw_NewFrame();
+
+					auto& io = ImGui::GetIO();
+
+					//displaysize is already capped to window size, so we apply that same cap to the local extent
+					io.DisplayPos.x = vp.current_viewport.offset.x;
+					io.DisplayPos.y = vp.current_viewport.offset.y;
+
+					io.DisplaySize.x = lab::Min(io.DisplaySize.x, static_cast<float>(vp.current_viewport.extent.width));
+					vp.current_viewport.extent.width = io.DisplaySize.x;
+					io.DisplaySize.y = lab::Min(io.DisplaySize.y, static_cast<float>(vp.current_viewport.extent.height));
+					vp.current_viewport.extent.height = io.DisplaySize.y;
+
+
+					ImGui::NewFrame();
+					
+					vp.exec_func(vp);
+
+					ImGui::Render();
+					//auto draw_data = ImGui::GetDrawData();
+					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
+				}
+			}
+
+
+			isRendering = false;
+			vkCmdEndRendering(cmdBuf);
+#if EWE_DEBUG_NAMING
+			Global::logicalDevice->EndLabel(cmdBuf);
+#endif
 		}
+
+
+
 	}
-	*/
 }
