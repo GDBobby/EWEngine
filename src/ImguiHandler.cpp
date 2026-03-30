@@ -7,12 +7,14 @@
 #include "EightWinds/Backend/STC_Helper.h"
 
 
+#include "GLFW/glfw3.h"
 #include "imgui.h"
 
 #include "EightWinds/Window.h"
 
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
+#include "imgui_internal.h"
 
 namespace EWE{
 
@@ -82,19 +84,15 @@ namespace EWE{
 		image_count{imageCount},
 		sample_count{sampleCount}
     {
-#if EWE_DEBUG_NAMING
-		for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-			//std::string debugName = std::string("imgui [") + std::to_string(i) + ']';
-			//semaphores[i].SetName(debugName);
-			//cmdBuffers[i].SetDebugName(debugName);
-		}
-#endif
-		InitializeImages();
 
 		IMGUI_CHECKVERSION();
 		
 		auto& main_vp = viewports.emplace_back();
 		main_vp.context = InitializeContext();
+
+		ImGui::CreateIOContext();
+
+		TakeCallbackControl(Global::window->window);
     }
 
 	ImguiHandler::~ImguiHandler() {
@@ -108,17 +106,8 @@ namespace EWE{
 		}
 	}
 
-	void ImguiHandler::InitializeImages() {
-
-	}
-
 	ImGuiContext* ImguiHandler::InitializeContext(){
 
-		auto* prev_context = ImGui::GetCurrentContext();
-
-		ImGuiContext* ret = ImGui::CreateContext();
-		//if another context is currently set, CreateContext takes the liberty of returning the context
-		ImGui::SetCurrentContext(ret); 
 
         ImGui_ImplVulkan_InitInfo vulkan_init_info{
 			.ApiVersion = Global::instance->api_version,
@@ -150,12 +139,15 @@ namespace EWE{
 		};
 
 
-		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		auto* prev_context = ImGui::GetCurrentContext();
+		ImGuiContext* ret = ImGui::CreateContext();
+		//if another context is currently set, CreateContext takes the liberty of returning the context to the previous
+		ImGui::SetCurrentContext(ret); 
+
+		ret->config.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		ImGui::StyleColorsDark();
 	
-		ImGui_ImplGlfw_InitForVulkan(Global::window->window, prev_context == nullptr);
-
+		ImGui_ImplGlfw_InitForVulkan(Global::window->window, false);
 		ImGui_ImplVulkan_Init(&vulkan_init_info);
 
 		if(prev_context != nullptr){
@@ -164,26 +156,12 @@ namespace EWE{
 		return ret;
 	}
 
-	/*
-	void ImguiHandler::BeginCommandBuffer() {
-		VkCommandBufferBeginInfo beginInfo{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.pInheritanceInfo = nullptr
-		};
-
-		auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
-		currentCmdBuf.Reset();
-		currentCmdBuf.Begin(beginInfo);
-	}
-		*/
 	void ImguiHandler::Render(CommandBuffer& cmdBuf) {
-		//auto& currentCmdBuf = cmdBuffers[Global::frameIndex];
-
 
 		if(viewports.size() > 0){
 			isRendering = true;
+
+			//auto& main_io = ImGui::GetIO(viewports[0].context);
 
 #if EWE_DEBUG_NAMING
 			VkDebugUtilsLabelEXT labelUtil{
@@ -194,6 +172,8 @@ namespace EWE{
 			};
 			Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
 #endif
+			ImGui::UpdateInputBegin();
+
 
 			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
 
@@ -205,27 +185,57 @@ namespace EWE{
 					ImGui_ImplVulkan_NewFrame();
 					ImGui_ImplGlfw_NewFrame();
 
-					auto& io = ImGui::GetIO();
+					vp.context->Viewports[0]->Pos.x = vp.current_viewport.offset.x;
+					vp.context->Viewports[0]->Pos.y = vp.current_viewport.offset.y;
+					//vp.context->Viewports[0]->Size.x = vp.current_viewport.extent.width;
+					//vp.context->Viewports[0]->Size.y = vp.current_viewport.extent.height;
 
 					//displaysize is already capped to window size, so we apply that same cap to the local extent
-					io.DisplayPos.x = vp.current_viewport.offset.x;
-					io.DisplayPos.y = vp.current_viewport.offset.y;
-
-					io.DisplaySize.x = lab::Min(io.DisplaySize.x, static_cast<float>(vp.current_viewport.extent.width));
-					vp.current_viewport.extent.width = io.DisplaySize.x;
-					io.DisplaySize.y = lab::Min(io.DisplaySize.y, static_cast<float>(vp.current_viewport.extent.height));
-					vp.current_viewport.extent.height = io.DisplaySize.y;
-
+					
+					vp.context->config.DisplaySize.x = lab::Min(vp.context->config.DisplaySize.x, static_cast<float>(vp.current_viewport.extent.width));
+					vp.context->config.DisplaySize.y = lab::Min(vp.context->config.DisplaySize.y, static_cast<float>(vp.current_viewport.extent.height));
+					vp.current_viewport.extent.width = vp.context->config.DisplaySize.x;
+					vp.current_viewport.extent.height = vp.context->config.DisplaySize.y;
 
 					ImGui::NewFrame();
 					
-					vp.exec_func(vp);
+					bool always_open = true;
+					ImGuiWindowFlags main_flags = ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
+					ImGui::SetNextWindowBgAlpha(0.f);
+					ImGuiViewport* viewport = ImGui::GetMainViewport();
+					if(viewport->Pos.x < 0.f){
+						viewport->Pos.x = 0.f;
+					}
+					if(viewport->Pos.y < 0.f){
+						viewport->Pos.y = 0.f;
+					}
+					if((viewport->Size.x + viewport->Pos.x) > Global::window->screenDimensions.width){
+						viewport->Size.x = Global::window->screenDimensions.width - viewport->Pos.x;
+					}
+					if((viewport->Size.y + viewport->Pos.y) > Global::window->screenDimensions.height){
+						viewport->Size.y = Global::window->screenDimensions.height - viewport->Pos.y;
+					}
 
+					//ImGui::FindBottomMostVisibleWindowWithinBeginStack(ImGuiWindow *window)
+
+					ImGui::SetNextWindowPos(viewport->Pos);
+					ImGui::SetNextWindowSize(viewport->Size);
+					if(ImGui::Begin("##backgroundwindow", &always_open, main_flags)){
+						vp.current_viewport.offset.x = ImGui::GetWindowPos().x;
+						vp.current_viewport.offset.y = ImGui::GetWindowPos().y;
+
+						vp.current_viewport.extent.width = ImGui::GetWindowSize().x;
+						vp.current_viewport.extent.height = ImGui::GetWindowSize().y;
+						vp.exec_func(vp);
+					}
+					ImGui::End();
 					ImGui::Render();
+					ImGui::EndFrame();
 					//auto draw_data = ImGui::GetDrawData();
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
 				}
 			}
+			ImGui::UpdateInputEnd();
 
 
 			isRendering = false;
@@ -234,8 +244,63 @@ namespace EWE{
 			Global::logicalDevice->EndLabel(cmdBuf);
 #endif
 		}
-
-
-
 	}
-}
+
+	void ImguiHandler::Begin(){
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+	}
+	void ImguiHandler::End(){
+		ImGui::EndFrame();
+	}
+
+	ImguiHandler* global_for_callbacks = nullptr;
+	void ImguiHandler::TakeCallbackControl(GLFWwindow* window){
+		global_for_callbacks = this;
+		glfwSetWindowFocusCallback(window, ImguiHandler::WindowFocusCallback);
+		glfwSetCursorEnterCallback(window, ImguiHandler::CursorEnterCallback);
+		glfwSetCursorPosCallback(window, ImguiHandler::CursorPosCallback);
+		glfwSetMouseButtonCallback(window, ImguiHandler::MouseButtonCallback);
+		glfwSetScrollCallback(window, ImguiHandler::ScrollCallback);
+		glfwSetKeyCallback(window, ImguiHandler::KeyCallback);
+		glfwSetCharCallback(window, ImguiHandler::CharCallback);
+	}
+
+	void ImguiHandler::WindowFocusCallback(GLFWwindow* window, int focused){
+		for(auto& vp : global_for_callbacks->viewports){
+			ImGui_ImplGlfw_WindowFocusCallback(window, focused);
+		}
+	}
+	void ImguiHandler::CursorEnterCallback(GLFWwindow* window, int entered){
+		for(auto& vp : global_for_callbacks->viewports){
+			ImGui_ImplGlfw_CursorEnterCallback(window, entered);
+		}
+	}
+	void ImguiHandler::CursorPosCallback(GLFWwindow* window, double x, double y){
+		for(auto& vp : global_for_callbacks->viewports){
+			ImGui_ImplGlfw_CursorPosCallback(window, x, y);
+		}
+	}
+	void ImguiHandler::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods){
+		for(auto& vp : global_for_callbacks->viewports){
+			ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+		}
+	}
+	void ImguiHandler::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset){
+		for(auto& vp : global_for_callbacks->viewports){
+			ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+		}
+	}
+	void ImguiHandler::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
+		for(auto& vp : global_for_callbacks->viewports){
+			ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+		}
+	}
+	void ImguiHandler::CharCallback(GLFWwindow* window, unsigned int c){
+		for(auto& vp : global_for_callbacks->viewports){
+			ImGui_ImplGlfw_CharCallback(window, c);
+		}
+	}
+
+} //namespace EWE

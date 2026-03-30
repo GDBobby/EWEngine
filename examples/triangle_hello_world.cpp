@@ -392,12 +392,12 @@ int main() {
     world_render_submission.packaged_tasks.push_back(renderTask.workload);
     EWE::SubmissionTask& imgui_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "imgui");
 
-
+    imguiHandler.Begin();
     EWE::Node::RenderGraphNodeGraph rgng{renderGraph};
     //EWE::Node::RasterTaskNodeGraph rtng{};
     EWE::Node::RecordNodeGraph rng{};
     EWE::Node::InstructionPackageNodeGraph ipng{};
-
+    imguiHandler.End();
 
     auto imgui_main_window_func = [&](EWE::ImguiViewport& vp){
         auto io = ImGui::GetIO();
@@ -564,22 +564,26 @@ int main() {
     };
 
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
-
-        
-
         ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->Pos);
-        ImGui::SetNextWindowSize(viewport->Size);
-        static ImGuiWindowFlags main_window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
-        if(ImGui::Begin("##", nullptr, main_window_flags)){
+        //ImGui::SetNextWindowPos(viewport->Pos);
+        //ImGui::SetNextWindowSize(viewport->Size);
+        //if(ImGui::Begin("##", nullptr, main_window_flags)){
 
+            const std::string extension_string = std::string("##") + std::to_string(reinterpret_cast<std::size_t>(&vp));
+
+            //ImGui::SetNextWindowCollapsed(false);
             DemoWindowInputs();
-            
+
+            ImGui::Separator();
+
+            ImGui::BulletText("capture mouse next frame : %d", ImGui::GetCurrentContext()->WantCaptureMouseNextFrame);
+            ImGui::BulletText("HoveredWindow : %d", ImGui::GetCurrentContext()->HoveredWindow); 
+
             ImGui::BulletText("pos : %.2f:%.2f", ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
             ImGui::BulletText("size : %.2f:%.2f", ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
             
             lab::ivec2 difference{vp.current_viewport.offset.x, vp.current_viewport.offset.y};
-            if(ImGui::DragInt2("offset", &vp.current_viewport.offset.x, 1.f, 0, EWE::Global::window->screenDimensions.width)){
+            if(ImGui::DragInt2((std::string("offset") + extension_string).c_str(), &vp.current_viewport.offset.x, 1.f, 0, EWE::Global::window->screenDimensions.width)){
                 difference.x -= vp.current_viewport.offset.x;
                 difference.y -= vp.current_viewport.offset.y;
 
@@ -599,7 +603,7 @@ int main() {
             
             ImGui::DragInt2("extent", reinterpret_cast<int*>(&vp.current_viewport.extent.width), 1.f, 0.f, EWE::Global::window->screenDimensions.width - vp.current_viewport.offset.x);
 
-            std::string butt_str = std::string("split right##") + std::to_string(reinterpret_cast<std::size_t>(&vp));
+            std::string butt_str = std::string("split right##") + extension_string;
             if(ImGui::Button(butt_str.c_str())){
                 vp.current_viewport.extent.width /= 2;
                 //vp.current_viewport.extent.height /= 2;
@@ -615,17 +619,20 @@ int main() {
                 //back_vp.current_viewport.offset.y += rect_copy.extent.height;
                 back_vp.exec_func = exec_func_copy;
             }
+
+            if(ImGui::Button("bring next to front")){
+                ImGui::SetNextWindowFocus();
+            }
+        //}
+        //ImGui::End();
+        if(ImGui::Begin("test mover")){
+            ImGui::BulletText("pos : %.2f:%.2f", ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+            ImGui::BulletText("size : %.2f:%.2f", ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
         }
         ImGui::End();
     };
 
-    imguiHandler.viewports[0].exec_func = imgui_main_window_func;
-    {
-        auto& second_vp = imguiHandler.viewports.emplace_back();
-        second_vp.exec_func = imgui_port_info;
-        second_vp.context = imguiHandler.InitializeContext();
-    }
-
+    imguiHandler.viewports[0].exec_func = imgui_port_info;//imgui_main_window_func;
     //imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
     imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
 #ifdef EWE_IMGUI

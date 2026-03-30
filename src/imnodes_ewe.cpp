@@ -32,23 +32,16 @@ namespace ImNodes{
         		ImNodes::CreateContext();
             }
             ImNodes::PushAttributeFlag(ImNodes::ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
-            
-            //initialize window data
-            ImGui::CreateContext();
-            ImGuiIO& io = ImGui::GetIO();
+
+            //begin imgui before this, and end it after
 
             
-            io.DisplaySize = ImVec2(::EWE::Global::window->screenDimensions.width, ::EWE::Global::window->screenDimensions.height); 
-            io.DeltaTime = 1.0f;
-
-            ImGui::NewFrame();
             ImNodes::EditorContextSet(context);
             ImNodes::BeginNodeEditor();
 
             node_editor_window_pos = ImGui::GetWindowPos();
             node_editor_window_size = ImGui::GetWindowSize();
             ImNodes::EndNodeEditor();
-            ImGui::EndFrame();
         }
 
 
