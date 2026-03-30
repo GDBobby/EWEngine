@@ -108,7 +108,7 @@ if(EWE_IMGUI)
 endif()
 
 
-message(STATUS "including directories")
+message(STATUS "including directories : ${LinearAlgebra_SOURCE_DIR}")
 target_include_directories(${PROJECT_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${Vulkan_INCLUDE_DIR}

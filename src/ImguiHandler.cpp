@@ -90,8 +90,6 @@ namespace EWE{
 		auto& main_vp = viewports.emplace_back();
 		main_vp.context = InitializeContext();
 
-		ImGui::CreateIOContext();
-
 		TakeCallbackControl(Global::window->window);
     }
 
@@ -144,7 +142,7 @@ namespace EWE{
 		//if another context is currently set, CreateContext takes the liberty of returning the context to the previous
 		ImGui::SetCurrentContext(ret); 
 
-		ret->config.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		ret->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		ImGui::StyleColorsDark();
 	
 		ImGui_ImplGlfw_InitForVulkan(Global::window->window, false);
@@ -172,7 +170,6 @@ namespace EWE{
 			};
 			Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
 #endif
-			ImGui::UpdateInputBegin();
 
 
 			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
@@ -192,10 +189,10 @@ namespace EWE{
 
 					//displaysize is already capped to window size, so we apply that same cap to the local extent
 					
-					vp.context->config.DisplaySize.x = lab::Min(vp.context->config.DisplaySize.x, static_cast<float>(vp.current_viewport.extent.width));
-					vp.context->config.DisplaySize.y = lab::Min(vp.context->config.DisplaySize.y, static_cast<float>(vp.current_viewport.extent.height));
-					vp.current_viewport.extent.width = vp.context->config.DisplaySize.x;
-					vp.current_viewport.extent.height = vp.context->config.DisplaySize.y;
+					vp.context->IO.DisplaySize.x = lab::Min(vp.context->IO.DisplaySize.x, static_cast<float>(vp.current_viewport.extent.width));
+					vp.context->IO.DisplaySize.y = lab::Min(vp.context->IO.DisplaySize.y, static_cast<float>(vp.current_viewport.extent.height));
+					vp.current_viewport.extent.width = vp.context->IO.DisplaySize.x;
+					vp.current_viewport.extent.height = vp.context->IO.DisplaySize.y;
 
 					ImGui::NewFrame();
 					
@@ -235,7 +232,6 @@ namespace EWE{
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
 				}
 			}
-			ImGui::UpdateInputEnd();
 
 
 			isRendering = false;

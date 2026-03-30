@@ -572,7 +572,7 @@ int main() {
             const std::string extension_string = std::string("##") + std::to_string(reinterpret_cast<std::size_t>(&vp));
 
             //ImGui::SetNextWindowCollapsed(false);
-            DemoWindowInputs();
+            //DemoWindowInputs();
 
             ImGui::Separator();
 

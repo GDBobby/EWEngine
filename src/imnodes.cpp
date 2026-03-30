@@ -2381,7 +2381,7 @@ int EndNodeEditor()
             direction = direction * ImInvLength(direction, 0.0);
 
             editor.AutoPanningDelta =
-                direction * ImGui::GetCurrentIOContext()->IO.DeltaTime * GImNodes->Io.AutoPanningSpeed;
+                direction * ImGui::GetCurrentContext()->IO.DeltaTime * GImNodes->Io.AutoPanningSpeed;
             editor.Panning += editor.AutoPanningDelta;
         }
     }
