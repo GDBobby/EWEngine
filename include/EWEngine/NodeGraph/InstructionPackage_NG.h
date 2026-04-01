@@ -2,9 +2,9 @@
 
 
 #include "EightWinds/Reflect/Enum.h"
-#include "EightWinds/RenderGraph/Command/Record.h"
-#include "EightWinds/RenderGraph/Command/InstructionPackage.h"
-#include "EightWinds/RenderGraph/Command/RasterInstructionPackage.h"
+#include "EightWinds/Command/Record.h"
+#include "EightWinds/Command/InstructionPackage.h"
+#include "EightWinds/Command/RasterInstructionPackage.h"
 
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 

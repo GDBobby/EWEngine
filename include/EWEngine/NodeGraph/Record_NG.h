@@ -2,7 +2,7 @@
 
 
 #include "EightWinds/Reflect/Enum.h"
-#include "EightWinds/RenderGraph/Command/Record.h"
+#include "EightWinds/Command/Record.h"
 
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 

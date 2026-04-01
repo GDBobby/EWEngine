@@ -9,8 +9,8 @@
 #include "EightWinds/Shader.h"
 #include "EightWinds/DescriptorImageInfo.h"
 
-#include "EightWinds/RenderGraph/Command/Record.h"
-#include "EightWinds/RenderGraph/Command/Execute.h"
+#include "EightWinds/Command/Record.h"
+#include "EightWinds/Command/Execute.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
 
 #include "EightWinds/Image.h"

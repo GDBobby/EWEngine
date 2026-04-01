@@ -5,7 +5,7 @@
 #include "EightWinds/LogicalDevice.h"
 #include "EightWinds/Buffer.h"
 #include "EightWinds/Shader.h"
-#include "EightWinds/RenderGraph/Command/Record.h"
+#include "EightWinds/Command/Record.h"
 #include "EightWinds/RenderGraph/RasterTask.h"
 #include "EightWinds/Sampler.h"
 #include "EightWinds/ImageView.h"

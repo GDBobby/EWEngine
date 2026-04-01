@@ -1,9 +1,9 @@
 #pragma once
 
 #include "EWEngine/Assets/Manager.h"
-#include "EightWinds/RenderGraph/Command/Record.h"
+#include "EightWinds/Command/Record.h"
 
-#include "EightWinds/RenderGraph/Command/InstructionPackage.h"
+#include "EightWinds/Command/InstructionPackage.h"
 
 namespace EWE{
 namespace Asset{

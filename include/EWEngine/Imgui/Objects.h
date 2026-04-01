@@ -4,7 +4,7 @@
 #include "EightWinds/VulkanHeader.h"
 
 #include "imgui.h"
-#include "EightWinds/RenderGraph/Command/Instruction.h"
+#include "EightWinds/Command/Instruction.h"
 
 #if EWE_IMGUI
 
