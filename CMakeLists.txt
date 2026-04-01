@@ -101,6 +101,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
         /W4 
         /we4456 /we4457 /we4458 /we4459
     >
+	-freflection
 )
 
 if(EWE_IMGUI)

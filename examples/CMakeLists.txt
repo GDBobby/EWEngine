@@ -19,3 +19,5 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}"
 )
+
+target_compile_options(${PROJECT_NAME} PRIVATE -freflection)

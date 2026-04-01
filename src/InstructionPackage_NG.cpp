@@ -1,16 +1,21 @@
-#include "EWEngine/NodeGraph/RecordNodeGraph.h"
+#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
 
 namespace EWE{
 namespace Node{
-    RecordNodeGraph::RecordNodeGraph()
+
+    InstructionPackageNodeGraph::InstructionPackageNodeGraph()
     : ImNodes::EWE::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions.push_back(".ewrg");
+        explorer.acceptable_extensions.push_back(".eip");
+        acceptable_add_instructions = std::vector<Inst::Type>{
+            InstructionPackage::allowed_instructions.begin(), 
+            InstructionPackage::allowed_instructions.end()
+        }; 
     }
 
-    ImNodes::EWE::Node* RecordNodeGraph::CreateHeadNode(){
+    ImNodes::EWE::Node* InstructionPackageNodeGraph::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
         head.payload = reinterpret_cast<void*>(UINT64_MAX);
@@ -19,26 +24,27 @@ namespace Node{
         return &head;
     } 
 
-    Inst::Type RecordNodeGraph::GetInstructionFromNode(ImNodes::EWE::Node& node){
+    Inst::Type InstructionPackageNodeGraph::GetInstructionFromNode(ImNodes::EWE::Node& node){
         return static_cast<Inst::Type>(reinterpret_cast<std::size_t>(node.payload));
     }
 
-    void RecordNodeGraph::ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const {
+    void InstructionPackageNodeGraph::ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const {
         if(node.id != 0){
             auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
             ImGui::Text("node.id[%d] : inst[%s] - pos[%.2f:%.2f]", node.id, Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), temp_pos.x, temp_pos.y);
         }
     }
-    void RecordNodeGraph::PrintNode(ImNodes::EWE::Node& node) const{
-                Logger::Print<Logger::Debug>("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
-                    node.id, 
-                    Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
-                    node.pins[0]->payload, 
-                    node.pins[1]->payload
-                );
-            }
 
-    ImNodes::EWE::Node& RecordNodeGraph::CreateRGNode(int inst_index) {
+    void InstructionPackageNodeGraph::PrintNode(ImNodes::EWE::Node& node) const{
+        Logger::Print<Logger::Debug>("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
+            node.id, 
+            Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
+            node.pins[0]->payload, 
+            node.pins[1]->payload
+        );
+    }
+
+    ImNodes::EWE::Node& InstructionPackageNodeGraph::CreateRGNode(int inst_index) {
         auto& added_node = AddNode();
         added_node.payload = reinterpret_cast<void*>(inst_index);//&emp;
         added_node.pos = menu_pos;
@@ -48,7 +54,7 @@ namespace Node{
         return added_node;
     }
 
-    std::vector<Inst::Type> RecordNodeGraph::CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const{
+    std::vector<Inst::Type> InstructionPackageNodeGraph::CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const{
         std::vector<Inst::Type> ret{};
         
         ImNodes::EWE::Node* current_node = nullptr;
@@ -93,25 +99,12 @@ namespace Node{
         return ret;
     }
 
-    void RecordNodeGraph::OpenAddMenu() {
+    void InstructionPackageNodeGraph::OpenAddMenu() {
         add_menu_is_open = true;
-        static constexpr std::size_t type_count = std::meta::enumerators_of(^^Inst::Type).size();
-        if(acceptable_add_instructions.size() != type_count){
-            acceptable_add_instructions.clear();
-            acceptable_add_instructions.reserve(type_count);
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-            template for(constexpr auto inst : std::define_static_array(std::meta::enumerators_of(^^Inst::Type))){
-                acceptable_add_instructions.push_back([:inst:]);
-            }
-#pragma GCC diagnostic pop
-        }
     }
 
-    bool RecordNodeGraph::AddInstructionButton(Inst::Type itype) {
-
-        if (filter.PassFilter(Reflect::Enum::ToString(itype).data())){
+    bool InstructionPackageNodeGraph::AddInstructionButton(Inst::Type itype){
+        if (filter.PassFilter(Reflect::Enum::ToString(itype).data())){ 
             if(ImGui::Button(Reflect::Enum::ToString(itype).data())){
                 auto& added_node = CreateRGNode(itype);
                 if(link_empty_drop_srcNode != nullptr){
@@ -131,7 +124,7 @@ namespace Node{
         return false;
     }
 
-    bool RecordNodeGraph::RenderAddMenu() {
+    bool InstructionPackageNodeGraph::RenderAddMenu() {
         bool wantsClose = false;
 
         bool window_not_focused;
@@ -139,7 +132,7 @@ namespace Node{
         ImGui::SetNextWindowPos(menu_pos);
         if(ImGui::Begin("add menu")){
 
-            if(ImGui::BeginListBox("##lb record")){
+            if (ImGui::BeginListBox("##add inst listbox")) {
                 if (ImGui::IsWindowAppearing()) {
                     ImGui::SetKeyboardFocusHere();
                     filter.Clear();
@@ -148,10 +141,10 @@ namespace Node{
                 filter.Draw("##Filter", -FLT_MIN);
 
                 window_not_focused = !ImGui::IsWindowFocused();
+                //printf("acceptable add size : %zu\n", acceptable_add_instructions.size());
                 for(auto const& inst : acceptable_add_instructions){
                     wantsClose |= AddInstructionButton(inst);
                 }
-
                 ImGui::EndListBox();
             }
         }
@@ -162,32 +155,58 @@ namespace Node{
         return wantsClose | window_not_focused;
     }
 
-    void RecordNodeGraph::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+    void InstructionPackageNodeGraph::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
         auto const& instructions = CollectInstructionsUpTo(&src_node);
-
-        acceptable_add_instructions = Instruction::GetValidInstructionsAtBackOf(instructions);
 
         menu_pos = ImGui::GetMousePos();
         add_menu_is_open = true;
         link_empty_drop_srcNode = &src_node;
     }
-
-    void RecordNodeGraph::LinkCreated(ImNodes::EWE::NodePair& link) {
+    void InstructionPackageNodeGraph::LinkCreated(ImNodes::EWE::NodePair& link) {
         link.start->pins[link.start_offset]->payload = link.end;
         link.end->pins[link.end_offset]->payload = link.start;
     }
 
-    void RecordNodeGraph::RenderNode(ImNodes::EWE::Node& node){
-        const std::size_t inst_index = reinterpret_cast<std::size_t>(node.payload);
+    void InstructionPackageNodeGraph::RenderNode(ImNodes::EWE::Node& node) {
 
+        const std::size_t inst_index = reinterpret_cast<std::size_t>(node.payload);
+        
+        //{
+            const auto curr_window_size = ImGui::GetWindowSize();
+            if(curr_window_size.x > 200.f){
+                ImGui::SetWindowSize(ImVec2(200.f, curr_window_size.y));
+            }
+        //}
         ImNodes::BeginNodeTitleBar();
 
+
         if(inst_index == UINT64_MAX){
-            ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "head node");
-        }
-        else if(inst_index >= Reflect::Enum::enum_data<Inst::Type>.size()){
-            //if its greater than that, it's a record
-            
+            ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "head node : %.2f:%.2f", curr_window_size.x, curr_window_size.y);
+            auto prev_val = packageType;
+            if(changing_package_type_allowed){
+                Reflect::Enum::Imgui_Combo_Selectable("package type", packageType);
+                if(packageType != prev_val){
+                    switch(packageType){
+                        case InstructionPackage::Base: 
+                            acceptable_add_instructions = std::vector<Inst::Type>{
+                                InstructionPackage::allowed_instructions.begin(), 
+                                InstructionPackage::allowed_instructions.end()
+                            };
+                            break;
+                        case InstructionPackage::Raster:
+                            acceptable_add_instructions = std::vector<Inst::Type>{
+                                RasterPackage::allowed_instructions.begin(), 
+                                RasterPackage::allowed_instructions.end()
+                            }; 
+                            break;
+                        default: break;
+                    }
+                    printf("immediately after allowed inst change size : %zu\n", acceptable_add_instructions.size());
+                }
+            }
+            else{
+                ImGui::Text("package type : %s", Reflect::Enum::ToString(packageType).data());
+            }
         }
         else{
             ImGui::Text("%s", Reflect::Enum::ToString(static_cast<Inst::Type>(inst_index)).data());
@@ -198,7 +217,7 @@ namespace Node{
         ImGui::Text(""); //empty text just to populate this
     }
 
-    void RecordNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void InstructionPackageNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin->local_pos)) {
@@ -207,7 +226,7 @@ namespace Node{
         ImNodes::EndPinAttribute();
     }
 
-    bool RecordNodeGraph::SaveFunc() {
+    bool InstructionPackageNodeGraph::SaveFunc() {
         explorer.enabled = save_open;
         explorer.state = ExplorerContext::State::Save;
         if(ImGui::Begin("file save")){
@@ -229,7 +248,7 @@ namespace Node{
         return !explorer.enabled;
     }
 
-    void RecordNodeGraph::CreateFromInstructions(std::span<const Inst::Type> create_instructions){
+    void InstructionPackageNodeGraph::CreateFromInstructions(std::span<const Inst::Type> create_instructions){
         nodes.Clear();
         links.clear();
         if(create_instructions.size() == 0){
@@ -280,7 +299,7 @@ namespace Node{
         nodes.ShrinkToFit();
     }
 
-    bool RecordNodeGraph::LoadFunc() {
+    bool InstructionPackageNodeGraph::LoadFunc() {
         explorer.enabled = load_open;
         explorer.state = ExplorerContext::State::Load;
         if(ImGui::Begin("file load")){

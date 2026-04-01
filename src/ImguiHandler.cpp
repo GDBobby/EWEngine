@@ -89,6 +89,7 @@ namespace EWE{
 		
 		auto& main_vp = viewports.emplace_back();
 		main_vp.context = InitializeContext();
+		ImGui::CreateDragDropContext();
 
 		TakeCallbackControl(Global::window->window);
     }
@@ -161,23 +162,27 @@ namespace EWE{
 
 			//auto& main_io = ImGui::GetIO(viewports[0].context);
 
-#if EWE_DEBUG_NAMING
-			VkDebugUtilsLabelEXT labelUtil{
-				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-				.pNext = nullptr,
-				.pLabelName = "imgui",
-				.color = {0.f, 0.f, 0.f, 1.f}
-			};
-			Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
-#endif
 
 
 			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
 
+			ImGui::NewFrameDD();
 			//im doing a index based approached because i want to allow the creation/removal of viewports from within the exec_func
 			for(std::size_t i = 0; i < viewports.size(); i++) {
 				auto& vp = viewports[i];
 				if(vp.exec_func != nullptr){
+
+#if EWE_DEBUG_NAMING
+					std::string label_name = std::string("imgui[") + std::to_string(i) + "]";
+					VkDebugUtilsLabelEXT labelUtil{
+						.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+						.pNext = nullptr,
+						.pLabelName = label_name.c_str(),
+						.color = {0.f, 0.f, 0.f, 1.f}
+					};
+					Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
+#endif
+
 					ImGui::SetCurrentContext(vp.context);
 					ImGui_ImplVulkan_NewFrame();
 					ImGui_ImplGlfw_NewFrame();
@@ -223,22 +228,26 @@ namespace EWE{
 
 						vp.current_viewport.extent.width = ImGui::GetWindowSize().x;
 						vp.current_viewport.extent.height = ImGui::GetWindowSize().y;
+						ImGui::PushID(static_cast<int>(reinterpret_cast<std::size_t>(vp.context)));
 						vp.exec_func(vp);
+						ImGui::PopID();
 					}
 					ImGui::End();
 					ImGui::Render();
 					ImGui::EndFrame();
 					//auto draw_data = ImGui::GetDrawData();
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
-				}
-			}
 
 
-			isRendering = false;
-			vkCmdEndRendering(cmdBuf);
 #if EWE_DEBUG_NAMING
 			Global::logicalDevice->EndLabel(cmdBuf);
 #endif
+				}
+			}
+			ImGui::EndFrameDD();
+
+			isRendering = false;
+			vkCmdEndRendering(cmdBuf);
 		}
 	}
 
@@ -265,37 +274,37 @@ namespace EWE{
 
 	void ImguiHandler::WindowFocusCallback(GLFWwindow* window, int focused){
 		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_WindowFocusCallback(window, focused);
+			ImGui_ImplGlfw_WindowFocusCallback_Context(vp.context, window, focused);
 		}
 	}
 	void ImguiHandler::CursorEnterCallback(GLFWwindow* window, int entered){
 		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_CursorEnterCallback(window, entered);
+			ImGui_ImplGlfw_CursorEnterCallback_Context(vp.context, window, entered);
 		}
 	}
 	void ImguiHandler::CursorPosCallback(GLFWwindow* window, double x, double y){
 		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_CursorPosCallback(window, x, y);
+			ImGui_ImplGlfw_CursorPosCallback_Context(vp.context, window, x, y);
 		}
 	}
 	void ImguiHandler::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods){
 		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+			ImGui_ImplGlfw_MouseButtonCallback_Context(vp.context, window, button, action, mods);
 		}
 	}
 	void ImguiHandler::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset){
 		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+			ImGui_ImplGlfw_ScrollCallback_Context(vp.context, window, xoffset, yoffset);
 		}
 	}
 	void ImguiHandler::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
 		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+			ImGui_ImplGlfw_KeyCallback_Context(vp.context, window, key, scancode, action, mods);
 		}
 	}
 	void ImguiHandler::CharCallback(GLFWwindow* window, unsigned int c){
 		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_CharCallback(window, c);
+			ImGui_ImplGlfw_CharCallback_Context(vp.context, window, c);
 		}
 	}
 

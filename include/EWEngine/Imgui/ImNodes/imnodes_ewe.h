@@ -7,7 +7,6 @@
 //#include "LAB/Vector.h"
 
 #include <vector>
-#include <functional>
 #include <cstdint>
 
 namespace ImNodes{
@@ -64,7 +63,7 @@ namespace ImNodes{
 
             void CreateLink(NodePair const& nodePair);
 
-            void RenderNodes();
+            virtual void RenderNodes();
 
             virtual void ImGuiNodeDebugPrint(Node& node) const;
 

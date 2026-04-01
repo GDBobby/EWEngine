@@ -31,6 +31,8 @@ namespace Node{
 
         [[nodiscard]] explicit RecordNodeGraph();
 
+        void RenderNodes() override final;
+
         ImNodes::EWE::Node* CreateHeadNode();
         static Inst::Type GetInstructionFromNode(ImNodes::EWE::Node& node);
         void PrintNode(ImNodes::EWE::Node& node) const;

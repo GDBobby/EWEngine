@@ -14,6 +14,7 @@
 #include "EWEngine/Assets/Images.h"
 #include "EWEngine/Assets/ImageViews.h"
 #include "EWEngine/Assets/DII.h"
+#include "EWEngine/Assets/Records.h"
 
 #include <cstdint>
 
@@ -35,6 +36,7 @@ namespace EWE{
         extern Asset::Manager<Image>* images;
         extern Asset::Manager<ImageView>* views;
         extern Asset::Manager<DescriptorImageInfo>* diis;
+        extern Asset::Manager<Command::Record>* records;
 
         extern STC_Manager* stcManager;
         //dont move logicaldevice, just construct it in place

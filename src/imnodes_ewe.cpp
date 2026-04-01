@@ -39,8 +39,8 @@ namespace ImNodes{
             ImNodes::EditorContextSet(context);
             ImNodes::BeginNodeEditor();
 
-            node_editor_window_pos = ImGui::GetWindowPos();
-            node_editor_window_size = ImGui::GetWindowSize();
+            node_editor_window_pos = ImGui::GetItemRectMin();
+            node_editor_window_size = ImGui::GetItemRectSize();
             ImNodes::EndNodeEditor();
         }
 
@@ -95,14 +95,12 @@ namespace ImNodes{
         }
 
         void Editor::RenderEditorTitle(){
-            ImGui::Text("node count : %zu", nodes.Size());
 
-            ImGui::Text("window pos  : %.2f:%.2f", node_editor_window_pos.x, node_editor_window_pos.y);
-            ImGui::Text("window size  : %.2f:%.2f", node_editor_window_size.x, node_editor_window_size.y);
-            //ImGui::Text("mouse in editor coords : %.2f:%.2f", ImNodes::Get)
+            //ImGui::Text("window pos  : %.2f:%.2f", node_editor_window_pos.x, node_editor_window_pos.y);
+            //ImGui::Text("window size  : %.2f:%.2f", node_editor_window_size.x, node_editor_window_size.y);
             
             if(ImGui::TreeNode("node data (debugging)")){
-
+                ImGui::Text("node count : %zu\n", nodes.Size());
                 for(auto& node : nodes){
                     ImGuiNodeDebugPrint(node);
                 }
@@ -299,6 +297,8 @@ namespace ImNodes{
                     }
                 }
             }
+
+
         }
     } //namespace EWE
 } //namespace ImNodes

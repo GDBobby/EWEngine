@@ -1,5 +1,5 @@
 //example
-#include "EWEngine/NodeGraph/InstructionPackageNodeGraph.h"
+#include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/VulkanHeader.h"
 
 #include "EWEngine/EWEngine.h"
@@ -16,20 +16,20 @@
 #include "EightWinds/Image.h"
 #include "EightWinds/ImageView.h"
 
-//#include "EWEngine/NodeGraph/Graph.h"
-
 #include "EWEngine/Tools/ImguiHandler.h"
 
 #include "EightWinds/RenderGraph/RasterTask.h"
 
 #include "EWEngine/Reflect/ImguiReflection.h"
 
-#include "EWEngine/NodeGraph/RenderGraphNodeGraph.h"
-#include "EWEngine/NodeGraph/RasterTaskNodeGraph.h"
-#include "EWEngine/NodeGraph/RecordNodeGraph.h"
-#include "EWEngine/NodeGraph/InstructionPackageNodeGraph.h"
+#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
+#include "EWEngine/NodeGraph/RenderGraph_NG.h"
+#include "EWEngine/NodeGraph/RasterTask_NG.h"
+#include "EWEngine/NodeGraph/Record_NG.h"
+#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
 
 #include "EWEngine/InputData.h"
+#include "EWEngine/Imgui/DragDrop.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 
@@ -399,170 +399,6 @@ int main() {
     EWE::Node::InstructionPackageNodeGraph ipng{};
     imguiHandler.End();
 
-    auto imgui_main_window_func = [&](EWE::ImguiViewport& vp){
-        auto io = ImGui::GetIO();
-        //nodeGraph.Imgui();
-
-        static bool use_work_area = true;
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
-        ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
-        static ImGuiWindowFlags main_window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize;
-        if(ImGui::Begin("##main window", nullptr, main_window_flags)){
-            ImGui::DragInt2("display size", reinterpret_cast<int*>(&vp.current_viewport.extent.width), 1.f, 0.f, EWE::Global::window->screenDimensions.width);
-
-            if(ImGui::BeginTabBar("##contexts")){
-
-                if(ImGui::BeginTabItem("node editors")){
-                    ImGui::Checkbox("Use work area instead of main area", &use_work_area);
-
-                    auto dragdrop_payload = ImGui::GetDragDropPayload();
-                    if (dragdrop_payload == NULL){
-                        ImGui::Text("payload null");
-                    }
-                    else{
-                        const int payload_count = (int)dragdrop_payload->DataSize / (int)sizeof(ImGuiID);
-                        ImGui::Text("payload count : %d : %s", payload_count, reinterpret_cast<const char*>(dragdrop_payload->Data));
-                    }
-
-                    if(ImGui::BeginTabBar("node editors")){
-                    
-                        if(ImGui::BeginTabItem("render graph")){
-                            rgng.RenderNodes();
-
-                            ImGui::EndTabItem();
-                        }
-                        if(ImGui::BeginTabItem("raster task")){
-                            //rtng.editor.RenderNodes();
-                            ImGui::EndTabItem();
-                        }
-                        if(ImGui::BeginTabItem("record")){
-                            rng.RenderNodes();
-                            ImGui::EndTabItem();
-                        }
-                        if(ImGui::BeginTabItem("inst pckg")){
-                            ipng.RenderNodes();
-                            ImGui::EndTabItem();
-                        }
-
-                        ImGui::EndTabBar();
-                    }
-                    ImGui::EndTabItem();
-                }
-
-                if(ImGui::BeginTabItem("random debug")){
-
-                    //EWE::ImguiExtension::Imgui(triangle_raster_task);
-                    //EWE::ImguiExtension::Imgui(mergeRaster);
-                    if(ImGui::TreeNode("resources")){
-                        if(ImGui::TreeNode("buffers")){
-                            logicalDevice.buffers.mut.lock();
-                            for(auto res : logicalDevice.buffers){
-                                const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
-                                std::string res_name = res->name + "##" + string_addr;
-                                if(res->name == ""){
-                                    res_name = string_addr;
-                                }
-                                if(ImGui::TreeNode(res_name.data())){
-                                    for(std::size_t i = 0; i < res->creation_trace.size(); i++){
-                                        if(res->creation_trace[i].source_file().size() == 0){
-                                            break;
-                                        }
-                                        ImGui::Text("%zu:%s", i, res->creation_trace[i].source_file().c_str());
-                                    }
-                                    ImGui::TreePop();
-                                }
-                            }
-                            logicalDevice.buffers.mut.unlock();
-                            ImGui::TreePop();
-                        }
-                        if(ImGui::TreeNode("images")){
-                            logicalDevice.images.mut.lock();
-                            for(auto res : logicalDevice.images){
-                                const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
-                                std::string res_name = res->name + "##" + string_addr;
-                                if(res->name == ""){
-                                    res_name = string_addr;
-                                }
-                                if(ImGui::TreeNode(res_name.data())){
-                                    for(std::size_t i = 0; i < res->creation_trace.size(); i++){
-                                        if(res->creation_trace[i].source_file().size() == 0){
-                                            break;
-                                        }
-                                        ImGui::Text("%zu:%s", i, res->creation_trace[i].source_file().c_str());
-                                    }
-                                    ImGui::TreePop();
-                                }
-                            }
-                            logicalDevice.images.mut.unlock();
-                            ImGui::TreePop();
-                        }
-                        for(auto& q : logicalDevice.queues){
-                            const std::string pool_name = std::string("queue[") + q.debugName + "] pools";
-                            if(ImGui::TreeNode(pool_name.c_str())) {
-                                q.commandPools.mut.lock();
-                                for(auto cmdPool : q.commandPools){
-                                    const std::string cmdpoolname = std::to_string(reinterpret_cast<std::size_t>(cmdPool));
-                                    if(ImGui::TreeNode(cmdpoolname.c_str())){
-                                        ImGui::TreePop();
-                                    }
-                                }
-                                q.commandPools.mut.unlock();
-                                ImGui::TreePop();
-                            }
-                        }
-
-                        ImGui::TreePop();
-                    }
-
-                    if(ImGui::TreeNode("shaders")){
-                        EWE::Global::shaders->Imgui();
-
-                        ImGui::TreePop();
-                    }
-                    if(ImGui::TreeNode("dii")){
-                        EWE::Global::diis->Imgui();
-
-                        ImGui::TreePop();
-                    }
-                    if(ImGui::TreeNode("images")){
-                        EWE::Global::images->Imgui();
-
-                        ImGui::TreePop();
-                    }
-                    if(ImGui::TreeNode("samplers")){
-                        EWE::Global::samplers->Imgui();
-
-                        ImGui::TreePop();
-                    }
-
-            
-                    if(ImGui::TreeNode("reflect TEST")){
-                        static constexpr auto hb_i_info = ^^EWE::HeapBlock<EWE::Image>;
-                        union TestUnion{
-                            int x;
-                            float y;
-                        };
-                        Reflect::ImguiReflect<^^TestUnion>();
-
-                        Reflect::ImguiReflect<hb_i_info>();
-                        Reflect::ImguiReflect<^^EWE::HeapBlock>();
-                        ImGui::TreePop();
-                    }
-
-                    ImGui::EndTabItem();
-                }
-
-                if(ImGui::BeginTabItem("engine")){
-                    engine.Imgui();
-                    ImGui::EndTabItem();
-                }
-                ImGui::EndTabBar();
-            }
-        }
-        ImGui::End();
-    };
-
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         //ImGui::SetNextWindowPos(viewport->Pos);
@@ -576,8 +412,9 @@ int main() {
 
             ImGui::Separator();
 
-            ImGui::BulletText("capture mouse next frame : %d", ImGui::GetCurrentContext()->WantCaptureMouseNextFrame);
-            ImGui::BulletText("HoveredWindow : %d", ImGui::GetCurrentContext()->HoveredWindow); 
+            ImGui::BulletText("context address : %zu", reinterpret_cast<std::size_t>(ImGui::GetCurrentContext()));
+            ImGui::BulletText("HoveredWindow : %zu", ImGui::GetCurrentContext()->HoveredWindow);
+            ImGui::BulletText("current window : %zu", ImGui::GetCurrentContext()->CurrentWindow);
 
             ImGui::BulletText("pos : %.2f:%.2f", ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
             ImGui::BulletText("size : %.2f:%.2f", ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
@@ -632,7 +469,175 @@ int main() {
         ImGui::End();
     };
 
-    imguiHandler.viewports[0].exec_func = imgui_port_info;//imgui_main_window_func;
+    auto node_imgui_vp = [&](EWE::ImguiViewport& vp){
+        //ImGui::Checkbox("Use work area instead of main area", &use_work_area);
+
+        auto dragdrop_payload = ImGui::GetDragDropPayload();
+        if (dragdrop_payload == NULL){
+            ImGui::Text("payload null");
+        }
+        else{
+            const int payload_count = (int)dragdrop_payload->DataSize / (int)sizeof(ImGuiID);
+            ImGui::Text("payload count : %d : %s", payload_count, reinterpret_cast<const char*>(dragdrop_payload->Data));
+        }
+
+        if(ImGui::BeginTabBar("node editors")){
+        
+            if(ImGui::BeginTabItem("render graph")){
+                rgng.RenderNodes();
+
+                ImGui::EndTabItem();
+            }
+            if(ImGui::BeginTabItem("raster task")){
+                //rtng.editor.RenderNodes();
+                ImGui::EndTabItem();
+            }
+            if(ImGui::BeginTabItem("record")){
+                rng.RenderNodes();
+                ImGui::EndTabItem();
+            }
+            if(ImGui::BeginTabItem("inst pckg")){
+                ipng.RenderNodes();
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
+    };
+
+    auto assets_imgui_window = [&](EWE::ImguiViewport& vp){
+        //EWE::ImguiExtension::Imgui(triangle_raster_task);
+        //EWE::ImguiExtension::Imgui(mergeRaster);
+        if(ImGui::TreeNode("resources")){
+            if(ImGui::TreeNode("buffers")){
+                logicalDevice.buffers.mut.lock();
+                for(auto res : logicalDevice.buffers){
+                    const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
+                    std::string res_name = res->name + "##" + string_addr;
+                    if(res->name == ""){
+                        res_name = string_addr;
+                    }
+                    if(ImGui::TreeNode(res_name.data())){
+                        for(std::size_t i = 0; i < res->creation_trace.size(); i++){
+                            if(res->creation_trace[i].source_file().size() == 0){
+                                break;
+                            }
+                            ImGui::Text("%zu:%s", i, res->creation_trace[i].source_file().c_str());
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+                logicalDevice.buffers.mut.unlock();
+                ImGui::TreePop();
+            }
+            if(ImGui::TreeNode("images")){
+                logicalDevice.images.mut.lock();
+                for(auto res : logicalDevice.images){
+                    const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
+                    std::string res_name = res->name + "##" + string_addr;
+                    if(res->name == ""){
+                        res_name = string_addr;
+                    }
+                    if(ImGui::TreeNode(res_name.data())){
+                        for(std::size_t i = 0; i < res->creation_trace.size(); i++){
+                            if(res->creation_trace[i].source_file().size() == 0){
+                                break;
+                            }
+                            ImGui::Text("%zu:%s", i, res->creation_trace[i].source_file().c_str());
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+                logicalDevice.images.mut.unlock();
+                ImGui::TreePop();
+            }
+            for(auto& q : logicalDevice.queues){
+                const std::string pool_name = std::string("queue[") + q.debugName + "] pools";
+                if(ImGui::TreeNode(pool_name.c_str())) {
+                    q.commandPools.mut.lock();
+                    for(auto cmdPool : q.commandPools){
+                        const std::string cmdpoolname = std::to_string(reinterpret_cast<std::size_t>(cmdPool));
+                        if(ImGui::TreeNode(cmdpoolname.c_str())){
+                            ImGui::TreePop();
+                        }
+                    }
+                    q.commandPools.mut.unlock();
+                    ImGui::TreePop();
+                }
+            }
+
+            ImGui::TreePop();
+        }
+
+        if(ImGui::TreeNode("shaders")){
+            EWE::Global::shaders->Imgui();
+
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("dii")){
+            EWE::Global::diis->Imgui();
+
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("images")){
+            EWE::Global::images->Imgui();
+
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("samplers")){
+            EWE::Global::samplers->Imgui();
+
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("records")){
+            EWE::Global::records->Imgui();
+            ImGui::TreePop();
+        }
+
+    };
+
+    auto engine_imgui_window = [&](EWE::ImguiViewport& vp){
+        engine.Imgui();
+        ImGui::BulletText("asset root directory : %s", EWE::Global::records->files.root_directory.string().c_str());
+        ImGui::BulletText("mouse pos : %.2f:%.2f", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+        static EWE::Inst::Type inst_type = EWE::Inst::Type::BindPipeline;
+        Reflect::Enum::Imgui_Combo_Selectable("inst dd", inst_type);
+        EWE::DragDropPtr::Source(inst_type);
+
+        if(ImGui::TreeNode("reflect TEST")){
+            static constexpr auto hb_i_info = ^^EWE::HeapBlock<EWE::Image>;
+            union TestUnion{
+                int x;
+                float y;
+            };
+            Reflect::ImguiReflect<^^TestUnion>();
+
+            Reflect::ImguiReflect<hb_i_info>();
+            Reflect::ImguiReflect<^^EWE::HeapBlock>();
+            ImGui::TreePop();
+        }
+    };
+    {
+        auto& vp_back = imguiHandler.viewports[0];
+        //imguiHandler.viewports.emplace_back();
+        vp_back.exec_func = node_imgui_vp;
+        vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.2f;
+        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.5f;
+    }
+    {
+        auto& vp_back = imguiHandler.viewports.emplace_back();
+        vp_back.exec_func = assets_imgui_window;
+        vp_back.context = imguiHandler.InitializeContext();
+        vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.7f;
+        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.3f;
+    }
+    {
+        auto& vp_back = imguiHandler.viewports.emplace_back();
+        vp_back.exec_func = engine_imgui_window;
+        vp_back.context = imguiHandler.InitializeContext();
+        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.2f;
+    }
+
     //imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
     imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
 #ifdef EWE_IMGUI

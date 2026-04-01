@@ -1,36 +1,34 @@
 #pragma once
 
 #include "EWEngine/Assets/Manager.h"
-#include "EightWinds/RenderGraph/Command/Record.h"
-
 #include "EightWinds/RenderGraph/Command/InstructionPackage.h"
 
 namespace EWE{
 namespace Asset{
 
     template<>
-    struct Manager<Command::Record>{
+    struct Manager<Command::InstructionPackage>{
         LogicalDevice& logicalDevice;
         FileSystem files;
         //FileSystem meta_files;
 
-        Hive<Command::Record, 64> data_arena;
-        KeyValueContainer<AssetHash, Command::Record*> association_container{};
+        Hive<Command::InstructionPackage, 64> data_arena;
+        KeyValueContainer<AssetHash, Command::InstructionPackage*> association_container{};
 
         [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path);
 
-        static AssetHash GetHash(Command::Record const& rec){
+        static AssetHash GetHash(Command::InstructionPackage const& rec){
             return CrossPlatformPathHash(rec.name);
         }
 
         //void UpdateMetaFile(AssetHash hash);
-        //void UpdateMetaFile(AssetHash hash, Command::Record& img);
+        //void UpdateMetaFile(AssetHash hash, Command::InstructionPackage& img);
 
         void Destroy(AssetHash hash);
-        void Destroy(Command::Record* sampler);
+        void Destroy(Command::InstructionPackage* sampler);
 
-        Command::Record* Get(AssetHash hash);
-        Command::Record* Get(std::string_view name);
+        Command::InstructionPackage* Get(AssetHash hash);
+        Command::InstructionPackage* Get(std::string_view name);
 
 #ifdef EWE_IMGUI
         void Imgui();
