@@ -6,6 +6,11 @@
 namespace EWE{
 namespace Asset{
 
+    /*
+        right now, the plan is to write the param pool to file
+        use hashes to shorten the data
+    */
+
     template<>
     struct Manager<Command::InstructionPackage>{
         LogicalDevice& logicalDevice;
@@ -29,6 +34,9 @@ namespace Asset{
 
         Command::InstructionPackage* Get(AssetHash hash);
         Command::InstructionPackage* Get(std::string_view name);
+
+        bool WriteToFile(Command::InstructionPackage& pkg, std::filesystem::path const& path);
+        static Command::InstructionPackage ReadFile(std::filesystem::path const& path);
 
 #ifdef EWE_IMGUI
         void Imgui();

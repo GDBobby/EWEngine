@@ -18,6 +18,7 @@ namespace EWE{
         Asset::Manager<ImageView> views;
         Asset::Manager<DescriptorImageInfo> diis;
         Asset::Manager<Command::Record> records;
+        Asset::Manager<Buffer> buffers;
 
         [[nodiscard]] explicit GlobalData(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& root_path)
         : logicalDevice{_logicalDevice},
@@ -29,7 +30,8 @@ namespace EWE{
             images{logicalDevice, root_path},
             views{logicalDevice, images},
             diis{logicalDevice, samplerManager, views, root_path},
-            records{logicalDevice, root_path}
+            records{logicalDevice, root_path},
+            buffers{logicalDevice, root_path}
         {
 
         }
@@ -55,6 +57,7 @@ namespace EWE{
         Asset::Manager<ImageView>* views;
         Asset::Manager<DescriptorImageInfo>* diis;
         Asset::Manager<Command::Record>* records;
+        Asset::Manager<Buffer>* buffers;
 
         
         bool Create(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& _root_path) {
@@ -74,6 +77,7 @@ namespace EWE{
             ::EWE::Global::views = &globalData->views;
             ::EWE::Global::diis = &globalData->diis;
             ::EWE::Global::records = &globalData->records;
+            ::EWE::Global::buffers = &globalData->buffers;
 
             return true;
         }

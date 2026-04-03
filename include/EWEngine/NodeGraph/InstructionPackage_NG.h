@@ -12,7 +12,6 @@
 
 namespace EWE{
 namespace Node{
-
     /*
         i can stop links from being made if it's not a valid instruction (binding descriptor out of a pipeline)
 
@@ -29,7 +28,7 @@ namespace Node{
         ImGuiTextFilter filter;
 
 
-        InstructionPackage::Type packageType = InstructionPackage::Base;
+        Command::InstructionPackage::Type packageType = Command::InstructionPackage::Base;
         bool changing_package_type_allowed = true;
 
         [[nodiscard]] explicit InstructionPackageNodeGraph();

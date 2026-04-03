@@ -165,7 +165,15 @@ namespace Asset{
         return *ret;
     }
 
-
+    AssetHash Manager<DescriptorImageInfo>::ConvertTextureIndexToHash(TextureIndex index) const{
+        for(auto& kvp : association_container){
+            if(kvp.value->index == index){
+                return kvp.key;
+            }
+        }
+        EWE_UNREACHABLE;
+        return INVALID_HASH;
+    }
 
 #ifdef EWE_IMGUI
     void Manager<DescriptorImageInfo>::Imgui(){

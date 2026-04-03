@@ -54,6 +54,8 @@ namespace Asset{
 
         DescriptorImageInfo& Get(Creation params);
 
+        AssetHash ConvertTextureIndexToHash(TextureIndex index) const;
+
 #ifdef EWE_IMGUI
         KeyValueContainer<DescriptorImageInfo*, ImTextureRef> imgui_texture_refs;
         Creation creation_params;

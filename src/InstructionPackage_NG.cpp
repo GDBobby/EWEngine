@@ -10,8 +10,8 @@ namespace Node{
     {
         explorer.acceptable_extensions.push_back(".eip");
         acceptable_add_instructions = std::vector<Inst::Type>{
-            InstructionPackage::allowed_instructions.begin(), 
-            InstructionPackage::allowed_instructions.end()
+            Command::InstructionPackage::allowed_instructions.begin(), 
+            Command::InstructionPackage::allowed_instructions.end()
         }; 
     }
 
@@ -187,16 +187,16 @@ namespace Node{
                 Reflect::Enum::Imgui_Combo_Selectable("package type", packageType);
                 if(packageType != prev_val){
                     switch(packageType){
-                        case InstructionPackage::Base: 
+                        case Command::InstructionPackage::Base: 
                             acceptable_add_instructions = std::vector<Inst::Type>{
-                                InstructionPackage::allowed_instructions.begin(), 
-                                InstructionPackage::allowed_instructions.end()
+                                Command::InstructionPackage::allowed_instructions.begin(), 
+                                Command::InstructionPackage::allowed_instructions.end()
                             };
                             break;
-                        case InstructionPackage::Raster:
+                        case Command::InstructionPackage::Raster:
                             acceptable_add_instructions = std::vector<Inst::Type>{
-                                RasterPackage::allowed_instructions.begin(), 
-                                RasterPackage::allowed_instructions.end()
+                                Command::RasterPackage::allowed_instructions.begin(), 
+                                Command::RasterPackage::allowed_instructions.end()
                             }; 
                             break;
                         default: break;
