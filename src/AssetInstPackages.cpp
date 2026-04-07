@@ -1,5 +1,10 @@
+#include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/InstPackages.h"
+#include "EightWinds/Backend/Logger.h"
+#include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/GlobalPushConstant.h"
+
+#include "EightWinds/Command/RasterInstructionPackage.h"
 
 namespace EWE{
 namespace Asset{
@@ -106,16 +111,20 @@ namespace Asset{
                         
                         for(uint8_t j = 0; j < GlobalPushConstant_Raw::buffer_count; j++){
                             if(temp_push->buffer_addr[j] == null_buffer){
-                                break;
+                                hash_buffer = INVALID_HASH;
                             }
-                            hash_buffer = Global::buffers->ConvertBDAToHash(temp_push->buffer_addr[j]);
+                            else{
+                                hash_buffer = Global::buffers->ConvertBDAToHash(temp_push->buffer_addr[j]);
+                            }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
                         for(uint8_t j = 0; j < GlobalPushConstant_Raw::texture_count; j++){
                             if(temp_push->texture_indices[j] == null_texture){
-                                break;
+                                hash_buffer = INVALID_HASH;
                             }
-                            hash_buffer = Global::diis->ConvertTextureIndexToHash(temp_push->texture_indices[j]);
+                            else{
+                                hash_buffer = Global::diis->ConvertTextureIndexToHash(temp_push->texture_indices[j]);
+                            }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
                     }
@@ -125,19 +134,101 @@ namespace Asset{
             }
         }
 
+        //end of default Instruction package, now we get into specializations (based on polymorphism)
 
-        //what I need to do is expand push constants
-        temp_buffer = pkg.paramPool.params[0].Size();
-        //EWE_ASSERT(paramPool.params[0].Size() == paramPool.params[1].Size());
-        //outFile.write(&temp_buffer, sizeof(std::size_t));
-        //and get a stable reference point to the buffers and DIIs
-        //outFile.write(paramPool.params[0].memory, paramPool.params[0].Size());
-        //outFile.write(paramPool.params[1].memory, paramPool.params[1].Size());
         if(pkg.type == Command::InstructionPackage::Type::Raster){
-            
+            Command::RasterPackage& rasterPkg = static_cast<Command::RasterPackage&>(pkg);
+            outFile.write(reinterpret_cast<char*>(&rasterPkg.config), sizeof(rasterPkg.config));
         }
+
+        outFile.close();
+        return true;
     }
 
+    Command::InstructionPackage* Manager<Command::InstructionPackage>::ReadFile(std::filesystem::path const& path){
+
+        std::ifstream inFile{path, std::ios::binary};
+
+
+        if(!inFile.is_open()){
+            inFile.open(path, std::ios::binary);
+            if(!std::filesystem::exists(path)){
+                Logger::Print<Logger::Error>("atempting to open instruction pkg but path[%s] doesn't exist", path.string().c_str());
+                return nullptr;
+            }
+            if(!inFile.is_open()){
+                return nullptr;
+            }
+        }
+
+        Command::InstructionPackage* ret = nullptr;
+        std::size_t temp_buffer = file_version;
+        inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(std::size_t));
+        Command::InstructionPackage::Type pkg_type;
+        inFile.read(reinterpret_cast<char*>(&pkg_type), sizeof(Command::InstructionPackage::Type));
+        switch(pkg_type){
+            case Command::InstructionPackage::Base: ret = new Command::InstructionPackage();
+            case Command::InstructionPackage::Raster: ret = reinterpret_cast<Command::InstructionPackage*>(new Command::RasterPackage());
+            default: break;
+        }
+        inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(std::size_t));
+        const std::size_t instruction_count = temp_buffer;
+        ret->paramPool.instructions.resize(instruction_count);
+        inFile.read(reinterpret_cast<char*>(ret->paramPool.instructions.data()), instruction_count * sizeof(Inst::Type));
+        
+        std::size_t written_param_size = 0;
+        inFile.read(reinterpret_cast<char*>(&written_param_size), sizeof(std::size_t));
+        
+
+
+        for(uint8_t frame = 0; frame < max_frames_in_flight; frame++) {
+            ret->paramPool.params[frame].Resize(written_param_size);
+            std::size_t param_index = 0;
+            for(std::size_t i = 0; i < ret->paramPool.instructions.size(); i++){
+                const auto current_param_size = Instruction::GetParamSize(ret->paramPool.instructions[i]);
+                if(current_param_size > 0){
+
+                    //convert the buffer_address to a buffer hash
+                    //convert the texture index to a dii hash
+                    if(ret->paramPool.instructions[i] == Inst::Push){
+                        written_param_size += 1;
+                        GlobalPushConstant_Raw* temp_push = reinterpret_cast<GlobalPushConstant_Raw*>(ret->paramPool.param_data[param_index].data[frame]);
+                        AssetHash hash_buffer;
+                        
+                        for(uint8_t j = 0; j < GlobalPushConstant_Raw::buffer_count; j++){
+                            temp_push->buffer_addr[j] = null_buffer;
+                            inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
+                            if(hash_buffer == INVALID_HASH){
+                                break;
+                            }
+                            hash_buffer = Global::buffers->ConvertBDAToHash(temp_push->buffer_addr[j]);
+                        }
+                        for(uint8_t j = 0; j < GlobalPushConstant_Raw::texture_count; j++){
+                            temp_push->texture_indices[j] = null_texture;
+                            inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
+                            if(hash_buffer == INVALID_HASH){
+                                break;
+                            }
+                            auto& temp_dii = Global::diis->Get(hash_buffer);
+                            temp_push->texture_indices[j] = temp_dii.index;
+                        }
+                    }
+                    else{
+                        inFile.read(reinterpret_cast<char*>(ret->paramPool.param_data[param_index].data[frame]), current_param_size);
+                    }
+                    param_index++;
+                }
+            }
+        }
+
+
+        if(ret->type == Command::InstructionPackage::Type::Raster){
+            Command::RasterPackage* rasterPkg = static_cast<Command::RasterPackage*>(ret);
+            inFile.read(reinterpret_cast<char*>(&rasterPkg->config), sizeof(rasterPkg->config));
+        }
+
+        inFile.close();
+    }
     /*
     Command::InstructionPackage ReadFile(std::filesystem::path const& path){
 

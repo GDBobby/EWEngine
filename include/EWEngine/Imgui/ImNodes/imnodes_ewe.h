@@ -33,18 +33,37 @@ namespace ImNodes{
             //negative is doesn't contain
             int CheckPin(PinID globalPinID); 
         };
-        struct Link{
+        struct InternalLink{
             LinkID id;
             PinID start_attr;
             PinID end_attr;
         };
-
+        struct NodeAndPin{
+            Node* node;
+            PinOffset offset;
+            Pin* GetPin(){
+                if(node){
+                    return node->pins[offset];
+                }
+                return nullptr;
+            }
+            bool operator==(NodeAndPin const& other) const{
+                return node == other.node 
+                && offset == other.offset;
+            }
+        };
         struct NodePair {
             LinkID id;
-            Node* start;
-            PinOffset start_offset;
-            Node* end;
-            PinOffset end_offset;
+            NodeAndPin start;
+            NodeAndPin end;
+
+            bool operator==(NodePair const& other){
+                return start == other.start && end == other.end;
+            }
+            void Clear(){
+                start.node = nullptr;
+                end.node = nullptr;
+            }
         };
 
         struct Editor {
@@ -53,19 +72,10 @@ namespace ImNodes{
             std::string name;
 
             ImNodes::ImNodesEditorContext* context;
+            NodeAndPin link_empty_drop;
 
             ::EWE::Hive<Node, 32> nodes;
             std::vector<NodePair> links;
-
-            Node& AddNode() {
-                return nodes.AddElement();
-            }
-
-            void CreateLink(NodePair const& nodePair);
-
-            virtual void RenderNodes();
-
-            virtual void ImGuiNodeDebugPrint(Node& node) const;
 
             bool attemptingToSave = false;
             bool submissionReady = false;
@@ -73,6 +83,12 @@ namespace ImNodes{
             ImVec2 node_editor_window_pos{0.f, 0.f};
             ImVec2 node_editor_window_size{0.f, 0.f};
 
+            Node& AddNode() {
+                return nodes.AddElement();
+            }
+            void CreateLink(NodePair const& nodePair);
+            virtual void RenderNodes();
+            virtual void ImGuiNodeDebugPrint(Node& node) const;
             /*
                 i want global controls for the node graph
                 something like
@@ -86,7 +102,10 @@ namespace ImNodes{
             // if I control them internally, there's a lot of assumptions I can't make
             virtual void InitNode(Node&){}
 
-            virtual void LinkEmptyDrop(Node&, PinOffset) {}
+            virtual void LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+                link_empty_drop.node = &src_node;
+                link_empty_drop.offset = pin_offset;
+            }
 
             virtual void LinkCreated(NodePair&) {}
             virtual void LinkDestroyed(NodePair& link) {
@@ -97,7 +116,7 @@ namespace ImNodes{
             virtual void DestroyPressedOnNode(Node& node) {
                 Node* node_ptr = &node;
                 for (auto& link : links){
-                    if(link.start == node_ptr || link.end == node_ptr){
+                    if(link.start.node == node_ptr || link.end.node == node_ptr){
                         LinkDestroyed(link);
                         break;
                     }
@@ -105,7 +124,7 @@ namespace ImNodes{
                 nodes.DestroyElement(node_ptr);
 
             }
-            virtual void DestroyPressedOnPin(Node& node, PinOffset) {
+            virtual void DestroyPressedOnPin(Node&, PinOffset) {
                 //i dont want to default this, pins beign deleted is abnormal
             }
             virtual void DestroyPressedOnLink(NodePair& link) {

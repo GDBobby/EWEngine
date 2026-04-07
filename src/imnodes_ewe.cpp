@@ -50,43 +50,6 @@ namespace ImNodes{
             has_load_func = loadFunc;
         }
 
-        /*
-        Editor::NodeAndPinOffset Editor::GetOtherNodeFromLinks(int rawPinID) {
-            for (auto& link : links) {
-                if (link.start_attr == rawPinID) {
-                    return NodeAndPinOffset(nodes, link.end_attr);
-                }
-                if (link.end_attr == rawPinID) {
-                    return NodeAndPinOffset(nodes, link.start_attr);
-                }
-            }
-            return {};
-        }
-
-        NodePair Editor::GetBothNodesFromLink(Link const& link) {
-
-            int startingNodeID = link.start_attr >> pin_shift;
-            int endingNodeID = link.end_attr >> pin_shift;
-
-            NodePair ret;
-            ret.start = &nodes.at(startingNodeID);
-            ret.end = &nodes.at(endingNodeID);
-
-            return ret;
-        }
-
-        Editor::NodeAndPinOffset::NodeAndPinOffset(std::unordered_map<int, Node>& nodes, int rawPinID) : rawPinID{ rawPinID } {
-            exists = true;
-            nodeID = rawPinID >> pin_shift;
-            pinOffset = rawPinID - (nodeID << pin_shift);
-    #if EWE_DEBUG
-            if (!nodes.contains(nodeID)) {
-                exists = false;
-            }
-    #endif
-        }
-        */
-
         void Editor::ImGuiNodeDebugPrint(Node& node) const {
             if(node.id != 0){
                 auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
@@ -106,7 +69,13 @@ namespace ImNodes{
                 }
                 ImGui::TreePop();
             }
-                
+            if(ImGui::TreeNode("link data (debugging)")){
+                ImGui::Text("count : %zu\n", links.size());
+                for(auto& link : links){
+                    ImGui::Text("link id[%d] : starting[%d][%u] - ending[%d][%u]", link.id, link.start.node->id, link.start.offset, link.end.node->id, link.end.offset);
+                }
+                ImGui::TreePop();
+            }
 
             auto editor_pan_pos = ImNodes::EditorContextGetPanning();
             if(ImGui::SliderFloat2("pan pos", &editor_pan_pos.x, -10000.f, 10000.f)){
@@ -191,7 +160,8 @@ namespace ImNodes{
 
             for (auto& link : links) {
                 link.id = current_index++;
-                ImNodes::Link(link.id, link.start->id + link.start_offset + 1, link.end->id + link.end_offset + 1);
+                //if the links have bad curvature (how they come off the pin, idk the term) then swap the start/end when theyre created
+                ImNodes::Link(link.id, link.start.node->id + link.start.offset + 1, link.end.node->id + link.end.offset + 1);
             }
 
             int returned_deleted_node = ImNodes::EndNodeEditor();
@@ -200,6 +170,7 @@ namespace ImNodes{
                 PinID link_pin_id = -1;
                 if(ImNodes::IsLinkStarted(&link_pin_id)){
                     //this is holding a link
+                    //::EWE::Logger::Print<::EWE::Logger::Debug>("link started\n");
                 }
                 if(ImNodes::IsLinkDropped(&link_pin_id)){
 
@@ -218,12 +189,15 @@ namespace ImNodes{
                     LinkEmptyDrop(*starting_node, (link_pin_id - starting_node->id) - 1);
                 }
                 if(ImNodes::IsLinkDestroyed(&link_pin_id)){
-                    for(auto link_iter = links.begin(); link_iter != links.end(); link_iter++){
-                        if(link_iter->id == link_pin_id){
-                            links.erase(link_iter);
-                            break;
-                        }
-                    }
+                    //i believe this is only when a link is dragged off a pin
+                    ::EWE::Logger::Print<::EWE::Logger::Debug>("imnodes::IsLinkDestroyed\n");
+
+                    //for(auto link_iter = links.begin(); link_iter != links.end(); link_iter++){
+                        //if(link_iter->id == link_pin_id){
+                            //LinkDestroyed(*link_iter);
+                            //break;
+                        //}
+                    //}
                 }
             }
             {
@@ -233,27 +207,31 @@ namespace ImNodes{
 
                     NodePair& pair = links.emplace_back(
                         NodePair{
-                            .start = nullptr,
-                            .end = nullptr
+                            .start = NodeAndPin{
+                                .node = nullptr
+                            },
+                            .end = NodeAndPin{
+                                .node = nullptr
+                            },
                         }
                     );
 
-                    for(auto & node : nodes){
+                    for(auto& node : nodes){
                         int lh_pin_offset = node.CheckPin(link_created_lh);
                         int rh_pin_offset = node.CheckPin(link_created_rh);
                         if(lh_pin_offset >= 0){
-                            pair.start = &node;
-                            pair.start_offset = lh_pin_offset;
+                            pair.start.node = &node;
+                            pair.start.offset = lh_pin_offset;
 
-                            if(pair.end != nullptr){
+                            if(pair.end.node != nullptr){
                                 break;
                             }
                         }
                         else if(rh_pin_offset >= 0) {
-                            pair.end = &node;
-                            pair.end_offset = rh_pin_offset;
+                            pair.end.node = &node;
+                            pair.end.offset = rh_pin_offset;
 
-                            if(pair.start != nullptr){
+                            if(pair.start.node != nullptr){
                                 break;
                             }
                         }

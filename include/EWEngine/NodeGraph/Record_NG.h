@@ -7,6 +7,7 @@
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
+#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
 #include "imgui.h"
 
 #include <fstream>
@@ -36,12 +37,12 @@ namespace Node{
         ImNodes::EWE::Node* CreateHeadNode();
         static Inst::Type GetInstructionFromNode(ImNodes::EWE::Node& node);
         void PrintNode(ImNodes::EWE::Node& node) const;
-        ImNodes::EWE::Node& CreateRGNode(int inst_index);
+        ImNodes::EWE::Node& CreateRGNode(Inst::Type inst_index);
         std::vector<Inst::Type> CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const;
-
         inline std::vector<Inst::Type> CollectInstructions() const{
             return CollectInstructionsUpTo(nullptr);
         }
+        void UpdateNodeOffsets();
         void CreateFromInstructions(std::span<const Inst::Type> create_instructions);
         bool AddInstructionButton(Inst::Type itype);
 
@@ -50,6 +51,7 @@ namespace Node{
         bool RenderAddMenu() override final;
         void LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) override final;
         void LinkCreated(ImNodes::EWE::NodePair& link) override final;
+        void LinkDestroyed(ImNodes::EWE::NodePair& link) override final;
         void RenderNode(ImNodes::EWE::Node& node) override final;
         void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
         bool SaveFunc() override final;

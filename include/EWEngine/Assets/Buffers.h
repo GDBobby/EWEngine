@@ -12,8 +12,7 @@ namespace Asset{
     template<>
     struct Manager<Buffer>{
         LogicalDevice& logicalDevice;
-        FileSystem files;
-        //FileSystem meta_files;
+        //FileSystem files; //no files for the buffers, yet at least
 
         Hive<Buffer, 64> data_arena;
         KeyValueContainer<AssetHash, Buffer*> association_container{};

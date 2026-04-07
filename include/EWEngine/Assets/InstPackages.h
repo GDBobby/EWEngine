@@ -36,7 +36,7 @@ namespace Asset{
         Command::InstructionPackage* Get(std::string_view name);
 
         bool WriteToFile(Command::InstructionPackage& pkg, std::filesystem::path const& path);
-        static Command::InstructionPackage ReadFile(std::filesystem::path const& path);
+        static Command::InstructionPackage* ReadFile(std::filesystem::path const& path);
 
 #ifdef EWE_IMGUI
         void Imgui();

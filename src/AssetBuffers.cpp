@@ -1,13 +1,14 @@
 #include "EWEngine/Assets/Buffers.h"
 
+#include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/Objects.h"
 
 namespace EWE{
 namespace Asset{
 Manager<Buffer>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
-    : logicalDevice{_logicalDevice},
-        files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
+    : logicalDevice{_logicalDevice}//,
+        //files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
         //meta_files{root_path, std::vector<std::string>{".mie"}}
     {
 
@@ -30,13 +31,14 @@ Manager<Buffer>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path co
             return iter->value;
         }
         else{
-            auto buf_path_hash_data = files.hashed_path.at(hash);
-            auto const& fs_path = buf_path_hash_data.value;
+            EWE_UNREACHABLE;
+            //auto buf_path_hash_data = files.hashed_path.at(hash);
+            //auto const& fs_path = buf_path_hash_data.value;
             Buffer& buf = data_arena.AddElement(logicalDevice);
-            buf.name = fs_path;
+            //buf.name = fs_path;
             association_container.push_back(hash, &buf);
 
-            auto full_buf_load_path = files.root_directory / fs_path;
+            //auto full_buf_load_path = files.root_directory / fs_path;
 
 
             return &buf;
@@ -47,31 +49,32 @@ Manager<Buffer>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path co
     }
 
 
+    AssetHash Manager<Buffer>::ConvertBDAToHash(VkDeviceAddress addr){
+        for(auto& kvp : association_container){
+            if(kvp.value->deviceAddress == addr){
+                return kvp.key;
+            }
+        }
+        EWE_UNREACHABLE;
+    }
+
 #ifdef EWE_IMGUI
     void Manager<Buffer>::Imgui(){
         //filesystem.Imgui();
-        for(auto& kvp : files.hashed_path){
-            auto found = association_container.find(kvp.key);
-            if(found == association_container.end()){
-                if(ImGui::Button(kvp.value.string().c_str())){
+        for(auto& kvp : association_container){
+            //auto found = association_container.find(kvp.key);
+            //if(found == association_container.end()){
+                if(ImGui::Button(kvp.value->name.c_str())){
                     Get(kvp.key);
                 }
-            }
-            else{
-                ImGui::PushID(kvp.key);
-                if(ImGui::TreeNode(kvp.value.string().c_str())){
-                    DragDropPtr::Source<Buffer>(*found->value);
-                    ImguiExtension::Imgui(*found->value);
-                    if(ImGui::Button("update meta values")){
-                        UpdateMetaFile(kvp.key, *found->value);
-                    }
-                    ImGui::TreePop();
-                }
-                else{
-                    DragDropPtr::Source<Buffer>(*found->value);
-                }
-                ImGui::PopID();
-            }
+            //}
+            //else{
+            //    ImGui::PushID(kvp.key);
+            //    ImGui::Text(kvp.value.string().c_str());
+            //    DragDropPtr::Source<Buffer>(*found->value);
+            //    
+            //    ImGui::PopID();
+            //}
         }
     }
 #endif

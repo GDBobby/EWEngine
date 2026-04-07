@@ -581,16 +581,18 @@ int main() {
         }
         if(ImGui::TreeNode("images")){
             EWE::Global::images->Imgui();
-
             ImGui::TreePop();
         }
         if(ImGui::TreeNode("samplers")){
             EWE::Global::samplers->Imgui();
-
             ImGui::TreePop();
         }
         if(ImGui::TreeNode("records")){
             EWE::Global::records->Imgui();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("buffers")){
+            EWE::Global::buffers->Imgui();
             ImGui::TreePop();
         }
 

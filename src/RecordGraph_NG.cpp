@@ -1,3 +1,4 @@
+#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
 #include "EWEngine/NodeGraph/Record_NG.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
@@ -17,14 +18,18 @@ namespace Node{
     ImNodes::EWE::Node* RecordNodeGraph::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
-        head.payload = reinterpret_cast<void*>(UINT64_MAX);
+        auto head_payload = new InstNodePayload();
+        head_payload->distanceFromHead = -1;
+        head_payload->type = InstNodePayload::Head;
+        head.payload = head_payload;
+
         head.pos = node_editor_window_pos;
         head.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
 
     Inst::Type RecordNodeGraph::GetInstructionFromNode(ImNodes::EWE::Node& node){
-        return static_cast<Inst::Type>(reinterpret_cast<std::size_t>(node.payload));
+        return reinterpret_cast<InstNodePayload*>(node.payload)->iType;
     }
 
     void RecordNodeGraph::ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const {
@@ -56,9 +61,12 @@ namespace Node{
         }
     }
 
-    ImNodes::EWE::Node& RecordNodeGraph::CreateRGNode(int inst_index) {
+    ImNodes::EWE::Node& RecordNodeGraph::CreateRGNode(Inst::Type inst_index) {
         auto& added_node = AddNode();
-        added_node.payload = reinterpret_cast<void*>(inst_index);//&emp;
+        auto* node_payload = new InstNodePayload();
+        node_payload->iType = inst_index;
+        node_payload->type = InstNodePayload::Instruction;
+        added_node.payload = node_payload;
         added_node.pos = menu_pos;
         added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
         added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
@@ -110,6 +118,39 @@ namespace Node{
         }
         return ret;
     }
+    void RecordNodeGraph::UpdateNodeOffsets() {
+
+
+        InstNodePayload* current_payload = nullptr;
+        for(auto& node : nodes){
+            current_payload = reinterpret_cast<InstNodePayload*>(node.payload);
+            current_payload->distanceFromHead = -1;
+        }
+        
+        ImNodes::EWE::Node* current_node = nullptr;
+        //the pin payload is going to be a pointer to the node, unless nullptr
+
+        std::size_t distance = 0;
+        if(headNode->pins[0]->payload != nullptr){
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0]->payload);
+            if(current_node == nullptr){
+                //Logger::Print<Logger::Debug>("early early return - %s\n", __FUNCTION__);
+                return;
+            }
+            current_payload = reinterpret_cast<InstNodePayload*>(current_node->payload);
+            current_payload->distanceFromHead = distance++;
+            PrintNode(*current_node);
+
+            while(current_node->pins[1]->payload != nullptr){
+                PrintNode(*current_node);
+
+                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1]->payload);
+                current_payload = reinterpret_cast<InstNodePayload*>(current_node->payload);
+                current_payload->distanceFromHead = distance++;
+            }
+            
+        }
+    }
 
     void RecordNodeGraph::OpenAddMenu() {
         add_menu_is_open = true;
@@ -136,10 +177,11 @@ namespace Node{
                     const uint16_t start_offset = link_empty_drop_srcNode == headNode ? 0 : 1;
                     links.emplace_back(
                         ImNodes::EWE::NodePair{
-                            .start = link_empty_drop_srcNode,
-                            .start_offset = start_offset,
-                            .end = &added_node,
-                            .end_offset = 0
+                            .start = link_empty_drop,
+                            .end = ImNodes::EWE::NodeAndPin{
+                                .node = &added_node,
+                                .offset = 0
+                            }
                         }
                     );
                 }
@@ -181,6 +223,7 @@ namespace Node{
     }
 
     void RecordNodeGraph::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+        //Logger::Print<Logger::Debug>("link empty drop\n");
         auto const& instructions = CollectInstructionsUpTo(&src_node);
 
         acceptable_add_instructions = Instruction::GetValidInstructionsAtBackOf(instructions);
@@ -191,29 +234,41 @@ namespace Node{
     }
 
     void RecordNodeGraph::LinkCreated(ImNodes::EWE::NodePair& link) {
-        link.start->pins[link.start_offset]->payload = link.end;
-        link.end->pins[link.end_offset]->payload = link.start;
+        //Logger::Print<Logger::Debug>("link created\n");
+        link.start.node->pins[link.start.offset]->payload = link.end.node;
+        link.end.node->pins[link.end.offset]->payload = link.start.node;
+
+        UpdateNodeOffsets();
+    }
+
+    void RecordNodeGraph::LinkDestroyed(ImNodes::EWE::NodePair& link) {
+        //Logger::Print<Logger::Debug>("link destroyed\n");
+
+        link.start.node->pins[link.start.offset]->payload = nullptr;
+        link.end.node->pins[link.end.offset]->payload = nullptr;
+        ImNodes::EWE::Editor::LinkDestroyed(link);
+        UpdateNodeOffsets();
     }
 
     void RecordNodeGraph::RenderNode(ImNodes::EWE::Node& node){
-        const std::size_t inst_index = reinterpret_cast<std::size_t>(node.payload);
+        auto node_payload = reinterpret_cast<InstNodePayload*>(node.payload);
 
         ImNodes::BeginNodeTitleBar();
 
-        if(inst_index == UINT64_MAX){
+        if(node_payload->type == InstNodePayload::Type::Head){
             ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "head node");
         }
-        else if(inst_index >= Reflect::Enum::enum_data<Inst::Type>.size()){
+        else if(node_payload->type == InstNodePayload::Package){
             //if its greater than that, it's a record
             
         }
         else{
-            ImGui::Text("%s", Reflect::Enum::ToString(static_cast<Inst::Type>(inst_index)).data());
+            ImGui::Text("%s", Reflect::Enum::ToString(node_payload->iType).data());
         }
         ImNodes::EndNodeTitleBar();
 
         //ImGui::DebugLog("");
-        ImGui::Text(""); //empty text just to populate this
+        ImGui::Text("distance from head : %d", node_payload->distanceFromHead); //empty text just to populate this
     }
 
     void RecordNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
@@ -266,10 +321,14 @@ namespace Node{
 
         links.emplace_back(
             ImNodes::EWE::NodePair{
-                .start = headNode,
-                .start_offset = 0,
-                .end = &init_node,
-                .end_offset = 0
+                .start = ImNodes::EWE::NodeAndPin{
+                    .node = headNode,
+                    .offset = 0
+                },
+                .end = ImNodes::EWE::NodeAndPin{
+                    .node = &init_node,
+                    .offset = 0
+                }
             }
         );
 
@@ -285,10 +344,14 @@ namespace Node{
 
             links.emplace_back(
                 ImNodes::EWE::NodePair{
-                    .start = lastNode,
-                    .start_offset = 1,
-                    .end = &node,
-                    .end_offset = 0
+                    .start = ImNodes::EWE::NodeAndPin{
+                        .node = lastNode,
+                        .offset = 1
+                    },
+                    .end = ImNodes::EWE::NodeAndPin{
+                        .node = &node,
+                        .offset = 0
+                    }
                 }
             );
 
