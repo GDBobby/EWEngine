@@ -1,7 +1,12 @@
 #include "EWEngine/NodeGraph/InstructionPackage_NG.h"
+#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
+#include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/Params.h"
+#include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/GlobalPushConstant.h"
+#include "EightWinds/ObjectRasterConfig.h"
+#include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/VulkanHeader.h"
 
 namespace EWE{
@@ -17,6 +22,15 @@ namespace Node{
             Command::InstructionPackage::allowed_instructions.begin(), 
             Command::InstructionPackage::allowed_instructions.end()
         }; 
+    }
+
+    InstructionPackageNodeGraph::InstructionPackageNodeGraph(Command::InstructionPackage& pkg)
+    : ImNodes::EWE::Editor{true, true},
+        explorer{std::filesystem::current_path()},
+        headNode{CreateHeadNode()}
+    {
+        explorer.acceptable_extensions.push_back(".eip");
+        InitFromPackage(pkg);
     }
 
     ImNodes::EWE::Node* InstructionPackageNodeGraph::CreateHeadNode(){
@@ -51,13 +65,23 @@ namespace Node{
         );
     }
 
+    void InstructionPackageNodeGraph::RenderEditorTitle(){
+        ImGui::BulletText("param data - inst count[%zu] : param heap size[%zu] : param count[%zu]", paramPool.instructions.size(), paramPool.params[0].Size(), paramPool.param_data.size());
+        ImNodes::EWE::Editor::RenderEditorTitle();
+        if(packageType == Command::InstructionPackage::Object){
+            ObjectRasterConfig* rasterConfig = reinterpret_cast<ObjectRasterConfig*>(package_payload);
+            //ImGui::SameLine();
+            if(ImGui::TreeNode("object config")){
+                ImguiExtension::Imgui(*rasterConfig);
+                ImGui::TreePop();
+            }
+        }
+    }
 
     void InstructionPackageNodeGraph::RenderNodes() {
-        ImGui::BulletText("param instruction count : %zu", paramPool.instructions.size());
         ImNodes::EWE::Editor::RenderNodes();
         Inst::Type* inst_type;
-        if(DragDropPtr::Target(inst_type))
-        {
+        if(DragDropPtr::Target(inst_type)) {
             auto temp_min = ImGui::GetItemRectMin();
             auto temp_max =ImGui::GetItemRectMax();
             auto& added_node = CreateRGNode(*inst_type);
@@ -378,9 +402,8 @@ namespace Node{
     }
     void InstructionPackageNodeGraph::LinkDestroyed(ImNodes::EWE::NodePair& link) {
         Logger::Print<Logger::Debug>("ipng::link destroyed\n");
-        if(link.start.node->pins[link.start.offset] != nullptr){
-            link.start.node->pins[link.start.offset]->payload = nullptr;
-        }
+        
+        link.start.node->pins[link.start.offset]->payload = nullptr;
         link.end.node->pins[link.end.offset]->payload = nullptr;
         auto* end_payload = reinterpret_cast<InstNodePayload*>(link.end.node->payload);
         //auto* start_payload = reinterpret_cast<InstNodePayload*>(link.start.node->payload); 
@@ -399,9 +422,36 @@ namespace Node{
 
         if(node_payload->type == InstNodePayload::Type::Head){
             ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "head node");
+            if(changing_package_type_allowed){
+                ImGui::SetNextItemWidth(150.f);
+                auto prev_pkg_type = packageType;
+                Reflect::Enum::Imgui_Combo_Selectable("package type", packageType);
+                if(prev_pkg_type != packageType){
+                    if(package_payload != nullptr){
+                        switch(prev_pkg_type){
+                            case Command::InstructionPackage::Object: 
+                                delete reinterpret_cast<ObjectRasterConfig*>(package_payload); 
+                                break;
+                            //case Command::InstructionPackage::Base: EWE_UNREACHABLE;
+                            default:EWE_UNREACHABLE;
+                        }
+                    }
+                    switch(packageType){
+                        case Command::InstructionPackage::Object: 
+                            package_payload = new ObjectRasterConfig();
+                            break;
+                        default: break;
+
+                    }
+                }
+            }
+            ImNodes::EndNodeTitleBar();
+            ImGui::Text(""); //nodes need some abritrary filler
+            return;
         }
         else if(node_payload->type == InstNodePayload::Package){
-            //if its greater than that, it's a record
+            //need to peek contents
+            //if 
             
         }
         else{
@@ -441,9 +491,7 @@ namespace Node{
             explorer.Imgui();
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
-                auto const& collected_instructions = CollectInstructions();
-                Logger::Print<Logger::Debug>("collected inst count : %zu\n", collected_instructions.size());
-                Command::Record::WriteInstructions(saved_path.string(), collected_instructions);
+                EWE::Global::instPackages->WriteToFile(paramPool, package_payload, packageType, saved_path);
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }
@@ -456,25 +504,23 @@ namespace Node{
         return !explorer.enabled;
     }
 
-    void InstructionPackageNodeGraph::CreateFromInstructions(std::span<const Inst::Type> create_instructions){
+    void InstructionPackageNodeGraph::InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type){
         nodes.Clear();
         links.clear();
-        if(create_instructions.size() == 0){
-            return;
-        }
 
         headNode = CreateHeadNode();
-        auto& init_node = CreateRGNode(create_instructions[0]);
+        if(paramPool.instructions.size() == 0){
+            return;
+        }
+        auto& init_node = CreateRGNode(paramPool.instructions[0]);
         reinterpret_cast<InstNodePayload*>(init_node.payload)->distanceFromHead = 0;
-        headNode->pins[0]->payload = reinterpret_cast<ImNodes::EWE::Node*>(&init_node);
+        headNode->pins[0]->payload = &init_node;
         init_node.pos.x = headNode->pos.x + 100.f;
         init_node.pos.y = headNode->pos.y + 30.f;
 
-
         auto* lastNode = &init_node;
-        lastNode->payload = new InstNodePayload();
+        //InstNodePayload* last_payload = lastNode->payload;
         init_node.pins[0]->payload = headNode;
-
         
         LinkCreated(
             links.emplace_back(
@@ -491,8 +537,8 @@ namespace Node{
             )
         );
 
-        for(std::size_t i = 1; i < create_instructions.size(); i++){
-            auto& node = CreateRGNode(create_instructions[i]);
+        for(std::size_t i = 1; i < pp.instructions.size(); i++){
+            auto& node = CreateRGNode(pp.instructions[i]);
             node.pos = lastNode->pos;
             node.pos.x += 100.f;
             node.pos.y += 30.f;
@@ -519,6 +565,39 @@ namespace Node{
         }
 
         nodes.ShrinkToFit();
+
+        switch(pkg_type){
+            case Command::InstructionPackage::Base:
+                acceptable_add_instructions = std::vector<Inst::Type>{
+                    Command::InstructionPackage::allowed_instructions.begin(), 
+                    Command::InstructionPackage::allowed_instructions.end()
+                };
+                break;
+            case Command::InstructionPackage::Object:
+                acceptable_add_instructions = std::vector<Inst::Type>{
+                    Command::ObjectPackage::allowed_instructions.begin(), 
+                    Command::ObjectPackage::allowed_instructions.end()
+                };
+                package_payload = new ObjectRasterConfig();
+                EWE_ASSERT(payload != nullptr);
+                memcpy(package_payload, payload, sizeof(ObjectRasterConfig));
+                break;
+            default: break;
+        }
+    }
+    void InstructionPackageNodeGraph::InitFromPackage(Command::InstructionPackage& pkg){
+        switch(pkg.type){
+            case Command::InstructionPackage::Base: 
+                InitFromFile(pkg.paramPool, nullptr, pkg.type);
+                break;
+            case Command::InstructionPackage::Object:
+                InitFromFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).config, pkg.type);
+                break;
+            default: 
+                Logger::Print<Logger::Warning>("attempting to init node graph from invalid pkg type\n"); 
+                break;
+        }
+        return;
     }
 
     bool InstructionPackageNodeGraph::LoadFunc() {
@@ -529,11 +608,10 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 //put the record somewhere
-                auto const& loaded_instructions = Command::Record::ReadInstructions(load_path.string());
+                auto* pkg = EWE::Global::instPackages->ReadFile(load_path);
+                InitFromPackage(*pkg);
 
-                CreateFromInstructions(std::span{loaded_instructions.Data(), loaded_instructions.Size()});
-
-                Logger::Print<Logger::Debug>("loaded instructions size : %zu\n", loaded_instructions.Size());
+                Logger::Print<Logger::Debug>("loaded pkg instructions size : %zu\n", pkg->paramPool.instructions.size());
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }

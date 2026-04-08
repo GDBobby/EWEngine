@@ -115,10 +115,10 @@ namespace ImNodes{
 
             virtual void DestroyPressedOnNode(Node& node) {
                 Node* node_ptr = &node;
-                for (auto& link : links){
-                    if(link.start.node == node_ptr || link.end.node == node_ptr){
-                        LinkDestroyed(link);
-                        break;
+                for (std::size_t i = 0; i < links.size(); i++){
+                    if(links[i].start.node == node_ptr || links[i].end.node == node_ptr){
+                        LinkDestroyed(links[i]);
+                        i--;
                     }
                 }
                 nodes.DestroyElement(node_ptr);

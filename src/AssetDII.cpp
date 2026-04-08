@@ -50,16 +50,16 @@ namespace Asset{
     : logicalDevice{_logicalDevice},
         samplers{_samplers},
         views{_views},
-        filesystem{root_path, std::vector<std::string>{".dii"}}
+        files{root_path, std::vector<std::string>{".dii"}}
     {
 
     }
 
     static constexpr std::size_t dii_version = 0;
 
-    void Manager<DescriptorImageInfo>::Read(std::filesystem::path const& file_name){
+    DescriptorImageInfo& Manager<DescriptorImageInfo>::Read(std::filesystem::path const& file_name){
 
-        std::ifstream stream{file_name, std::ios::binary};
+        std::ifstream stream{files.root_directory / file_name, std::ios::binary};
         EWE_ASSERT(stream.is_open());
 
         Stream::Operator streamHandler{stream};
@@ -91,10 +91,10 @@ namespace Asset{
         streamHandler.Process(layout);
 
         if(sampler != nullptr){
-            data_arena.AddElement(*sampler, view, type, layout);
+            return data_arena.AddElement(*sampler, view, type, layout);
         }
         else{
-            data_arena.AddElement(view, type, layout);
+            return data_arena.AddElement(view, type, layout);
         }
     }
 
@@ -125,22 +125,22 @@ namespace Asset{
     }
 
     DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(AssetHash hash){
-        auto found = association_container.find(hash);
-        if(found == association_container.end()){
-            //look into the file system
-        }
-        else{
-            return *found->value;
-        }
-    }
-    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(std::string_view name){
-        auto hash = CrossPlatformPathHash(name);
         for(auto kvp : association_container){
-            if(kvp.value->name == name){
+            if(kvp.key == hash){
                 return *kvp.value;
             }
         }
         //wasnt found, break into the file system
+        auto found_file = files.hashed_path.find(hash);
+        EWE_ASSERT(found_file != files.hashed_path.end());
+        auto& ret = Read(found_file->value);
+        ret.name = found_file->value;
+        association_container.push_back(found_file->key, &ret);
+        return ret;
+    }
+    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(std::filesystem::path const& name){
+        auto hash = CrossPlatformPathHash(name);
+        return Get(hash);
     }
 
     DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(Creation params){
@@ -229,9 +229,19 @@ namespace Asset{
             ImGui::Separator();
         }
 
+        for(auto& kvp : files.hashed_path){
+            if(association_container.find(kvp.key) == association_container.end()){
+                if(ImGui::Button(kvp.value.string().c_str())){
+                    Get(kvp.value.string());
+                    Logger::Print("created dii : %s\n", kvp.value.string().c_str());
+                }
+            }
+        }
+
         for(auto& kvp : association_container){
             ImGui::PushID(kvp.key);
             if(ImGui::TreeNode(kvp.value->name.c_str())){
+                DragDropPtr::Source(*kvp.value);
                 auto found_image = imgui_texture_refs.find(kvp.value);
                 if(found_image != imgui_texture_refs.end() && found_image->key->view.image.data.layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL){
                     ImVec2 image_size{
@@ -240,7 +250,6 @@ namespace Asset{
                     };
                     ImGui::Image(found_image->value, image_size);
                 }
-
 
                 if(kvp.value->sampler != nullptr){
                     if(ImGui::TreeNode("sampler")){
@@ -258,7 +267,16 @@ namespace Asset{
                 }
                 ImGui::Text("descriptor type : %s", Reflect::Enum::ToString(kvp.value->type).data());
                 ImGui::Text("layout : %s", Reflect::Enum::ToString(kvp.value->imageInfo.imageLayout).data());
+                
+                if(ImGui::Button("write to file")) {
+                    Write(*kvp.value, files.root_directory / kvp.value->name);
+                    Logger::Print("wrote [%s] to file[%s]\n", kvp.value->name.c_str(), files.root_directory.string().c_str());
+                }
+                
                 ImGui::TreePop();
+            }
+            else{
+                DragDropPtr::Source(*kvp.value);
             }
             ImGui::PopID();
         }

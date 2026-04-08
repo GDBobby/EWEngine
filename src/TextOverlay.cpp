@@ -23,9 +23,9 @@ namespace EWE {
 
 	TextOverlay::TextOverlay(LogicalDevice& _logicalDevice, float screenWidth, float screenHeight)
 		: logicalDevice{ _logicalDevice }, 
+		scale{ framebuffer_width / DEFAULT_WIDTH },
 		framebuffer_width {screenWidth},
 		framebuffer_height{ screenHeight },
-		scale{ framebuffer_width / DEFAULT_WIDTH },
 		vertShader{ logicalDevice, "common/shaders/textoverlay.vert.spv" },
 		fragShader{ logicalDevice, "common/shaders/textoverlay.frag.spv" },
 		pipeLayout{ logicalDevice, {&vertShader, &fragShader} }
@@ -41,10 +41,10 @@ namespace EWE {
 	}
 
 	Font::Font(std::unordered_map<wchar_t, CharacterData>& _vertData, std::unordered_map<wchar_t, float>& _advanceData, uint16_t _width, uint16_t _height, void* imgdata)
-		: vertData{ std::move(_vertData) },
-		advanceData{ std::move(_advanceData) },
-		width{ _width },
+		:  width{ _width },
 		height{ _height },
+		vertData{ std::move(_vertData) },
+		advanceData{ std::move(_advanceData) },
 		image{ *Global::logicalDevice },
 		image_view{ image, false },
 		buffers{

@@ -102,6 +102,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
         /we4456 /we4457 /we4458 /we4459
     >
 	-freflection
+	#-unusedparameter
+	#-whatever is for initializers out of order
 )
 
 if(EWE_IMGUI)

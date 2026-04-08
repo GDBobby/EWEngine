@@ -61,25 +61,27 @@ namespace ImNodes{
 
             //ImGui::Text("window pos  : %.2f:%.2f", node_editor_window_pos.x, node_editor_window_pos.y);
             //ImGui::Text("window size  : %.2f:%.2f", node_editor_window_size.x, node_editor_window_size.y);
-            
-            if(ImGui::TreeNode("node data (debugging)")){
-                ImGui::Text("node count : %zu\n", nodes.Size());
-                for(auto& node : nodes){
-                    ImGuiNodeDebugPrint(node);
+            if(ImGui::TreeNode("debugging")){
+                if(ImGui::TreeNode("node data (debugging)")){
+                    ImGui::Text("node count : %zu\n", nodes.Size());
+                    for(auto& node : nodes){
+                        ImGuiNodeDebugPrint(node);
+                    }
+                    ImGui::TreePop();
                 }
-                ImGui::TreePop();
-            }
-            if(ImGui::TreeNode("link data (debugging)")){
-                ImGui::Text("count : %zu\n", links.size());
-                for(auto& link : links){
-                    ImGui::Text("link id[%d] : starting[%d][%u] - ending[%d][%u]", link.id, link.start.node->id, link.start.offset, link.end.node->id, link.end.offset);
+                if(ImGui::TreeNode("link data (debugging)")){
+                    ImGui::Text("count : %zu\n", links.size());
+                    for(auto& link : links){
+                        ImGui::Text("link id[%d] : starting[%d][%u] - ending[%d][%u]", link.id, link.start.node->id, link.start.offset, link.end.node->id, link.end.offset);
+                    }
+                    ImGui::TreePop();
                 }
-                ImGui::TreePop();
-            }
 
-            auto editor_pan_pos = ImNodes::EditorContextGetPanning();
-            if(ImGui::SliderFloat2("pan pos", &editor_pan_pos.x, -10000.f, 10000.f)){
-                ImNodes::EditorContextResetPanning(editor_pan_pos);
+                auto editor_pan_pos = ImNodes::EditorContextGetPanning();
+                if(ImGui::SliderFloat2("pan pos", &editor_pan_pos.x, -10000.f, 10000.f)){
+                    ImNodes::EditorContextResetPanning(editor_pan_pos);
+                }
+                ImGui::TreePop();
             }
         }
 

@@ -68,7 +68,7 @@ namespace EWE {
 			//top left and bottom right, can be mixed for top right and bottom left
 			Vert vertices[2];
 		};
-		Font(std::unordered_map<wchar_t, EWE::Font::CharacterData>& vertData, std::unordered_map<wchar_t, float>& advanceData, uint16_t width, uint16_t height, void* imgdata);
+		[[nodiscard]] Font(std::unordered_map<wchar_t, EWE::Font::CharacterData>& vertData, std::unordered_map<wchar_t, float>& advanceData, uint16_t width, uint16_t height, void* imgdata);
 		Font& operator=(Font& other) = delete;
 		Font& operator=(Font&& other) = delete;
 		Font(Font&& other) noexcept = delete;
@@ -87,12 +87,13 @@ namespace EWE {
 		std::unordered_map<wchar_t, CharacterData> vertData{};
 		std::unordered_map<wchar_t, float> advanceData;
 
-		Sampler sampler;
 
 		Image image;
 		ImageView image_view;
 
 		PerFlight<Buffer> buffers;
+		
+		Sampler sampler;
 
 		Font::CharacterData::Vert* mapped = nullptr;
 	};
@@ -102,6 +103,11 @@ namespace EWE {
 	private:
 		static constexpr uint32_t TEXTOVERLAY_MAX_CHAR_COUNT = 65536 / sizeof(lab::vec4);
 		LogicalDevice& logicalDevice;
+	public:
+		float scale;
+		
+		float framebuffer_width;
+		float framebuffer_height;
 
 		Shader vertShader;
 		Shader fragShader;
@@ -119,10 +125,6 @@ namespace EWE {
 	public:
 
 		bool visible = true;
-		float scale;
-		
-		float framebuffer_width;
-		float framebuffer_height;
 
 		ObjectRasterData objectConfig;
 

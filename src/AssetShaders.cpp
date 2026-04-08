@@ -35,7 +35,7 @@ namespace Asset{
             }
         }
 
-        Logger::Print<Logger::Error>("returning nullptr from GetShader : %s\n", file_name.data());
+        Logger::Print<Logger::Error>("returning nullptr from GetShader : %s - %s\n", files.root_directory.string().c_str(), file_name.data());
         return nullptr;
     }
 

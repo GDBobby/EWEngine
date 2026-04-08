@@ -33,8 +33,9 @@ namespace Asset{
         void Destroy(Command::InstructionPackage* sampler);
 
         Command::InstructionPackage* Get(AssetHash hash);
-        Command::InstructionPackage* Get(std::string_view name);
-
+        Command::InstructionPackage* Get(std::filesystem::path const& name);
+        
+        bool WriteToFile(Command::ParamPool const& param_pool, void* payload, Command::InstructionPackage::Type pkg_type, std::filesystem::path const& path);
         bool WriteToFile(Command::InstructionPackage& pkg, std::filesystem::path const& path);
         static Command::InstructionPackage* ReadFile(std::filesystem::path const& path);
 

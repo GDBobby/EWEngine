@@ -18,7 +18,7 @@ namespace Asset{
         LogicalDevice& logicalDevice;
         Manager<Sampler>& samplers;
         Manager<ImageView>& views;
-        FileSystem filesystem;
+        FileSystem files;
 
         [[nodiscard]] explicit Manager(
             LogicalDevice& logicalDevice,
@@ -40,9 +40,9 @@ namespace Asset{
         void Destroy(DescriptorImageInfo* dii);
 
         DescriptorImageInfo& Get(AssetHash hash);
-        DescriptorImageInfo& Get(std::string_view name);
+        DescriptorImageInfo& Get(std::filesystem::path const& name);
 
-        void Read(std::filesystem::path const& file_name);
+        DescriptorImageInfo& Read(std::filesystem::path const& file_name);
         void Write(DescriptorImageInfo const& dii, std::filesystem::path const& file_name);
 
         struct Creation{

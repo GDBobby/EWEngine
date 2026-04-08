@@ -113,7 +113,7 @@ namespace Asset{
                 auto old_extent = img.data.extent;
                 auto old_format = img.data.format;
                 auto old_miplevels = img.data.mipLevels;
-                InitializeImage(img, full_img_load_path, Queue::Type::Graphics);
+                img.readyForUsage = InitializeImage(img, full_img_load_path, Queue::Type::Graphics);
 
             }};
             Global::scheduler->enqueue(std::move(load_img_fiber));

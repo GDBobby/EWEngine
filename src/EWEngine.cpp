@@ -262,7 +262,7 @@ namespace EWE{
 
     EWEngine::EWEngine(std::string_view application_name)
         : instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
-        window{instance, 1280, 720, application_name},
+        window{instance, 1920, 1080, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
         renderQueue{GetPresentQueue(logicalDevice)}, computeQueue{GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)}, 
         swapchain{logicalDevice, window, renderQueue},
@@ -276,7 +276,7 @@ namespace EWE{
         }
         */
     {
-        Global::Create(logicalDevice, window, stcManager, "/home/Projects/EWEngine/examples/common");
+        Global::Create(logicalDevice, window, stcManager, "/home/corey/Projects/EWEngine/examples/common");
     }
 
 #if EWE_IMGUI

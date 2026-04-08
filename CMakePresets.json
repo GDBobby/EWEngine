@@ -119,10 +119,10 @@
             "inherits": "base",
             "hidden": true,
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "/home/corey/gcc-trunk/bin/gcc",
-                "CMAKE_CXX_COMPILER": "/home/corey/gcc-trunk/bin/g++",
+                "CMAKE_C_COMPILER": "/opt/gcc-trunk/bin/gcc",
+                "CMAKE_CXX_COMPILER": "/opt/gcc-trunk/bin/g++",
                 "CMAKE_CXX_STANDARD": "26",
-                "CMAKE_EXE_LINKER_FLAGS": "-L/home/corey/programming/gcc-trunk/lib64 -Wl,-rpath,/home/corey/gcc-trunk/lib64 -static-libgcc -static-libstdc++",
+                "CMAKE_EXE_LINKER_FLAGS": "-L/opt/gcc-trunk/lib64 -Wl,-rpath,/opt/gcc-trunk/lib64 -static-libgcc -static-libstdc++",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
