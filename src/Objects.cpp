@@ -230,7 +230,7 @@ namespace EWE{
         for(auto& inst : obj.record.records){
             
 
-            current_memory_offset += Instruction::GetParamSize(inst.type);
+            current_memory_offset += Inst::GetParamSize(inst.type);
         }
         /*
         for (std::size_t i = 0; i < obj.records.size(); i++) {

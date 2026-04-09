@@ -29,10 +29,15 @@ namespace Asset{
         void UpdateMetaFile(AssetHash hash, Buffer& img);
 
         void Destroy(AssetHash hash);
-        void Destroy(Buffer* buf);
+        void Destroy(Buffer& buf);
 
-        Buffer* Get(AssetHash hash);
-        Buffer* Get(std::string_view name);
+        Buffer& Get(AssetHash hash);
+        Buffer& Get(std::filesystem::path const& name);
+        Buffer& Get(std::filesystem::path const& name,
+            VkDeviceSize instanceSize, uint32_t instanceCount, 
+            VmaAllocationCreateInfo const& vmaAllocCreateInfo, 
+            VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+        );
 
         AssetHash ConvertBDAToHash(VkDeviceAddress addr);
 

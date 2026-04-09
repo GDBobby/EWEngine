@@ -24,7 +24,7 @@ namespace Node{
         head.payload = head_payload;
 
         head.pos = node_editor_window_pos;
-        head.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
 
@@ -42,8 +42,8 @@ namespace Node{
         Logger::Print<Logger::Debug>("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
             node.id, 
             Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
-            node.pins[0]->payload, 
-            node.pins[1]->payload
+            node.pins[0].payload, 
+            node.pins[1].payload
         );
     }
     
@@ -68,8 +68,8 @@ namespace Node{
         node_payload->type = InstNodePayload::Instruction;
         added_node.payload = node_payload;
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
@@ -79,8 +79,8 @@ namespace Node{
         
         ImNodes::EWE::Node* current_node = nullptr;
         //the pin payload is going to be a pointer to the node, unless nullptr
-        if(headNode->pins[0]->payload != nullptr){
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0]->payload);
+        if(headNode->pins[0].payload != nullptr){
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
             PrintNode(*current_node);
             ret.push_back(GetInstructionFromNode(*current_node));
             if(current_node == limit_node){
@@ -89,17 +89,17 @@ namespace Node{
             }
 
             if(limit_node == nullptr){
-                while(current_node->pins[1]->payload != nullptr){
+                while(current_node->pins[1].payload != nullptr){
                     PrintNode(*current_node);
 
-                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1]->payload);
+                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                     auto const current_inst = GetInstructionFromNode(*current_node);
                     ret.push_back(current_inst);
                 }
             }
             else{
-                while(current_node->pins[1]->payload != nullptr){
-                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1]->payload);
+                while(current_node->pins[1].payload != nullptr){
+                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                     auto const current_inst = GetInstructionFromNode(*current_node);
                     ret.push_back(current_inst);
                     if(current_node == limit_node){
@@ -131,8 +131,8 @@ namespace Node{
         //the pin payload is going to be a pointer to the node, unless nullptr
 
         std::size_t distance = 0;
-        if(headNode->pins[0]->payload != nullptr){
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0]->payload);
+        if(headNode->pins[0].payload != nullptr){
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
             if(current_node == nullptr){
                 //Logger::Print<Logger::Debug>("early early return - %s\n", __FUNCTION__);
                 return;
@@ -141,10 +141,10 @@ namespace Node{
             current_payload->distanceFromHead = distance++;
             PrintNode(*current_node);
 
-            while(current_node->pins[1]->payload != nullptr){
+            while(current_node->pins[1].payload != nullptr){
                 PrintNode(*current_node);
 
-                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1]->payload);
+                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                 current_payload = reinterpret_cast<InstNodePayload*>(current_node->payload);
                 current_payload->distanceFromHead = distance++;
             }
@@ -235,8 +235,8 @@ namespace Node{
 
     void RecordNodeGraph::LinkCreated(ImNodes::EWE::NodePair& link) {
         //Logger::Print<Logger::Debug>("link created\n");
-        link.start.node->pins[link.start.offset]->payload = link.end.node;
-        link.end.node->pins[link.end.offset]->payload = link.start.node;
+        link.start.node->pins[link.start.offset].payload = link.end.node;
+        link.end.node->pins[link.end.offset].payload = link.start.node;
 
         UpdateNodeOffsets();
     }
@@ -244,8 +244,8 @@ namespace Node{
     void RecordNodeGraph::LinkDestroyed(ImNodes::EWE::NodePair& link) {
         //Logger::Print<Logger::Debug>("link destroyed\n");
 
-        link.start.node->pins[link.start.offset]->payload = nullptr;
-        link.end.node->pins[link.end.offset]->payload = nullptr;
+        link.start.node->pins[link.start.offset].payload = nullptr;
+        link.end.node->pins[link.end.offset].payload = nullptr;
         ImNodes::EWE::Editor::LinkDestroyed(link);
         UpdateNodeOffsets();
     }
@@ -274,7 +274,7 @@ namespace Node{
     void RecordNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin->local_pos)) {
+        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
             //ImGui::Text("pin");
         }
         ImNodes::EndPinAttribute();
@@ -311,13 +311,13 @@ namespace Node{
 
         headNode = CreateHeadNode();
         auto& init_node = CreateRGNode(create_instructions[0]);
-        headNode->pins[0]->payload = reinterpret_cast<ImNodes::EWE::Node*>(&init_node);
+        headNode->pins[0].payload = reinterpret_cast<ImNodes::EWE::Node*>(&init_node);
         init_node.pos.x = headNode->pos.x + 100.f;
         init_node.pos.y = headNode->pos.y + 30.f;
 
 
         auto* lastNode = &init_node;
-        init_node.pins[0]->payload = headNode;
+        init_node.pins[0].payload = headNode;
 
         links.emplace_back(
             ImNodes::EWE::NodePair{
@@ -338,8 +338,8 @@ namespace Node{
             node.pos.x += 100.f;
             node.pos.y += 30.f;
 
-            node.pins[0]->payload = lastNode;
-            lastNode->pins[1]->payload = &node;
+            node.pins[0].payload = lastNode;
+            lastNode->pins[1].payload = &node;
 
 
             links.emplace_back(

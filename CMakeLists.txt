@@ -96,14 +96,15 @@ target_compile_options(${PROJECT_NAME} PRIVATE
         -Wall 
         -Wextra 
         -Wshadow -Werror=shadow
+		-freflection
+		#-Wunusedparameter
+        -Wreorder -Werror=reorder
+        -Wreturn-type -Werror=return-type
     >
     $<$<CXX_COMPILER_ID:MSVC>:
         /W4 
         /we4456 /we4457 /we4458 /we4459
     >
-	-freflection
-	#-unusedparameter
-	#-whatever is for initializers out of order
 )
 
 if(EWE_IMGUI)

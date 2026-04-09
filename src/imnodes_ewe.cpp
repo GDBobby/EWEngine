@@ -33,8 +33,8 @@ namespace ImNodes{
             }
             ImNodes::PushAttributeFlag(ImNodes::ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
 
-            //begin imgui before this, and end it after
-
+            //begin imgui before this constructor, and end it after
+            //RenderEditorTitle(); the editor pos and size are a bit off. idk how to fix, this didnt do it
             
             ImNodes::EditorContextSet(context);
             ImNodes::BeginNodeEditor();

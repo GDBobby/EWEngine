@@ -3,8 +3,8 @@
 namespace EWE{
 namespace Node{
     RenderGraphNodeGraph::RenderGraphNodeGraph(RenderGraph& _renderGraph)
-        : renderGraph{_renderGraph},
-        ImNodes::EWE::Editor{}
+        : ImNodes::EWE::Editor{},
+        renderGraph{_renderGraph}
     {
         name = "render graph ng";
     }
@@ -33,13 +33,13 @@ namespace Node{
                     float pin_starting = 0.3f;
                     for(auto& wait : ind_sub->submitInfo[0].waitSemaphores){
                         //currently a mem leak
-                        added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{0.f, pin_starting}, .payload = wait});
+                        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, pin_starting}, .payload = wait});
                         pin_starting += 0.1f;
                     }
                     pin_starting = 0.3f;
                     for(auto& signal : ind_sub->submitInfo[0].signalSemaphores){
                         //currently a mem leak
-                        added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, pin_starting}, .payload = &signal});
+                        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, pin_starting}, .payload = &signal});
                         pin_starting += 0.1f;
                     }
                 }
@@ -88,9 +88,9 @@ namespace Node{
 
     void RenderGraphNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
-        auto* payload = reinterpret_cast<VkSemaphoreSubmitInfo*>(pin->payload);
+        auto* payload = reinterpret_cast<VkSemaphoreSubmitInfo*>(pin.payload);
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index, pin->local_pos)) {
+        if (ImNodes::BeginPinAttribute(node.id + pin_index, pin.local_pos)) {
             ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "%zu", payload->stageMask);
         }
         else {

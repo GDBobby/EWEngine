@@ -222,7 +222,10 @@ namespace EWE{
 
 					ImGui::SetNextWindowPos(viewport->Pos);
 					ImGui::SetNextWindowSize(viewport->Size);
+
+					ImGuiWindow* background_window = nullptr;
 					if(ImGui::Begin("##backgroundwindow", &always_open, main_flags)){
+						background_window = ImGui::GetCurrentWindow();
 						vp.current_viewport.offset.x = ImGui::GetWindowPos().x;
 						vp.current_viewport.offset.y = ImGui::GetWindowPos().y;
 
@@ -231,6 +234,9 @@ namespace EWE{
 						ImGui::PushID(static_cast<int>(reinterpret_cast<std::size_t>(vp.context)));
 						vp.exec_func(vp);
 						ImGui::PopID();
+					}
+					if(background_window != nullptr){
+						ImGui::BringWindowToDisplayBack(background_window);
 					}
 					ImGui::End();
 					ImGui::Render();

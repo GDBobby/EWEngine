@@ -12,8 +12,8 @@ namespace Asset{
 
         template<>
         struct Manager<Shader>{
-        FileSystem files;
         LogicalDevice& logicalDevice;
+        FileSystem files;
 
         static AssetHash GetHash(Shader const& shader){
             return CrossPlatformPathHash(shader.filepath);
@@ -23,7 +23,7 @@ namespace Asset{
 
         std::unordered_map<std::filesystem::path, Shader*> shaders;
 
-        Shader* Get(std::string_view file_path);
+        Shader* Get(std::filesystem::path const& file_path);
 
 #if EWE_IMGUI
         void Imgui();

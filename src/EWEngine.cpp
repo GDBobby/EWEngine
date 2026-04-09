@@ -276,7 +276,7 @@ namespace EWE{
         }
         */
     {
-        Global::Create(logicalDevice, window, stcManager, "/home/corey/Projects/EWEngine/examples/common");
+        Global::Create(logicalDevice, window, stcManager, std::filesystem::current_path());
     }
 
 #if EWE_IMGUI

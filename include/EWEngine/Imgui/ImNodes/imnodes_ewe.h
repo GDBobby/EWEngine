@@ -28,7 +28,7 @@ namespace ImNodes{
             bool snapToGrid = false;
 
             void* payload = nullptr;
-            std::vector<Pin*> pins{}; //i dont want to move the pins from here, hence the pointer
+            std::vector<Pin> pins{}; //i dont want to move the pins from here, hence the pointer
 
             //negative is doesn't contain
             int CheckPin(PinID globalPinID); 
@@ -43,7 +43,7 @@ namespace ImNodes{
             PinOffset offset;
             Pin* GetPin(){
                 if(node){
-                    return node->pins[offset];
+                    return &node->pins[offset];
                 }
                 return nullptr;
             }

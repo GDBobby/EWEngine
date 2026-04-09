@@ -13,7 +13,7 @@ namespace Asset{
 
     }
 
-    Shader* Manager<Shader>::Get(std::string_view file_name){
+    Shader* Manager<Shader>::Get(std::filesystem::path const& file_name){
 
         auto foundShader = shaders.find(file_name);
         
@@ -26,7 +26,7 @@ namespace Asset{
                 }
             );
 
-            std::filesystem::path full_file_name = files.root_directory / file_name.data();
+            std::filesystem::path full_file_name = files.root_directory / file_name;
 
             if(iter != files.hashed_path.end()){
                 auto emp_back = shaders.try_emplace(file_name, new Shader(logicalDevice, full_file_name.string().c_str()));
@@ -35,7 +35,7 @@ namespace Asset{
             }
         }
 
-        Logger::Print<Logger::Error>("returning nullptr from GetShader : %s - %s\n", files.root_directory.string().c_str(), file_name.data());
+        Logger::Print<Logger::Error>("returning nullptr from GetShader : %s - %s\n", files.root_directory.string().c_str(), file_name.string().c_str());
         return nullptr;
     }
 

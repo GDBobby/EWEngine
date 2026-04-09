@@ -21,3 +21,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -freflection)
+
+target_compile_options(EWEngine PRIVATE -g)
+target_compile_options(EWFramework PRIVATE -g)

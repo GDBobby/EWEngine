@@ -50,6 +50,7 @@ namespace Node{
         //this is just going to call InitFromPkg
         [[nodiscard]] explicit InstructionPackageNodeGraph(Command::InstructionPackage& pkg);
 
+        void RecreateLinks();
         void InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type);
         void InitFromPackage(Command::InstructionPackage& pkg);
 

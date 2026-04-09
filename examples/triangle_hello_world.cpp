@@ -1,4 +1,5 @@
 //example
+#include "EightWinds/Preprocessor.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/VulkanHeader.h"
 
@@ -73,7 +74,40 @@ std::string GetMetaInfo_Temp(){
     return "none";
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+
+    if(argc < 2){
+        EWE::Logger::Print<EWE::Logger::Warning>("working directory wasn't set via cmd line\n");
+
+    //need to fix htis. its something with my windows debugger
+        auto current_working_directory = std::filesystem::current_path();
+        if (current_working_directory.parent_path().parent_path().stem() == "build") {
+            current_working_directory = current_working_directory.parent_path().parent_path().parent_path();
+#if EWE_DEBUG_BOOL
+            EWE::Logger::Print<EWE::Logger::Normal>("build redacted working dir - %s\n", current_working_directory.string().c_str());
+#endif
+        }
+        else if (current_working_directory.parent_path().stem() == "build") {
+            current_working_directory = current_working_directory.parent_path().parent_path();
+        }
+        if (current_working_directory.stem() == "EWEngine") {
+            current_working_directory = current_working_directory / "examples";
+        }
+     std::filesystem::current_path(current_working_directory);
+#if EWE_DEBUG_BOOL
+        EWE::Logger::Print<EWE::Logger::Normal>("current dir (not set from cmd line) - %s\n", std::filesystem::current_path().string().c_str());
+#endif
+        EWE_Debug_Breakpoint();
+    }
+    else{
+        auto argv1_length = strlen(argv[1]);
+        if(argv1_length <= 5){
+            EWE::Logger::Print<EWE::Logger::Error>("im scared to fuck my system, not allowing working directories less than 5 characters\n");
+            return -1;
+        }
+        std::filesystem::current_path(argv[1]);
+        EWE::Logger::Print<EWE::Logger::Normal>("current dir (set from cmd line) - %s\n", std::filesystem::current_path().string().c_str());
+    }
 
 
 #if EWE_DEBUG_BOOL
@@ -86,28 +120,6 @@ int main() {
 
 #if defined(__SANITIZE_ADDRESS__)
     EWE::Logger::Print<EWE::Logger::Debug>("compiled with asan\n");
-#endif
-
-    std::hash<std::filesystem::path> hash{};
-    hash(std::filesystem::current_path());
-
-    //need to fix htis. its something with my windows debugger
-    auto current_working_directory = std::filesystem::current_path();
-    if (current_working_directory.parent_path().parent_path().stem() == "build") {
-        current_working_directory = current_working_directory.parent_path().parent_path().parent_path();
-#if EWE_DEBUG_BOOL
-        EWE::Logger::Print<EWE::Logger::Normal>("build redacted working dir - %s\n", current_working_directory.string().c_str());
-#endif
-    }
-    else if (current_working_directory.parent_path().stem() == "build") {
-        current_working_directory = current_working_directory.parent_path().parent_path();
-    }
-    if (current_working_directory.stem() == "EWEngine") {
-        current_working_directory = current_working_directory / "examples";
-    }
-    std::filesystem::current_path(current_working_directory);
-#if EWE_DEBUG_BOOL
-    EWE::Logger::Print<EWE::Logger::Normal>("current dir - %s\n", std::filesystem::current_path().string().c_str());
 #endif
 
     uint32_t extensionCount = 0;
@@ -199,10 +211,6 @@ int main() {
     triangle_drawData.use_labelPack = true;
     triangle_raster_task.AddDraw(triangle_rasterObj, &triangle_drawData);
 
-
-    //EWE::Node::Graph nodeGraph{};
-    //nodeGraph.Record(triangle_raster_task);
-
     EWE::Command::Record triangleRecord{};
     triangle_raster_task.Record(triangleRecord, true);
 
@@ -226,8 +234,6 @@ int main() {
             triangle_label.blue = 0.f;
         }
     }
-
-    //nodeGraph.Undefer();
 
 
     VmaAllocationCreateInfo vmaAllocInfo{
@@ -255,10 +261,8 @@ int main() {
 #endif
         }
     }
-    EWE::Buffer vertex_buffer{ logicalDevice, sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT };
-#if EWE_DEBUG_NAMING
-    vertex_buffer.SetName("vertex buffer");
-#endif
+
+    auto& vertex_buffer = EWE::Global::buffers->Get("triangle vertex buffer", sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
     {
         TriangleVertex* mappedData = reinterpret_cast<TriangleVertex*>(vertex_buffer.Map());
 
@@ -620,24 +624,28 @@ int main() {
         }
     };
     {
+        auto& vp_back = imguiHandler.viewports.emplace_back();
+        vp_back.exec_func = engine_imgui_window;
+        vp_back.context = imguiHandler.InitializeContext();
+        vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.8f;
+        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.2f;
+    }
+    {
         auto& vp_back = imguiHandler.viewports[0];
         //imguiHandler.viewports.emplace_back();
         vp_back.exec_func = node_imgui_vp;
+        vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.8f;
         vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.2f;
-        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.5f;
+        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.8f;
     }
     {
         auto& vp_back = imguiHandler.viewports.emplace_back();
         vp_back.exec_func = assets_imgui_window;
         vp_back.context = imguiHandler.InitializeContext();
-        vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.7f;
-        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.3f;
-    }
-    {
-        auto& vp_back = imguiHandler.viewports.emplace_back();
-        vp_back.exec_func = engine_imgui_window;
-        vp_back.context = imguiHandler.InitializeContext();
-        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.2f;
+        vp_back.current_viewport.offset.x = EWE::Global::window->screenDimensions.width * 0.8f;
+        vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.2f;
+        //vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.7f;
+        //vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.3f;
     }
 
     //imguiHandler.SetSubmissionData(imgui_submission.submitInfo);

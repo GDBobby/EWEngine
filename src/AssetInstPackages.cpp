@@ -1,5 +1,6 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/InstPackages.h"
+#include "EWEngine/Global.h"
 #include "EightWinds/Backend/Logger.h"
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/GlobalPushConstant.h"
@@ -40,11 +41,8 @@ namespace Asset{
             auto path_hash_data = files.hashed_path.at(hash);
             auto const& fs_path = path_hash_data.value;
             auto full_load_path = files.root_directory / fs_path;
-            //Command::InstructionPackage& InstructionPackage = data_arena.AddElement(full_load_path.string());
 
-            //potentially check for duplicates
-
-            return nullptr;//&InstructionPackage;
+            return ReadFile(full_load_path);
         }
     }
     Command::InstructionPackage* Manager<Command::InstructionPackage>::Get(std::filesystem::path const& name){
@@ -88,7 +86,7 @@ namespace Asset{
         std::size_t written_param_size = 0;
         //just checking sizes now, and going to write that size to file
         for(std::size_t i = 0; i < param_pool.instructions.size(); i++){
-            const auto current_param_size = Instruction::GetParamSize(param_pool.instructions[i]);
+            const auto current_param_size = Inst::GetParamSize(param_pool.instructions[i]);
             if(current_param_size > 0){
                 if(param_pool.instructions[i] == Inst::Push){
                     //the globalpushconstant_raw is 96 bytes, but giving it some padding will help keep the file version stable
@@ -103,18 +101,19 @@ namespace Asset{
         Logger::Print("current write position, before written param size : %zu\n", outFile.tellp());
         outFile.write(reinterpret_cast<char*>(&written_param_size), sizeof(std::size_t));
         outFile.write(reinterpret_cast<const char*>(param_pool.instructions.data()), temp_buffer * sizeof(Inst::Type));
+        Logger::Print("current write position, after writing instructions : %zu\n", outFile.tellp());
     
         //actually writign to file now
         for(uint8_t frame = 0; frame < max_frames_in_flight; frame++) {
             std::size_t param_index = 0;
             for(std::size_t i = 0; i < param_pool.instructions.size(); i++){
-                const auto current_param_size = Instruction::GetParamSize(param_pool.instructions[i]);
+                const auto current_param_size = Inst::GetParamSize(param_pool.instructions[i]);
                 if(current_param_size > 0){
 
                     //convert the buffer_address to a buffer hash
                     //convert the texture index to a dii hash
                     if(param_pool.instructions[i] == Inst::Push){
-                        written_param_size += 1;
+                        Logger::Print("writing push at [%zu] : frame[%u]\n", outFile.tellp(), frame);
                         GlobalPushConstant_Raw* temp_push = reinterpret_cast<GlobalPushConstant_Raw*>(param_pool.param_data[param_index].data[frame]);
                         AssetHash hash_buffer;
                         
@@ -137,7 +136,10 @@ namespace Asset{
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
                     }
-                    written_param_size += current_param_size;
+                    else{
+                        outFile.write(reinterpret_cast<char*>(param_pool.param_data[param_index].data[frame]), current_param_size);
+                    }
+                    //written_param_size += current_param_size;
                     param_index++;
                 }
             }
@@ -148,7 +150,7 @@ namespace Asset{
         switch(pkg_type){
             case Command::InstructionPackage::Type::Object:
                 EWE_ASSERT(payload != nullptr);
-                outFile.write(reinterpret_cast<char*>(payload), sizeof(ObjectRasterConfig));
+                outFile.write(reinterpret_cast<char*>(payload), sizeof(Command::ObjectPackage::Payload));
                 break;
             default: break;
         }
@@ -163,7 +165,7 @@ namespace Asset{
                 return WriteToFile(pkg.paramPool, nullptr, pkg.type, path);
                 break;
             case Command::InstructionPackage::Object:
-                return WriteToFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).config, pkg.type, path);
+                return WriteToFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, pkg.type, path);
                 break;
             default: EWE_UNREACHABLE;
         }
@@ -204,8 +206,8 @@ namespace Asset{
         std::size_t written_param_size = 0;
         Logger::Print("current read position, before written param size : %zu\n", inFile.tellg());
         inFile.read(reinterpret_cast<char*>(&written_param_size), sizeof(std::size_t));
-
         inFile.read(reinterpret_cast<char*>(ret->paramPool.instructions.data()), instruction_count * sizeof(Inst::Type));
+        Logger::Print("current read position, after writing instructions : %zu\n", inFile.tellg());
         
         for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
             ret->paramPool.params[frame].Resize(written_param_size);
@@ -214,7 +216,7 @@ namespace Asset{
         
         std::size_t current_param_offset = 0;
         for(auto& inst : ret->paramPool.instructions){
-            const auto current_param_size = Instruction::GetParamSize(inst);
+            const auto current_param_size = Inst::GetParamSize(inst);
             if(current_param_size > 0){
                 auto& back_param = ret->paramPool.param_data.emplace_back();
 
@@ -229,40 +231,37 @@ namespace Asset{
         for(uint8_t frame = 0; frame < max_frames_in_flight; frame++) {
             std::size_t param_index = 0;
             for(std::size_t i = 0; i < ret->paramPool.instructions.size(); i++){
-                const auto current_param_size = Instruction::GetParamSize(ret->paramPool.instructions[i]);
+                const auto current_param_size = Inst::GetParamSize(ret->paramPool.instructions[i]);
                 if(current_param_size > 0){
                     //convert the buffer_address to a buffer hash
                     //convert the texture index to a dii hash
                     if(ret->paramPool.instructions[i] == Inst::Push){
-                        written_param_size += 1;
+                        Logger::Print("reading push at [%zu] : frame[%u]\n", inFile.tellg(), frame);
                         GlobalPushConstant_Raw* temp_push = reinterpret_cast<GlobalPushConstant_Raw*>(ret->paramPool.param_data[param_index].data[frame]);
                         AssetHash hash_buffer;
-                        std::size_t read_count = 0;
                         for(uint8_t j = 0; j < GlobalPushConstant_Raw::buffer_count; j++){
-                            temp_push->buffer_addr[j] = null_buffer;
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
-                            read_count++;
-                            if(hash_buffer == INVALID_HASH){
-                                break;
+                            if(hash_buffer != INVALID_HASH){
+                                temp_push->buffer_addr[j] = Global::buffers->Get(hash_buffer).deviceAddress;
                             }
-                            hash_buffer = Global::buffers->ConvertBDAToHash(temp_push->buffer_addr[j]);
-                            
+                            else{
+                                temp_push->buffer_addr[j] = null_buffer;
+                            }
                         }
                         for(uint8_t j = 0; j < GlobalPushConstant_Raw::texture_count; j++){
-                            temp_push->texture_indices[j] = null_texture;
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
-                            read_count++;
-                            if(hash_buffer == INVALID_HASH){
-                                break;
+                            if(hash_buffer != INVALID_HASH){
+                                auto& temp_dii = Global::diis->Get(hash_buffer);
+                                temp_push->texture_indices[j] = temp_dii.index;
                             }
-                            auto& temp_dii = Global::diis->Get(hash_buffer);
-                            temp_push->texture_indices[j] = temp_dii.index;
+                            else{
+                                temp_push->texture_indices[j] = null_texture;
+                            }
                         }
-                        //the write writes a 64 bit hash each slot, regardless if filled or not, instead of directly copying the push data
-                        inFile.seekg((16 - read_count) * sizeof(AssetHash), std::ios::cur);
                     }
                     else{
-                        inFile.read(reinterpret_cast<char*>(ret->paramPool.param_data[param_index].data[frame]), current_param_size);
+                        const std::size_t param_addr = ret->paramPool.param_data[param_index].data[frame];
+                        inFile.read(reinterpret_cast<char*>(param_addr), current_param_size);
                     }
                     param_index++;
                 }
@@ -272,7 +271,7 @@ namespace Asset{
 
         if(ret->type == Command::InstructionPackage::Type::Object) {
             Command::ObjectPackage* objPkg = static_cast<Command::ObjectPackage*>(ret);
-            inFile.read(reinterpret_cast<char*>(&objPkg->config), sizeof(objPkg->config));
+            inFile.read(reinterpret_cast<char*>(&objPkg->payload), sizeof(objPkg->payload));
         }
 
         inFile.close();

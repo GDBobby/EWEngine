@@ -15,37 +15,49 @@ Manager<Buffer>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path co
     }
 
     void Manager<Buffer>::Destroy(AssetHash hash){
-        Buffer* buf = Get(hash);
-        EWE_ASSERT(buf != nullptr);
-        data_arena.DestroyElement(buf);
+        Buffer& buf = Get(hash);
+        data_arena.DestroyElement(&buf);
         association_container.Remove(hash);
     }
-    void Manager<Buffer>::Destroy(Buffer* buf){
+    void Manager<Buffer>::Destroy(Buffer& buf){
         //do I hash it first? idk
-        AssetHash hash = GetHash(*buf);
+        AssetHash hash = GetHash(buf);
         Destroy(hash);
     }
-    Buffer* Manager<Buffer>::Get(AssetHash hash){
+    Buffer& Manager<Buffer>::Get(AssetHash hash){
         auto iter = association_container.find(hash);
         if(iter != association_container.end()){
-            return iter->value;
+            return *iter->value;
         }
         else{
-            EWE_UNREACHABLE;
-            //auto buf_path_hash_data = files.hashed_path.at(hash);
-            //auto const& fs_path = buf_path_hash_data.value;
             Buffer& buf = data_arena.AddElement(logicalDevice);
-            //buf.name = fs_path;
             association_container.push_back(hash, &buf);
-
-            //auto full_buf_load_path = files.root_directory / fs_path;
-
-
-            return &buf;
+            //set name??
+            return buf;
         }
     }
-    Buffer* Manager<Buffer>::Get(std::string_view name){
-        return Get(CrossPlatformPathHash(name));
+    Buffer& Manager<Buffer>::Get(std::filesystem::path const& name){
+        auto& ret = Get(CrossPlatformPathHash(name));
+        return ret;
+    }
+    Buffer& Manager<Buffer>::Get(std::filesystem::path const& name,
+            VkDeviceSize instanceSize, uint32_t instanceCount, 
+            VmaAllocationCreateInfo const& vmaAllocCreateInfo, 
+            VkBufferUsageFlags usageFlags
+    )
+    {
+        const auto hash = CrossPlatformPathHash(name);
+        auto iter = association_container.find(hash);
+        if(iter != association_container.end()){
+            Logger::Print<Logger::Error>("attempting to re-create an existing buffer\n");
+            return *iter->value;
+        }
+        else{
+            Buffer& buf = data_arena.AddElement(logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
+            association_container.push_back(hash, &buf);
+            buf.SetName(name.string());
+            return buf;
+        }
     }
 
 

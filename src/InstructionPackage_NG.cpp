@@ -4,8 +4,10 @@
 #include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/Params.h"
 #include "EightWinds/Command/InstructionPackage.h"
+#include "EightWinds/Command/ObjectInstructionPackage.h"
 #include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/ObjectRasterConfig.h"
+#include "EightWinds/Preprocessor.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/VulkanHeader.h"
 
@@ -41,7 +43,7 @@ namespace Node{
         node_payload->distanceFromHead = -1; //head isn['t connected to head
         head.payload = node_payload;
         head.pos = node_editor_window_pos;
-        head.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
 
@@ -60,8 +62,8 @@ namespace Node{
         Logger::Print<Logger::Debug>("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
             node.id, 
             Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
-            node.pins[0]->payload, 
-            node.pins[1]->payload
+            node.pins[0].payload, 
+            node.pins[1].payload
         );
     }
 
@@ -69,10 +71,10 @@ namespace Node{
         ImGui::BulletText("param data - inst count[%zu] : param heap size[%zu] : param count[%zu]", paramPool.instructions.size(), paramPool.params[0].Size(), paramPool.param_data.size());
         ImNodes::EWE::Editor::RenderEditorTitle();
         if(packageType == Command::InstructionPackage::Object){
-            ObjectRasterConfig* rasterConfig = reinterpret_cast<ObjectRasterConfig*>(package_payload);
+            ObjectRasterConfig& rasterConfig = reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload)->config;
             //ImGui::SameLine();
             if(ImGui::TreeNode("object config")){
-                ImguiExtension::Imgui(*rasterConfig);
+                ImguiExtension::Imgui(rasterConfig);
                 ImGui::TreePop();
             }
         }
@@ -99,8 +101,8 @@ namespace Node{
 
         added_node.payload = node_payload;
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(new ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
@@ -110,8 +112,8 @@ namespace Node{
         
         ImNodes::EWE::Node* current_node = nullptr;
         //the pin payload is going to be a pointer to the node, unless nullptr
-        if(headNode->pins[0]->payload != nullptr){
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0]->payload);
+        if(headNode->pins[0].payload != nullptr){
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
             PrintNode(*current_node);
             ret.push_back(GetInstructionFromNode(*current_node));
             if(current_node == limit_node){
@@ -120,17 +122,17 @@ namespace Node{
             }
 
             if(limit_node == nullptr){
-                while(current_node->pins[1]->payload != nullptr){
+                while(current_node->pins[1].payload != nullptr){
                     PrintNode(*current_node);
 
-                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1]->payload);
+                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                     auto const current_inst = GetInstructionFromNode(*current_node);
                     ret.push_back(current_inst);
                 }
             }
             else{
-                while(current_node->pins[1]->payload != nullptr){
-                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1]->payload);
+                while(current_node->pins[1].payload != nullptr){
+                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                     auto const current_inst = GetInstructionFromNode(*current_node);
                     ret.push_back(current_inst);
                     if(current_node == limit_node){
@@ -170,8 +172,8 @@ namespace Node{
         //the pin payload is going to be a pointer to the node, unless nullptr
 
         std::size_t distance = 0;
-        if(headNode->pins[0]->payload != nullptr){
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0]->payload);
+        if(headNode->pins[0].payload != nullptr){
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
             if(current_node == nullptr){
                 //Logger::Print<Logger::Debug>("early early return - %s\n", __FUNCTION__);
                 return;
@@ -180,10 +182,10 @@ namespace Node{
             current_payload->distanceFromHead = distance++;
             //PrintNode(*current_node);
 
-            while(current_node->pins[1]->payload != nullptr){
+            while(current_node->pins[1].payload != nullptr){
                 PrintNode(*current_node);
 
-                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1]->payload);
+                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                 current_payload = reinterpret_cast<InstNodePayload*>(current_node->payload);
                 current_payload->distanceFromHead = distance++;
             }
@@ -211,8 +213,8 @@ namespace Node{
         //offsets should already be at 1 and 0 respectively
         existing_link->start.GetPin()->payload = &added_node;
         existing_link->end.GetPin()->payload = &added_node;
-        added_node.pins[0]->payload = existing_link->start.node;
-        added_node.pins[1]->payload = existing_link->end.node;
+        added_node.pins[0].payload = existing_link->start.node;
+        added_node.pins[1].payload = existing_link->end.node;
         ImNodes::EWE::NodePair created_link{
             .start = ImNodes::EWE::NodeAndPin{
                 .node = &added_node,
@@ -354,8 +356,8 @@ namespace Node{
         link_empty_drop.offset = pin_offset;
     }
     void InstructionPackageNodeGraph::LinkCreated(ImNodes::EWE::NodePair& link) {
-        if(link.start.node->pins[link.start.offset]->payload != nullptr 
-            || link.end.node->pins[link.end.offset]->payload != nullptr
+        if(link.start.node->pins[link.start.offset].payload != nullptr 
+            || link.end.node->pins[link.end.offset].payload != nullptr
         ){
             ImNodes::EWE::Editor::LinkDestroyed(link);
             return;
@@ -380,8 +382,8 @@ namespace Node{
         }
 
         Logger::Print<Logger::Debug>("ipng::link created\n");
-        link.start.node->pins[link.start.offset]->payload = link.end.node;
-        link.end.node->pins[link.end.offset]->payload = link.start.node;
+        link.start.node->pins[link.start.offset].payload = link.end.node;
+        link.end.node->pins[link.end.offset].payload = link.start.node;
         if(reinterpret_cast<InstNodePayload*>(link.start.node->payload)->distanceFromHead >= 0 || link.start.node == headNode){
             Logger::Print<Logger::Debug>("ipng : push back necessary\n");
             auto* end_payload = reinterpret_cast<InstNodePayload*>(link.end.node->payload);
@@ -403,8 +405,8 @@ namespace Node{
     void InstructionPackageNodeGraph::LinkDestroyed(ImNodes::EWE::NodePair& link) {
         Logger::Print<Logger::Debug>("ipng::link destroyed\n");
         
-        link.start.node->pins[link.start.offset]->payload = nullptr;
-        link.end.node->pins[link.end.offset]->payload = nullptr;
+        link.start.node->pins[link.start.offset].payload = nullptr;
+        link.end.node->pins[link.end.offset].payload = nullptr;
         auto* end_payload = reinterpret_cast<InstNodePayload*>(link.end.node->payload);
         //auto* start_payload = reinterpret_cast<InstNodePayload*>(link.start.node->payload); 
         if(end_payload->distanceFromHead >= 0){
@@ -430,16 +432,19 @@ namespace Node{
                     if(package_payload != nullptr){
                         switch(prev_pkg_type){
                             case Command::InstructionPackage::Object: 
-                                delete reinterpret_cast<ObjectRasterConfig*>(package_payload); 
+                                delete reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload); 
                                 break;
                             //case Command::InstructionPackage::Base: EWE_UNREACHABLE;
                             default:EWE_UNREACHABLE;
                         }
                     }
                     switch(packageType){
-                        case Command::InstructionPackage::Object: 
-                            package_payload = new ObjectRasterConfig();
+                        case Command::InstructionPackage::Object: {
+                            auto* temp_payload = new Command::ObjectPackage::Payload();
+                            temp_payload->shaders.fill(nullptr);
+                            package_payload = temp_payload;
                             break;
+                        }
                         default: break;
 
                     }
@@ -461,7 +466,7 @@ namespace Node{
 
         //ImGui::DebugLog("");
         ImGui::Text("distance from head : %d", node_payload->distanceFromHead); //empty text just to populate this
-        const std::size_t param_size = Instruction::GetParamSize(node_payload->iType);
+        const std::size_t param_size = Inst::GetParamSize(node_payload->iType);
         ImGui::Text("param size : %zu", param_size);
         if(node_payload->distanceFromHead >= 0){
             if(param_size > 0){
@@ -474,12 +479,12 @@ namespace Node{
     void InstructionPackageNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin->local_pos)) {
+        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
             //ImGui::Text("pin");
             
         }
-        if(node.pins[pin_index]->payload != nullptr){
-            ImGui::Text("payload id : %d", reinterpret_cast<ImNodes::EWE::Node*>(node.pins[pin_index]->payload)->id);
+        if(node.pins[pin_index].payload != nullptr){
+            ImGui::Text("payload id : %d", reinterpret_cast<ImNodes::EWE::Node*>(node.pins[pin_index].payload)->id);
         }
         ImNodes::EndPinAttribute();
     }
@@ -504,38 +509,69 @@ namespace Node{
         return !explorer.enabled;
     }
 
+    void InstructionPackageNodeGraph::RecreateLinks(){
+        links.clear();
+
+        if(headNode->pins[0].payload == nullptr){
+            return;
+        }
+        ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+
+        links.emplace_back(
+            ImNodes::EWE::NodePair{
+                .start = ImNodes::EWE::NodeAndPin{
+                    .node = headNode,
+                    .offset = 0
+                },
+                .end = ImNodes::EWE::NodeAndPin{
+                    .node = current_node,
+                    .offset = 0
+                }
+            }
+        );
+        while(current_node->pins[1].payload != nullptr){
+            links.emplace_back(
+                ImNodes::EWE::NodePair{
+                    .start = ImNodes::EWE::NodeAndPin{
+                        .node = current_node,
+                        .offset = 1
+                    },
+                    .end = ImNodes::EWE::NodeAndPin{
+                        .node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload),
+                        .offset = 0
+                    }
+                }
+            );
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+        }
+
+        UpdateNodeOffsets();
+    }
+
     void InstructionPackageNodeGraph::InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type){
         nodes.Clear();
         links.clear();
 
+        try{
+            paramPool = pp;
+        }
+        catch(std::exception& e){
+            Logger::Print<Logger::Error>("failed to copy operator param pool : %s\n", e.what());
+        }
+
         headNode = CreateHeadNode();
-        if(paramPool.instructions.size() == 0){
+        if(pp.instructions.size() == 0){
             return;
         }
         auto& init_node = CreateRGNode(paramPool.instructions[0]);
         reinterpret_cast<InstNodePayload*>(init_node.payload)->distanceFromHead = 0;
-        headNode->pins[0]->payload = &init_node;
+        headNode->pins[0].payload = &init_node;
         init_node.pos.x = headNode->pos.x + 100.f;
         init_node.pos.y = headNode->pos.y + 30.f;
 
         auto* lastNode = &init_node;
         //InstNodePayload* last_payload = lastNode->payload;
-        init_node.pins[0]->payload = headNode;
-        
-        LinkCreated(
-            links.emplace_back(
-                ImNodes::EWE::NodePair{
-                    .start = ImNodes::EWE::NodeAndPin{
-                        .node = headNode,
-                        .offset = 0
-                    },
-                    .end = ImNodes::EWE::NodeAndPin{
-                        .node = &init_node,
-                        .offset = 0
-                    }
-                }
-            )
-        );
+        init_node.pins[0].payload = headNode;
 
         for(std::size_t i = 1; i < pp.instructions.size(); i++){
             auto& node = CreateRGNode(pp.instructions[i]);
@@ -543,24 +579,10 @@ namespace Node{
             node.pos.x += 100.f;
             node.pos.y += 30.f;
 
-            node.pins[0]->payload = lastNode;
+            node.pins[0].payload = lastNode;
             reinterpret_cast<InstNodePayload*>(node.payload)->distanceFromHead = reinterpret_cast<InstNodePayload*>(lastNode->payload)->distanceFromHead + 1;
-            lastNode->pins[1]->payload = &node;
+            lastNode->pins[1].payload = &node;
 
-            LinkCreated(
-                links.emplace_back(
-                    ImNodes::EWE::NodePair{
-                        .start = ImNodes::EWE::NodeAndPin{
-                            .node = lastNode,
-                            .offset = 1
-                        },
-                        .end = ImNodes::EWE::NodeAndPin{
-                            .node = &node,
-                            .offset = 0
-                        }
-                    }
-                )
-            );
             lastNode = &node;
         }
 
@@ -578,12 +600,13 @@ namespace Node{
                     Command::ObjectPackage::allowed_instructions.begin(), 
                     Command::ObjectPackage::allowed_instructions.end()
                 };
-                package_payload = new ObjectRasterConfig();
+                package_payload = new Command::ObjectPackage::Payload();
                 EWE_ASSERT(payload != nullptr);
-                memcpy(package_payload, payload, sizeof(ObjectRasterConfig));
+                memcpy(package_payload, payload, sizeof(Command::ObjectPackage::Payload));
                 break;
             default: break;
         }
+        RecreateLinks();
     }
     void InstructionPackageNodeGraph::InitFromPackage(Command::InstructionPackage& pkg){
         switch(pkg.type){
@@ -591,7 +614,7 @@ namespace Node{
                 InitFromFile(pkg.paramPool, nullptr, pkg.type);
                 break;
             case Command::InstructionPackage::Object:
-                InitFromFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).config, pkg.type);
+                InitFromFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, pkg.type);
                 break;
             default: 
                 Logger::Print<Logger::Warning>("attempting to init node graph from invalid pkg type\n"); 
@@ -611,7 +634,7 @@ namespace Node{
                 auto* pkg = EWE::Global::instPackages->ReadFile(load_path);
                 InitFromPackage(*pkg);
 
-                Logger::Print<Logger::Debug>("loaded pkg instructions size : %zu\n", pkg->paramPool.instructions.size());
+                Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }

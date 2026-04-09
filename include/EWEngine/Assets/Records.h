@@ -27,7 +27,7 @@ namespace Asset{
         //void UpdateMetaFile(AssetHash hash, Command::Record& img);
 
         void Destroy(AssetHash hash);
-        void Destroy(Command::Record* sampler);
+        void Destroy(Command::Record* record);
 
         Command::Record* Get(AssetHash hash);
         Command::Record* Get(std::string_view name);

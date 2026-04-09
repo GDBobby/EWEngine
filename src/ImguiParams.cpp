@@ -14,9 +14,9 @@ namespace EWE{
 				ImGui::TableNextColumn();
 				if(iter < GlobalPushConstant_Raw::buffer_count){
 					if(mem_addr->buffer_addr[iter] != null_buffer){
-						auto* buf = Global::buffers->Get(Global::buffers->ConvertBDAToHash(mem_addr->buffer_addr[iter]));
-						ImGui::Text("%u:%s", iter, buf->name.c_str());
-						ImGui::SetItemTooltip(buf->name.c_str());
+						auto& buf = Global::buffers->Get(Global::buffers->ConvertBDAToHash(mem_addr->buffer_addr[iter]));
+						ImGui::Text("%u:%s", iter, buf.name.c_str());
+						ImGui::SetItemTooltip(buf.name.c_str());
 					}
 					else{
 						ImGui::Text("%u:null", iter);
