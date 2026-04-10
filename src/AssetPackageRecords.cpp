@@ -1,11 +1,15 @@
-#include "EWEngine/Assets/Tasks.h"
+#include "EWEngine/Assets/PackageRecords.h"
 #include "EWEngine/Global.h"
+
+
+#include "EWEngine/Imgui/DragDrop.h"
+#include <fstream>
 
 namespace EWE{
 namespace Asset{
     Manager<Command::PackageRecord>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
     : logicalDevice{_logicalDevice},
-        files{root_path, std::vector<std::string>{".egt"}}
+        files{root_path, std::vector<std::string>{".epr"}}
     {
 
     }
@@ -23,24 +27,44 @@ namespace Asset{
     Command::PackageRecord& Manager<Command::PackageRecord>::Get(AssetHash hash){
 auto iter = association_container.find(hash);
         if(iter != association_container.end()){
-            return iter->value;
+            return *iter->value;
         }
         else{
             auto path_hash_data = files.hashed_path.at(hash);
             auto const& fs_path = path_hash_data.value;
             auto full_load_path = files.root_directory / fs_path;
 
-            return ReadFile(full_load_path);
+            auto& ret = ReadFile(full_load_path);
+            association_container.push_back(hash, &ret);
+            return ret;
         }
     }
-    Command::PackageRecord Manager<Command::PackageRecord>::Get(std::filesystem::path const& name){
+    Command::PackageRecord& Manager<Command::PackageRecord>::Get(std::filesystem::path const& name){
         //potentially enforce it exists in the file system, and enforce create is called for construction
         return Get(CrossPlatformPathHash(name));
     }
 
 #ifdef EWE_IMGUI
-    void Imgui(){
-
+    void Manager<Command::PackageRecord>::Imgui(){
+        for(auto& kvp : files.hashed_path){
+            auto found = association_container.find(kvp.key);
+            if(found == association_container.end()){
+                if(ImGui::Button(kvp.value.string().c_str())){
+                    Get(kvp.key);
+                }
+            }
+        }
+        for(auto& kvp : association_container){
+            if(ImGui::TreeNode(kvp.value->name.c_str())) {
+                DragDropPtr::Source(*kvp.value);
+                //ImGuiExtension::Imgui(*kvp.value);
+                ImGui::TreePop();
+            }
+            else{
+                DragDropPtr::Source(*kvp.value);
+            }
+            
+        }
     }
 #endif
 
@@ -55,6 +79,9 @@ auto iter = association_container.find(hash);
         std::size_t temp_buffer = current_file_version;
         outFile.write(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
         
+        if(rec.queue == nullptr){
+            return false;
+        }
         auto queue_type = Global::stcManager->GetQueueType(*rec.queue);
         outFile.write(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
 
@@ -65,6 +92,7 @@ auto iter = association_container.find(hash);
             AssetHash hash_buffer = EWE::Global::instPackages->GetHash(*pkg);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
+        return true;
     }
 
     Command::PackageRecord& Manager<Command::PackageRecord>::ReadFile(std::filesystem::path const& name){
@@ -75,7 +103,7 @@ auto iter = association_container.find(hash);
         EWE_ASSERT(temp_buffer == current_file_version, "needs support otherwise");
         
         auto& ret = data_arena.AddElement();
-        association_container.emplace_back(GetHash(name), &ret);
+        association_container.push_back(GetHash(ret), &ret);
         Queue::Type queue_type;
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
         ret.queue = &Global::stcManager->GetQueue(queue_type);

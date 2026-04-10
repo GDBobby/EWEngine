@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EightWinds/Command/InstructionPackage.h"
+#include "EightWinds/Command/PackageRecord.h"
 #include "EightWinds/VulkanHeader.h"
 #include "marl/scheduler.h"
 
@@ -18,6 +19,7 @@
 #include "EWEngine/Assets/Records.h"
 #include "EWEngine/Assets/Buffers.h"
 #include "EWEngine/Assets/InstPackages.h"
+#include "EWEngine/Assets/PackageRecords.h"
 
 #include <cstdint>
 
@@ -42,6 +44,7 @@ namespace EWE{
         extern Asset::Manager<Command::Record>* records;
         extern Asset::Manager<Buffer>* buffers;
         extern Asset::Manager<Command::InstructionPackage>* instPackages;
+        extern Asset::Manager<Command::PackageRecord>* pkgRecords;
 
         extern STC_Manager* stcManager;
         //dont move logicaldevice, just construct it in place

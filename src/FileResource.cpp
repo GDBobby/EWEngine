@@ -9,9 +9,28 @@
 
 namespace EWE{
 namespace Asset{ 
-    FileSystem::FileSystem(std::filesystem::path const& _root_directory, std::vector<std::string> const& acceptable_extensions)
-    : root_directory{_root_directory}
+    FileSystem::FileSystem(std::filesystem::path const& _root_directory, std::vector<std::string> const& _acceptable_extensions)
+    : root_directory{_root_directory},
+        acceptable_extensions{_acceptable_extensions}
     {
+        RefreshFiles();
+    }
+
+#if EWE_IMGUI
+    void FileSystem::Imgui(){
+        ImGui::Text("root : %s", root_directory.string().c_str());
+
+        for(auto& kvp : hashed_path){
+            ImGui::Text("%s", kvp.value.string().c_str());
+        }
+
+    }
+#endif
+
+    void FileSystem::RefreshFiles(){
+
+        hashed_path.clear();
+
         if (!std::filesystem::exists(root_directory) || !std::filesystem::is_directory(root_directory)) {
             return; 
         }
@@ -38,16 +57,5 @@ namespace Asset{
         //assert the hash and path are each unique, if it's an issue
 #endif
     }
-
-#if EWE_IMGUI
-    void FileSystem::Imgui(){
-        ImGui::Text("root : %s", root_directory.string().c_str());
-
-        for(auto& kvp : hashed_path){
-            ImGui::Text("%s", kvp.value.string().c_str());
-        }
-
-    }
-#endif
 }//namespace Asset
 } //namespace EWE

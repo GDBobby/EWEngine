@@ -1,7 +1,6 @@
-##pragma once
+#pragma once
 
 #include "EWEngine/Assets/Manager.h"
-#include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/PackageRecord.h"
 
 namespace EWE{
@@ -24,15 +23,15 @@ namespace Asset{
         void Destroy(AssetHash hash);
         void Destroy(Command::PackageRecord& rec);
 
-        GPUTask& Get(AssetHash hash);
-        GPUTask& Get(std::filesystem::path const& name);
+        Command::PackageRecord& Get(AssetHash hash);
+        Command::PackageRecord& Get(std::filesystem::path const& name);
 
 #ifdef EWE_IMGUI
         void Imgui();
 #endif
 
-        static bool WriteToFile(Command::PackageRecord const& task);
-        Command::PackageRecord& ReadFile(std::filesystem::path const& name):
+        static bool WriteToFile(Command::PackageRecord const& record);
+        Command::PackageRecord& ReadFile(std::filesystem::path const& name);
     };
 } //namespace Asset
 } //namespace EWE

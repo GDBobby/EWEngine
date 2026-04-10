@@ -28,6 +28,7 @@
 #include "EWEngine/NodeGraph/RasterTask_NG.h"
 #include "EWEngine/NodeGraph/Record_NG.h"
 #include "EWEngine/NodeGraph/InstructionPackage_NG.h"
+#include "EWEngine/NodeGraph/PackageRecord_NG.h"
 
 #include "EWEngine/InputData.h"
 #include "EWEngine/Imgui/DragDrop.h"
@@ -401,6 +402,7 @@ int main(int argc, char* argv[]) {
     //EWE::Node::RasterTaskNodeGraph rtng{};
     EWE::Node::RecordNodeGraph rng{};
     EWE::Node::InstructionPackageNodeGraph ipng{};
+    EWE::Node::PackageRecord_NG prng{};
     imguiHandler.End();
 
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
@@ -504,6 +506,10 @@ int main(int argc, char* argv[]) {
                 ipng.RenderNodes();
                 ImGui::EndTabItem();
             }
+            if(ImGui::BeginTabItem("pkg rec")){
+                prng.RenderNodes();
+                ImGui::EndTabItem();
+            }
 
             ImGui::EndTabBar();
         }
@@ -597,6 +603,14 @@ int main(int argc, char* argv[]) {
         }
         if(ImGui::TreeNode("buffers")){
             EWE::Global::buffers->Imgui();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("inst pkgs")){
+            EWE::Global::instPackages->Imgui();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("pkg records")){
+            EWE::Global::pkgRecords->Imgui();
             ImGui::TreePop();
         }
 

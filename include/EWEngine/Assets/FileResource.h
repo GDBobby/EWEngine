@@ -11,6 +11,7 @@ namespace Asset{
 
         //std::vector<std::filesystem::path> folders;
         std::filesystem::path root_directory;
+        std::vector<std::string> acceptable_extensions;
 
         KeyValueContainer<AssetHash, std::filesystem::path> hashed_path;
 
@@ -19,6 +20,8 @@ namespace Asset{
 #if EWE_IMGUI
         void Imgui();
 #endif
+
+        void RefreshFiles();
     };
 } //namespace Asset
 } //namespace EWE

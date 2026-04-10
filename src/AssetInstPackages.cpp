@@ -9,6 +9,8 @@
 #include "EightWinds/ObjectRasterConfig.h"
 #include "EightWinds/VulkanHeader.h"
 
+#include "EWEngine/Imgui/DragDrop.h"
+
 #include <fstream>
 
 namespace EWE{
@@ -16,19 +18,19 @@ namespace Asset{
     
     Manager<Command::InstructionPackage>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
     : logicalDevice{_logicalDevice},
-        files{root_path, std::vector<std::string>{".eri"}}
+        files{root_path, std::vector<std::string>{".eip"}}
     {
     }
 
     void Manager<Command::InstructionPackage>::Destroy(AssetHash hash){
         Command::InstructionPackage* InstructionPackage = Get(hash);
         EWE_ASSERT(InstructionPackage != nullptr);
-        data_arena.DestroyElement(InstructionPackage);
+        data_arena.DestroyElement(&InstructionPackage);
         association_container.Remove(hash);
     }
-    void Manager<Command::InstructionPackage>::Destroy(Command::InstructionPackage* InstructionPackage){
+    void Manager<Command::InstructionPackage>::Destroy(Command::InstructionPackage* instPackage){
         //do I hash it first? idk
-        AssetHash hash = GetHash(*InstructionPackage);
+        AssetHash hash = GetHash(*instPackage);
         Destroy(hash);
     }
 
@@ -42,6 +44,9 @@ namespace Asset{
             auto const& fs_path = path_hash_data.value;
             auto full_load_path = files.root_directory / fs_path;
 
+            auto* ret = ReadFile(full_load_path);
+            association_container.push_back(hash, ret);
+
             return ReadFile(full_load_path);
         }
     }
@@ -51,16 +56,25 @@ namespace Asset{
 
 #ifdef EWE_IMGUI
     void Manager<Command::InstructionPackage>::Imgui(){
+        if(ImGui::Button("refresh files")){
+            files.RefreshFiles();
+        }
+
         for(auto& kvp : files.hashed_path){
             auto found = association_container.find(kvp.key);
             if(found == association_container.end()){
                 if(ImGui::Button(kvp.value.string().c_str())){
-                    Get(kvp.value.string().c_str());
+                    Get(kvp.value);
                 }
             }
         }
         for(auto& kvp : association_container){
-            ImGui::Text(kvp.value->name.c_str());
+            if(ImGui::TreeNode(kvp.value->name.c_str())){
+                DragDropPtr::Source(kvp.value); //specifically i want to drag the pointer
+                ImGui::TreePop();
+            }
+            //Logger::Print("%s\n", kvp.value->name.c_str());
+            DragDropPtr::Source(kvp.value); //specifically i want to drag the pointer
         }
     }
 #endif
@@ -275,6 +289,7 @@ namespace Asset{
         }
 
         inFile.close();
+        ret->name = std::filesystem::proximate(path, files.root_directory).string();
         return ret;
     }
     /*

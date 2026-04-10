@@ -1,5 +1,6 @@
 #include "EWEngine/Assets/Tasks.h"
 #include "EWEngine/Global.h"
+#include "EWEngine/STC_Manager.h"
 
 namespace EWE{
 namespace Asset{
@@ -23,25 +24,21 @@ namespace Asset{
     GPUTask& Manager<GPUTask>::Get(AssetHash hash){
 auto iter = association_container.find(hash);
         if(iter != association_container.end()){
-            return iter->value;
+            return *iter->value;
         }
         else{
             auto path_hash_data = files.hashed_path.at(hash);
             auto const& fs_path = path_hash_data.value;
             auto full_load_path = files.root_directory / fs_path;
 
-            return ReadFile(full_load_path);
+            //return ReadFile(full_load_path);
+
+            return data_arena.AddElement("invalid", logicalDevice, Global::stcManager->renderQueue);
         }
     }
-    GPUTask Manager<GPUTask>::Get(std::filesystem::path const& name){
+    GPUTask& Manager<GPUTask>::Get(std::filesystem::path const& name){
         //potentially enforce it exists in the file system, and enforce create is called for construction
         return Get(CrossPlatformPathHash(name));
-    }
-    GPUTask& Manager<GPUTask>::Create(std::filesystem::path const& name, Command::RecordPackage& record){
-        //just goign to assume everything is graphics queue for the moment
-        auto& ret = data_arena.AddElement(name.string(), logicalDevice, Global::stcManager->renderQueue, record);
-        association_container.emplace_back(name, &ret);
-        return ret;
     }
 
 #ifdef EWE_IMGUI
@@ -55,6 +52,8 @@ auto iter = association_container.find(hash);
         //if it doesnt have an instruction package, its special execution, aka hand coded, cant be written
 
         std::ofstream outFile{task.name.c_str(), std::ios::binary};
+
+        return true;
     }
 
 } //namepsace Asset

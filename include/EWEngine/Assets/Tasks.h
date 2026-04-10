@@ -27,8 +27,6 @@ namespace Asset{
         GPUTask& Get(AssetHash hash);
         GPUTask& Get(std::filesystem::path const& name);
 
-        GPUTask& Create(Command::InstructionPackage* pkg);
-
 #ifdef EWE_IMGUI
         void Imgui();
 #endif

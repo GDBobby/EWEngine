@@ -6,7 +6,7 @@
 
 namespace EWE{
 namespace Asset{
-Manager<Buffer>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
+    Manager<Buffer>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
     : logicalDevice{_logicalDevice}//,
         //files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
         //meta_files{root_path, std::vector<std::string>{".mie"}}
