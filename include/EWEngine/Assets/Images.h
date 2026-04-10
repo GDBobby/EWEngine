@@ -12,7 +12,7 @@ namespace Asset{
     template<>
     struct Manager<Image>{
         LogicalDevice& logicalDevice;
-        FileSystem image_files;
+        FileSystem files;
         //FileSystem meta_files;
 
         Hive<Image, 64> data_arena;

@@ -15,7 +15,6 @@ namespace Node{
     struct PackageRecord_NG : ImNodes::EWE::Editor {
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
-        Command::PackageRecord record;
 
         [[nodiscard]] explicit PackageRecord_NG();
 

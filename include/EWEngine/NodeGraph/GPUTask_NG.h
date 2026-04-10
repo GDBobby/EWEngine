@@ -1,12 +1,14 @@
 #pragma once
 
-#include "EWEngine/NodeGraph/PackageRecord_NG.h"
-#include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
-
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
+
+/*
+    i can skip this and build this directly from the packagerecord
+*/
+
 
 namespace EWE{
 namespace Node{
@@ -14,7 +16,8 @@ namespace Node{
     struct GPUTask_NG : ImNodes::EWE::Editor {
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
-        GPUTask record;
+
+        std::string name{"default"};
 
         [[nodiscard]] explicit GPUTask_NG();
 
@@ -33,6 +36,11 @@ namespace Node{
         void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
         bool SaveFunc() override final;
         bool LoadFunc() override final;
+
+        void LoadFromTask(GPUTask& task);
+        void WriteIntoTask(GPUTask& task);
+
+        void CreateTask();
     };
 } //namespace Node 
 } //namespace EWE

@@ -21,6 +21,7 @@ namespace EWE{
         Asset::Manager<Buffer> buffers;
         Asset::Manager<Command::InstructionPackage> instPackages;
         Asset::Manager<Command::PackageRecord> pkgRecords;
+        Asset::Manager<SubmissionTask> subTasks;
 
         [[nodiscard]] explicit GlobalData(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& root_path)
         : logicalDevice{_logicalDevice},
@@ -35,7 +36,8 @@ namespace EWE{
             records{logicalDevice, root_path},
             buffers{logicalDevice, root_path},
             instPackages{logicalDevice, root_path},
-            pkgRecords{logicalDevice, root_path}
+            pkgRecords{logicalDevice, root_path},
+            subTasks{logicalDevice, root_path}
         {
 
         }
@@ -64,6 +66,7 @@ namespace EWE{
         Asset::Manager<Buffer>* buffers;
         Asset::Manager<Command::InstructionPackage>* instPackages;
         Asset::Manager<Command::PackageRecord>* pkgRecords;
+        Asset::Manager<SubmissionTask>* subTasks;
 
         
         bool Create(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& _root_path) {
@@ -86,6 +89,7 @@ namespace EWE{
             ::EWE::Global::buffers = &globalData->buffers;
             ::EWE::Global::instPackages = &globalData->instPackages;
             ::EWE::Global::pkgRecords = &globalData->pkgRecords;
+            ::EWE::Global::subTasks = &globalData->subTasks;
 
             return true;
         }

@@ -1,9 +1,7 @@
 #pragma once
 
-
-#include "EightWinds/Reflect/Enum.h"
+#include "EightWinds/RenderGraph/GPUTask.h"
 #include "EightWinds/RenderGraph/SubmissionTask.h"
-
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
@@ -14,7 +12,6 @@ namespace Node{
     struct SubmissionTask_NG : ImNodes::EWE::Editor {
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
-        SubmissionTask record;
 
         [[nodiscard]] explicit SubmissionTask_NG();
 
@@ -33,6 +30,9 @@ namespace Node{
         void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
         bool SaveFunc() override final;
         bool LoadFunc() override final;
+
+        void CreateFromGraph(SubmissionTask& subTask);
+        void LoadFromTask(SubmissionTask& subTask);
     };
 } //namespace Node 
 } //namespace EWE

@@ -1,5 +1,6 @@
 #include "EWEngine/NodeGraph/PackageRecord_NG.h"
 
+#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/PackageRecord.h"
@@ -13,7 +14,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions.push_back(".ewrg");
+        explorer.acceptable_extensions.push_back(".epr");
     }
 
     ImNodes::EWE::Node* PackageRecord_NG::CreateHeadNode(){
@@ -129,7 +130,14 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-
+                Command::PackageRecord record{};
+                record.name = saved_path;
+                ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+                while(current_node != nullptr){
+                    record.packages.push_back(reinterpret_cast<Command::InstructionPackage*>(current_node->payload));
+                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+                }
+                EWE::Global::pkgRecords->WriteToFile(record);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();

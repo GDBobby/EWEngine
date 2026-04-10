@@ -1,5 +1,7 @@
 #include "EWEngine/NodeGraph/RenderGraph_NG.h"
 
+#include "EWEngine/Imgui/DragDrop.h"
+
 namespace EWE{
 namespace Node{
     RenderGraphNodeGraph::RenderGraphNodeGraph(RenderGraph& _renderGraph)
@@ -73,7 +75,7 @@ namespace Node{
         
     }
 
-    bool RenderGraphNodeGraph::RenderAddMenu(ImVec2 _menu_pos){
+    bool RenderGraphNodeGraph::RenderAddMenu(){
 
         bool wantsClose = false;
 
@@ -107,7 +109,7 @@ namespace Node{
         ImGui::TextUnformatted(payload->name.c_str());
         ImNodes::EndNodeTitleBar();
 
-        ImGui::Text("queue family index : %u", payload->queue.FamilyIndex());
+        ImGui::Text("queue family index : %u", payload->queue->FamilyIndex());
     }
 
     void RenderGraphNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {

@@ -20,6 +20,7 @@
 #include "EWEngine/Assets/Buffers.h"
 #include "EWEngine/Assets/InstPackages.h"
 #include "EWEngine/Assets/PackageRecords.h"
+#include "EWEngine/Assets/SubmissionTasks.h"
 
 #include <cstdint>
 
@@ -45,6 +46,7 @@ namespace EWE{
         extern Asset::Manager<Buffer>* buffers;
         extern Asset::Manager<Command::InstructionPackage>* instPackages;
         extern Asset::Manager<Command::PackageRecord>* pkgRecords;
+        extern Asset::Manager<SubmissionTask>* subTasks;
 
         extern STC_Manager* stcManager;
         //dont move logicaldevice, just construct it in place

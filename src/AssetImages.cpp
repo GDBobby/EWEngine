@@ -14,7 +14,7 @@ namespace EWE{
 namespace Asset{
     Manager<Image>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
     : logicalDevice{_logicalDevice},
-        image_files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
+        files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
         //meta_files{root_path, std::vector<std::string>{".mie"}}
     {
 
@@ -24,7 +24,7 @@ namespace Asset{
     static constexpr std::size_t meta_version = 0;
 
     void Manager<Image>::UpdateMetaFile(AssetHash hash, Image& img){
-        const std::filesystem::path meta_path = (image_files.root_directory / img.name).replace_extension("mie");
+        const std::filesystem::path meta_path = (files.root_directory / img.name).replace_extension("mie");
 
         std::ofstream outFile{meta_path, std::ios::binary};
         if(!outFile.is_open()){
@@ -100,15 +100,15 @@ namespace Asset{
             return iter->value;
         }
         else{
-            auto image_path_hash_data = image_files.hashed_path.at(hash);
+            auto image_path_hash_data = files.hashed_path.at(hash);
             auto const& fs_path = image_path_hash_data.value;
             Image& img = data_arena.AddElement(logicalDevice);
             img.name = fs_path;
             association_container.push_back(hash, &img);
 
-            auto full_img_load_path = image_files.root_directory / fs_path;
+            auto full_img_load_path = files.root_directory / fs_path;
 
-            auto load_img_fiber = marl::Task{[&img, img_kvp = image_path_hash_data, full_img_load_path, root_dir = image_files.root_directory](){
+            auto load_img_fiber = marl::Task{[&img, img_kvp = image_path_hash_data, full_img_load_path, root_dir = files.root_directory](){
                 img.data = LoadMetaData(root_dir, img_kvp);
                 auto old_extent = img.data.extent;
                 auto old_format = img.data.format;
@@ -129,11 +129,13 @@ namespace Asset{
         return Get(CrossPlatformPathHash(name));
     }
 
-
 #ifdef EWE_IMGUI
     void Manager<Image>::Imgui(){
+        if(ImGui::Button("refresh files")){
+            files.RefreshFiles();
+        }
         //filesystem.Imgui();
-        for(auto& kvp : image_files.hashed_path){
+        for(auto& kvp : files.hashed_path){
             auto found = association_container.find(kvp.key);
             if(found == association_container.end()){
                 if(ImGui::Button(kvp.value.string().c_str())){

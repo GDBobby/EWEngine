@@ -42,6 +42,9 @@ namespace Asset{
 #ifdef EWE_IMGUI
     void Manager<Shader>::Imgui(){
         ImGui::Text("root : %s", files.root_directory.string().c_str());
+        if(ImGui::Button("refresh files")){
+            files.RefreshFiles();
+        }
 
         for(auto& file : files.hashed_path){
             auto foundShader = shaders.find(file.value);

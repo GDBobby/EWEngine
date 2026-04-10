@@ -28,7 +28,6 @@
 #include "EWEngine/NodeGraph/Record_NG.h"
 #include "EWEngine/NodeGraph/InstructionPackage_NG.h"
 #include "EWEngine/NodeGraph/PackageRecord_NG.h"
-#include "EWEngine/NodeGraph/GPUTask_NG.h"
 #include "EWEngine/NodeGraph/SubmissionTask_NG.h"
 
 #include "EWEngine/InputData.h"
@@ -107,7 +106,8 @@ int main(int argc, char* argv[]) {
             EWE::Logger::Print<EWE::Logger::Error>("im scared to fuck my system, not allowing working directories less than 5 characters\n");
             return -1;
         }
-        std::filesystem::current_path(argv[1]);
+        const char* second_arg = argv[1];
+        std::filesystem::current_path(second_arg);
         EWE::Logger::Print<EWE::Logger::Normal>("current dir (set from cmd line) - %s\n", std::filesystem::current_path().string().c_str());
     }
 
@@ -394,9 +394,10 @@ int main(int argc, char* argv[]) {
     renderTask.GenerateWorkload();
     mergeTask.GenerateWorkload();
 
-    EWE::SubmissionTask& world_render_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "world render");
+    EWE::SubmissionTask& world_render_submission = renderGraph.submissions.AddElement("world render", *EWE::Global::logicalDevice, *renderQueue);
     world_render_submission.packaged_tasks.push_back(renderTask.workload);
-    EWE::SubmissionTask& imgui_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "imgui");
+    EWE::SubmissionTask& imgui_submission = renderGraph.submissions.AddElement("imgui", *EWE::Global::logicalDevice, *renderQueue);
+    imgui_submission.specializedSubmission = true;
 
     imguiHandler.Begin();
     EWE::Node::RenderGraphNodeGraph rgng{renderGraph};
@@ -405,7 +406,7 @@ int main(int argc, char* argv[]) {
     EWE::Node::InstructionPackageNodeGraph ipng{};
     EWE::Node::PackageRecord_NG prng{};
     EWE::Node::SubmissionTask_NG stng{};
-    EWE::Node::GPUTask_NG gtng{};
+    //EWE::Node::GPUTask_NG gtng{};
     imguiHandler.End();
 
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
@@ -517,10 +518,12 @@ int main(int argc, char* argv[]) {
                 stng.RenderNodes();
                 ImGui::EndTabItem();
             }
+            /*
             if(ImGui::BeginTabItem("gpu task")){
                 gtng.RenderNodes();
                 ImGui::EndTabItem();
             }
+            */
 
             ImGui::EndTabBar();
         }
@@ -684,7 +687,8 @@ int main(int argc, char* argv[]) {
         return false;
     }
     );
-    EWE::SubmissionTask& attachment_blit_submission = renderGraph.submissions.AddElement(*EWE::Global::logicalDevice, *renderQueue, "attachment blit");
+    EWE::SubmissionTask& attachment_blit_submission = renderGraph.submissions.AddElement("attachment blit", *EWE::Global::logicalDevice, *renderQueue);
+    attachment_blit_submission.specializedSubmission = true;
 
     VkSamplerCreateInfo samplerCreateInfo{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,

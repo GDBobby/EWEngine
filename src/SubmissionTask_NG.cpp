@@ -1,11 +1,11 @@
 #include "EWEngine/NodeGraph/SubmissionTask_NG.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
-#include "EightWinds/Command/InstructionPackage.h"
+#include "EWEngine/Global.h"
 #include "EightWinds/Command/PackageRecord.h"
-#include "EightWinds/Command/SubmissionTask.h"
 #include "imgui.h"
 #include "imgui_internal.h"
+#include <filesystem>
 
 namespace EWE{
 namespace Node{
@@ -28,20 +28,22 @@ namespace Node{
     
     void SubmissionTask_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        GPUTask** pkg;
+        Command::PackageRecord** pkg;
         if(DragDropPtr::Target(pkg)) {
+            Logger::Print("dropping in sub task\n");
             auto temp_min = ImGui::GetItemRectMin();
             auto temp_max =ImGui::GetItemRectMax();
-            auto& added_node = CreateRGNode(*pkg);
+            GPUTask* task = new GPUTask((*pkg)->name, *Global::logicalDevice, **pkg);
+            auto& added_node = CreateRGNode(task);
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
             auto window_pos =  ImGui::GetWindowPos();
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }
     }
 
-    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(GPUTask* pkg) {
+    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(GPUTask* task) {
         auto& added_node = AddNode();
-        added_node.payload = pkg;
+        added_node.payload = task;
         added_node.pos = menu_pos;
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
@@ -103,13 +105,17 @@ namespace Node{
             ImGui::Text(""); //filler text
             return;
         }
-        auto* node_payload = reinterpret_cast<Command::InstructionPackage*>(node.payload);
+        auto* node_payload = reinterpret_cast<GPUTask*>(node.payload);
         ImGui::Text(node_payload->name.c_str());
 
         ImNodes::EndNodeTitleBar();
 
-        for(auto& inst : node_payload->paramPool.instructions){
-            ImGui::BulletText(Reflect::Enum::ToString(inst).data());
+        if(node_payload->pkgRecord->packages.size() == 0){
+            ImGui::Text("no packages");
+        }
+
+        for(auto& pkg : node_payload->pkgRecord->packages){
+            ImGui::BulletText(pkg->name.c_str());
         }
     }
 
@@ -151,8 +157,11 @@ namespace Node{
             explorer.Imgui();
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
-                
 
+                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::subTasks->files.root_directory);
+
+                auto& subTask = Global::subTasks->Get(temp);
+                LoadFromTask(subTask);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -164,6 +173,63 @@ namespace Node{
         }
         ImGui::End();
         return !explorer.enabled;
+    }
+
+    void SubmissionTask_NG::CreateFromGraph(SubmissionTask& subTask){
+        subTask.tasks.clear();
+        ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+        while(current_node != nullptr){
+            subTask.tasks.push_back(reinterpret_cast<GPUTask*>(current_node->payload));
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+        }
+        subTask.CollectTaskWorkloads();
+    }
+
+    void SubmissionTask_NG::LoadFromTask(SubmissionTask& subTask){
+        nodes.Clear();
+        CreateHeadNode();
+        links.clear();
+        ImNodes::EWE::Node* last_node = headNode;
+
+        if(subTask.tasks.size() == 0){
+            return;
+        }
+        {
+            auto& node = CreateRGNode(subTask.tasks.front());
+            headNode->pins[0].payload = &node;
+            links.push_back(
+                ImNodes::EWE::NodePair{
+                    .start{
+                        .node = last_node,
+                        .offset = 0,
+                    },
+                    .end{
+                        .node = &node,
+                        .offset = 0
+                    }
+                }
+            );
+            node.pins[0].payload = headNode;
+        }
+
+        for(std::size_t i = 1; i < subTask.tasks.size(); i++){
+            auto& node = CreateRGNode(subTask.tasks[i]);
+
+            links.push_back(
+                ImNodes::EWE::NodePair{
+                    .start{
+                        .node = last_node,
+                        .offset = 1,
+                    },
+                    .end{
+                        .node = &node,
+                        .offset = 0
+                    }
+                }
+            );
+            last_node->pins[1].payload = &node;
+            node.pins[0].payload = last_node;
+        }
     }
 } //namespace Node
 } //namespace EWE

@@ -1,5 +1,6 @@
 #include "EWEngine/NodeGraph/GPUTask_NG.h"
 
+#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/PackageRecord.h"
 #include "imgui.h"
@@ -12,7 +13,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions.push_back(".ewrg");
+        explorer.acceptable_extensions.push_back(".egt");
     }
 
     ImNodes::EWE::Node* GPUTask_NG::CreateHeadNode(){
@@ -147,7 +148,10 @@ namespace Node{
             explorer.Imgui();
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
-                
+                //const std::filesystem::path temp_path = std::filesystem::proximate(load_path, Global::gpuTasks->files.root_directory);
+
+                //auto& task = Global::gpuTasks->Get(temp_path);
+                //LoadFromTask(task);
 
 
                 explorer.enabled = false;
@@ -160,6 +164,76 @@ namespace Node{
         }
         ImGui::End();
         return !explorer.enabled;
+    }
+
+
+    void GPUTask_NG::LoadFromTask(GPUTask& task){
+        nodes.Clear();
+        links.clear();
+        CreateHeadNode();
+
+        ImNodes::EWE::Node* last_node = headNode;
+        if(task.pkgRecord->packages.size() == 0){
+            return;
+        }
+        /*
+        {
+            auto& node = CreateRGNode(subTask.tasks.front());
+            headNode->pins[0].payload = &node;
+            links.AddElement(
+                ImNodes::EWE::NodePair{
+                    .start{
+                        .node = last_node,
+                        .offset = 0,
+                    },
+                    .end{
+                        .node = &node,
+                        .offset = 0
+                    }
+                }
+            );
+            node.pins[0].payload = headNode;
+        }
+
+        for(std::size_t i = 1; i < subTask.tasks.size(); i++){
+            auto& node = CreateRGNode(subTask.tasks[i]);
+
+            links.AddElement(
+                ImNodes::EWE::NodePair{
+                    .start{
+                        .node = last_node,
+                        .offset = 1,
+                    },
+                    .end{
+                        .node = &node,
+                        .offset = 0
+                    }
+                }
+            );
+            last_node->pins[1].payload = &node;
+            node.pins[0].payload = last_node;
+        }
+            */
+    }
+    void GPUTask_NG::WriteIntoTask(GPUTask& task){
+
+    }
+    void GPUTask_NG::CreateTask(){
+
+        /*
+        Command::PackageRecord record{};
+        record.name = name;
+        record.queue = &Global::stcManager->renderQueue;
+        record.packages;
+
+        ImNodes::EWE::Node* current_node = headNode->pins[0].payload;
+        while(current_node != nullptr){
+            record.packages.push_back(current_node->payload);
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node.pins[1].payload);
+        }
+
+        Global::gpuTasks->Create(name, Global::gpuTasks->logicalDevice, record);
+        */
     }
 } //namespace Node
 } //namespace EWE

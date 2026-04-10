@@ -1,7 +1,6 @@
 #pragma once
 
 #include "EWEngine/Assets/Manager.h"
-#include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
 
 namespace EWE{
@@ -13,7 +12,7 @@ namespace Asset{
         FileSystem files;
 
         Hive<GPUTask, 64> data_arena;
-        KeyValueContainer<AssetHash, GPUTask*> association_container{};
+        KeyValueContainer<AssetHash, GPUTask> association_container{};
 
         [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path);
 
@@ -26,6 +25,12 @@ namespace Asset{
 
         GPUTask& Get(AssetHash hash);
         GPUTask& Get(std::filesystem::path const& name);
+
+        template<typename... Args>
+        requires(std::is_constructible_v<GPUTask, Args...>)
+        GPUTask& Create(Args&&... args){
+            return data_arena.AddElement(std::forward<Args>(args)...);
+        }
 
 #ifdef EWE_IMGUI
         void Imgui();
