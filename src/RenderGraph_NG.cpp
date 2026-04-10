@@ -9,6 +9,30 @@ namespace Node{
         name = "render graph ng";
     }
 
+
+    void RenderGraphNodeGraph::RenderNodes() {
+        ImNodes::EWE::Editor::RenderNodes();
+        SubmissionTask** subTask;
+        if(DragDropPtr::Target(subTask)) {
+            auto temp_min = ImGui::GetItemRectMin();
+            auto temp_max =ImGui::GetItemRectMax();
+            auto& added_node = CreateRGNode(*subTask);
+            auto temp_mouse_pos =ImGui::GetIO().MousePos;
+            auto window_pos =  ImGui::GetWindowPos();
+            added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+        }
+    }
+
+    ImNodes::EWE::Node& RenderGraphNodeGraph::CreateRGNode(SubmissionTask* subTask) {
+        auto& added_node = AddNode();
+        added_node.payload = subTask;
+        added_node.pos = menu_pos;
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+
+        return added_node;
+    }
+
     void RenderGraphNodeGraph::RenderEditorTitle() {
 
         ImNodes::EWE::Editor::RenderEditorTitle();

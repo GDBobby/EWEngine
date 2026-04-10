@@ -25,10 +25,11 @@
 
 #include "EWEngine/NodeGraph/InstructionPackage_NG.h"
 #include "EWEngine/NodeGraph/RenderGraph_NG.h"
-#include "EWEngine/NodeGraph/RasterTask_NG.h"
 #include "EWEngine/NodeGraph/Record_NG.h"
 #include "EWEngine/NodeGraph/InstructionPackage_NG.h"
 #include "EWEngine/NodeGraph/PackageRecord_NG.h"
+#include "EWEngine/NodeGraph/GPUTask_NG.h"
+#include "EWEngine/NodeGraph/SubmissionTask_NG.h"
 
 #include "EWEngine/InputData.h"
 #include "EWEngine/Imgui/DragDrop.h"
@@ -403,6 +404,8 @@ int main(int argc, char* argv[]) {
     EWE::Node::RecordNodeGraph rng{};
     EWE::Node::InstructionPackageNodeGraph ipng{};
     EWE::Node::PackageRecord_NG prng{};
+    EWE::Node::SubmissionTask_NG stng{};
+    EWE::Node::GPUTask_NG gtng{};
     imguiHandler.End();
 
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
@@ -508,6 +511,14 @@ int main(int argc, char* argv[]) {
             }
             if(ImGui::BeginTabItem("pkg rec")){
                 prng.RenderNodes();
+                ImGui::EndTabItem();
+            }
+            if(ImGui::BeginTabItem("submission task")){
+                stng.RenderNodes();
+                ImGui::EndTabItem();
+            }
+            if(ImGui::BeginTabItem("gpu task")){
+                gtng.RenderNodes();
                 ImGui::EndTabItem();
             }
 

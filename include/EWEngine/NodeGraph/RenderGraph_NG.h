@@ -13,11 +13,10 @@ namespace EWE{
             [[nodiscard]] explicit RenderGraphNodeGraph(RenderGraph& _renderGraph);
 
             void RenderEditorTitle() override final;
+            ImNodes::EWE::Node& CreateRGNode(SubmissionTask* subTask);
 
-            bool RenderAddMenu(ImVec2 menu_pos);
-
+            bool RenderAddMenu(ImVec2 menu_pos) override final;
             void RenderNode(ImNodes::EWE::Node& node) override final;
-
             void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
         };
     }
