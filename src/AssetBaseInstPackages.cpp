@@ -1,12 +1,11 @@
 #include "EWEngine/Assets/Hash.h"
-#include "EWEngine/Assets/InstPackages.h"
+#include "EWEngine/Assets/BaseInstPackages.h"
 #include "EWEngine/Global.h"
 #include "EightWinds/Backend/Logger.h"
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/GlobalPushConstant.h"
 
 #include "EightWinds/Command/ObjectInstructionPackage.h"
-#include "EightWinds/ObjectRasterConfig.h"
 #include "EightWinds/VulkanHeader.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
@@ -16,41 +15,45 @@
 namespace EWE{
 namespace Asset{
     
-    Manager<Command::InstructionPackage>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
-    : logicalDevice{_logicalDevice},
-        files{root_path, std::vector<std::string>{".eip"}}
+    Manager<Command::InstructionPackage>::Manager(std::filesystem::path const& root_path)
+    : files{root_path, std::vector<std::string>{".eip"}}
     {
     }
 
     void Manager<Command::InstructionPackage>::Destroy(AssetHash hash){
-        Command::InstructionPackage* InstructionPackage = Get(hash);
-        EWE_ASSERT(InstructionPackage != nullptr);
+        Command::InstructionPackage& InstructionPackage = Get(hash);
         data_arena.DestroyElement(&InstructionPackage);
         association_container.Remove(hash);
     }
-    void Manager<Command::InstructionPackage>::Destroy(Command::InstructionPackage* instPackage){
+    void Manager<Command::InstructionPackage>::Destroy(Command::InstructionPackage& instPackage){
         //do I hash it first? idk
-        AssetHash hash = GetHash(*instPackage);
+        AssetHash hash = GetHash(instPackage);
         Destroy(hash);
     }
 
-    Command::InstructionPackage* Manager<Command::InstructionPackage>::Get(AssetHash hash){
+    Command::InstructionPackage& Manager<Command::InstructionPackage>::Get(AssetHash hash) {
         auto iter = association_container.find(hash);
         if(iter != association_container.end()){
-            return iter->value;
+            return *iter->value;
         }
         else{
             auto path_hash_data = files.hashed_path.at(hash);
             auto const& fs_path = path_hash_data.value;
             auto full_load_path = files.root_directory / fs_path;
 
-            auto* ret = ReadFile(full_load_path);
-            association_container.push_back(hash, ret);
+            auto& ret = data_arena.AddElement();
+            if(ReadInstPkgFile(&ret, full_load_path)){
+                association_container.push_back(hash, &ret);
+            }
+            else{
+                data_arena.DestroyElement(&ret);
+                EWE_ASSERT(false, "failed to construct");
+            }
 
-            return ReadFile(full_load_path);
+            return ret;
         }
     }
-    Command::InstructionPackage* Manager<Command::InstructionPackage>::Get(std::filesystem::path const& name){
+    Command::InstructionPackage& Manager<Command::InstructionPackage>::Get(std::filesystem::path const& name){
         return Get(CrossPlatformPathHash(name));
     }
 
@@ -83,10 +86,13 @@ namespace Asset{
     static constexpr std::size_t file_version = 0;
 //
 
-    bool Manager<Command::InstructionPackage>::WriteToFile(Command::ParamPool const& param_pool, void* payload, Command::InstructionPackage::Type pkg_type, std::filesystem::path const& path){
-        std::ofstream outFile{path, std::ios::binary};
+    bool WriteToInstPkgFile(Command::ParamPool const& param_pool, void* payload, Command::InstructionPackage::Type pkg_type, std::filesystem::path const& temp_path){
+        
+        std::filesystem::path adjusted_path = Global::assetManager->root_directory / temp_path;
+        
+        std::ofstream outFile{adjusted_path, std::ios::binary};
         if(!outFile.is_open()){
-            outFile.open(path, std::ios::binary);
+            outFile.open(adjusted_path, std::ios::binary);
             if(!outFile.is_open()){
                 return false;
             }
@@ -136,7 +142,7 @@ namespace Asset{
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
-                                hash_buffer = Global::buffers->ConvertBDAToHash(temp_push->buffer_addr[j]);
+                                hash_buffer = Global::assetManager->buffer.ConvertBDAToHash(temp_push->buffer_addr[j]);
                             }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
@@ -145,7 +151,7 @@ namespace Asset{
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
-                                hash_buffer = Global::diis->ConvertTextureIndexToHash(temp_push->texture_indices[j]);
+                                hash_buffer = Global::assetManager->dii.ConvertTextureIndexToHash(temp_push->texture_indices[j]);
                             }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
@@ -159,58 +165,49 @@ namespace Asset{
             }
         }
 
-        //end of default Instruction package, now we get into specializations (based on polymorphism)
-
-        switch(pkg_type){
-            case Command::InstructionPackage::Type::Object:
-                EWE_ASSERT(payload != nullptr);
-                outFile.write(reinterpret_cast<char*>(payload), sizeof(Command::ObjectPackage::Payload));
-                break;
-            default: break;
-        }
-
         outFile.close();
         return true;
     }
 
-    bool Manager<Command::InstructionPackage>::WriteToFile(Command::InstructionPackage& pkg, std::filesystem::path const& path){
+    bool WriteToInstPkgFile(Command::InstructionPackage& pkg, std::filesystem::path const& path){
         switch(pkg.type){
             case Command::InstructionPackage::Base: 
-                return WriteToFile(pkg.paramPool, nullptr, pkg.type, path);
+                return WriteToInstPkgFile(pkg.paramPool, nullptr, pkg.type, path);
                 break;
             case Command::InstructionPackage::Object:
-                return WriteToFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, pkg.type, path);
+                return WriteToInstPkgFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, pkg.type, path);
                 break;
             default: EWE_UNREACHABLE;
         }
         EWE_UNREACHABLE;
     }
 
-    Command::InstructionPackage* Manager<Command::InstructionPackage>::ReadFile(std::filesystem::path const& path){
+    bool ReadInstPkgFile(Command::InstructionPackage* ret, std::filesystem::path const& path){
         std::ifstream inFile{path, std::ios::binary};
 
         if(!inFile.is_open()){
             if(!std::filesystem::exists(path)){
                 Logger::Print<Logger::Error>("atempting to open instruction pkg but path[%s] doesn't exist", path.string().c_str());
-                return nullptr;
+                return false;
             }
             inFile.open(path, std::ios::binary);
             if(!inFile.is_open()){
-                return nullptr;
+                return false;
             }
         }
 
-        Command::InstructionPackage* ret = nullptr;
         std::size_t temp_buffer = file_version;
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(std::size_t));
         Command::InstructionPackage::Type pkg_type;
         inFile.read(reinterpret_cast<char*>(&pkg_type), sizeof(Command::InstructionPackage::Type));
         switch(pkg_type){
             case Command::InstructionPackage::Base: 
-                ret = new Command::InstructionPackage(); 
+                //ret = new Command::InstructionPackage(); 
+                //EWE_ASSERT(dynamic_cast<
                 break;
             case Command::InstructionPackage::Object: 
-                ret = reinterpret_cast<Command::InstructionPackage*>(new Command::ObjectPackage()); 
+                //ret = reinterpret_cast<Command::InstructionPackage*>(new Command::ObjectPackage());
+                //EWE_ASSERT(dynamic_cast<Command::ObjectPackage*>(ret) != nullptr);
                 break;
             default: break;
         }
@@ -256,7 +253,7 @@ namespace Asset{
                         for(uint8_t j = 0; j < GlobalPushConstant_Raw::buffer_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
-                                temp_push->buffer_addr[j] = Global::buffers->Get(hash_buffer).deviceAddress;
+                                temp_push->buffer_addr[j] = Global::assetManager->buffer.Get(hash_buffer).deviceAddress;
                             }
                             else{
                                 temp_push->buffer_addr[j] = null_buffer;
@@ -265,7 +262,7 @@ namespace Asset{
                         for(uint8_t j = 0; j < GlobalPushConstant_Raw::texture_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
-                                auto& temp_dii = Global::diis->Get(hash_buffer);
+                                auto& temp_dii = Global::assetManager->dii.Get(hash_buffer);
                                 temp_push->texture_indices[j] = temp_dii.index;
                             }
                             else{
@@ -289,14 +286,9 @@ namespace Asset{
         }
 
         inFile.close();
-        ret->name = std::filesystem::proximate(path, files.root_directory).string();
+        ret->name = std::filesystem::proximate(path, Global::assetManager->root_directory).string();
         return ret;
     }
-    /*
-    Command::InstructionPackage ReadFile(std::filesystem::path const& path){
-
-}
-    */
 
 } //namespace Asset
 } //namespace EWE

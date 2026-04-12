@@ -1,6 +1,6 @@
 #include "EWEngine/Assets/FileResource.h"
 
-#include "EWEngine/Assets/Manager.h"
+#include "EWEngine/Assets/Base.h"
 
 
 #if EWE_IMGUI

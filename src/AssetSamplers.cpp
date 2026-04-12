@@ -6,9 +6,8 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<Sampler>::Manager(LogicalDevice& _logicalDevice) 
-    : logicalDevice{_logicalDevice}, 
-    data_arena{}, 
+    Manager<Sampler>::Manager() 
+    : data_arena{}, 
     association_container{}
     {}
 
@@ -41,7 +40,7 @@ namespace Asset{
         }
 
         auto samplerInfo = Sampler::Expand(condensed_val);
-        auto& ret = data_arena.AddElement(logicalDevice, samplerInfo);
+        auto& ret = data_arena.AddElement(*Global::logicalDevice, samplerInfo);
         association_container.push_back(condensed_val, &ret);
         return ret;
     }

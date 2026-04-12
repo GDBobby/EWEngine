@@ -1,31 +1,17 @@
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 
 #include <array>
 #include <LAB/Vector.h>
 #include <filesystem>
 
+#include <format>
+
 
 #ifdef EWE_IMGUI
 namespace EWE{
 	
-	auto AlphanumericFilter = [](ImGuiInputTextCallbackData* data) -> int {
-		if (isalnum((unsigned char)data->EventChar)) {
-			return 0;
-		}
-		return 1;
-	};
-	auto FileFilter = [](ImGuiInputTextCallbackData* data) -> int {
-		if (isalnum((unsigned char)data->EventChar)) {
-			return 0;
-		}
-		switch(data->EventChar){
-			case '.': return 0;
-			case '_': return 0;
-			default: return 1;
-		}
-		return 1;
-	};
 
 
 
@@ -94,7 +80,7 @@ namespace EWE{
 
 		ImGui::TableNextColumn();
 		auto ftime = std::filesystem::last_write_time(entry_path);
-		ImGui::Text("Modified"); 
+		ImGui::Text("Modified : %s", std::format("{}", ftime).c_str()); 
 		ImGui::PopID();
 
 		if (was_selected) {
@@ -166,7 +152,7 @@ namespace EWE{
 			}
 			if(ImGui::BeginPopup("file_create_popup")){
 
-				ImGui::InputText("folder name", file_create_buf, 64, ImGuiInputTextFlags_CallbackCharFilter, AlphanumericFilter);
+				ImGui::InputText("folder name", file_create_buf, 64, ImGuiInputTextFlags_CallbackCharFilter, ImguiInputFilters::Alphanumeric);
 				ImGui::PushID(696969);
 				if(ImGui::Button("Create")){
 					if(file_create_buf[0] != '\0'){
@@ -231,6 +217,7 @@ namespace EWE{
 
 				if(ImGui::Button("Save in Current Folder")){
 					save_path = current_path;
+					want_save_open = true;
 				}
 				if(currently_selected_folder.has_value()){
 					ImGui::SameLine();
@@ -239,22 +226,23 @@ namespace EWE{
 					}
 				}
 
-				if(!popup_opened && save_path.has_value()){
+				popup_opened = ImGui::IsPopupOpen("save file popup");
+
+				if(!popup_opened && want_save_open){
 					ImGui::OpenPopup("save file popup");
 					popup_opened = true;
+					want_save_open = false;
 					//selected_file = save_path;
 				}
 				if(ImGui::BeginPopup("save file popup")){
-					static char file_save_buf[64] = "";
 					ImGui::PushID(696970);
-					ImGui::InputText("file name", file_save_buf, 64, ImGuiInputTextFlags_CallbackCharFilter, FileFilter);
+					ImGui::InputText("file name", file_save_buf, path_length, ImGuiInputTextFlags_CallbackCharFilter, ImguiInputFilters::File);
 					if(file_save_buf[0] != '\0'){
 						if(ImGui::Button("Create")){
 							//std::filesystem::create_directory(file_save_buf);
 							selected_file = save_path.value() / file_save_buf;
 							save_path.reset();
 							ImGui::CloseCurrentPopup();
-							popup_opened = false;
 						}
 					}
 					ImGui::PopID();

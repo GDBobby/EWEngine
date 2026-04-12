@@ -6,12 +6,8 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<Buffer>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
-    : logicalDevice{_logicalDevice}//,
-        //files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
-        //meta_files{root_path, std::vector<std::string>{".mie"}}
+    Manager<Buffer>::Manager(std::filesystem::path const& root_path)
     {
-
     }
 
     void Manager<Buffer>::Destroy(AssetHash hash){
@@ -30,7 +26,7 @@ namespace Asset{
             return *iter->value;
         }
         else{
-            Buffer& buf = data_arena.AddElement(logicalDevice);
+            Buffer& buf = data_arena.AddElement(*Global::logicalDevice);
             association_container.push_back(hash, &buf);
             //set name??
             return buf;
@@ -53,7 +49,7 @@ namespace Asset{
             return *iter->value;
         }
         else{
-            Buffer& buf = data_arena.AddElement(logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
+            Buffer& buf = data_arena.AddElement(*Global::logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
             association_container.push_back(hash, &buf);
             buf.SetName(name.string());
             return buf;
@@ -76,8 +72,15 @@ namespace Asset{
         for(auto& kvp : association_container){
             //auto found = association_container.find(kvp.key);
             //if(found == association_container.end()){
-                if(ImGui::Button(kvp.value->name.c_str())){
+                auto addr = &kvp.value;
+                if(ImGui::TreeNode(kvp.value->name.c_str())){
                     Get(kvp.key);
+                    DragDropPtr::Source(kvp.value);
+
+                    ImGui::TreePop();
+                }
+                else{
+                    DragDropPtr::Source(kvp.value);
                 }
             //}
             //else{

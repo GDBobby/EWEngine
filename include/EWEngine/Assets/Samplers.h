@@ -3,7 +3,7 @@
 #include "EightWinds/Sampler.h"
 #include "EightWinds/Data/KeyValueContainer.h"
 
-#include "EWEngine/Assets/Manager.h"
+#include "EWEngine/Assets/Base.h"
 
 namespace EWE{
 namespace Asset{
@@ -13,13 +13,12 @@ namespace Asset{
 
     template<>
     struct Manager<Sampler>{
-        LogicalDevice& logicalDevice;
 
         static AssetHash GetHash(Sampler const& sampler){
             return Sampler::Condense(sampler.info);
         }
 
-        [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice);
+        [[nodiscard]] explicit Manager();
         
         Hive<Sampler, 64> data_arena;
         KeyValueContainer<Sampler::CondensedType, Sampler*> association_container;

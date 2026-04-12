@@ -4,21 +4,20 @@
 #include "EightWinds/Sampler.h"
 #include "EightWinds/Data/KeyValueContainer.h"
 
-#include "EWEngine/Assets/Manager.h"
+#include "EWEngine/Assets/Base.h"
 
 namespace EWE{
 namespace Asset{
 
     template<>
     struct Manager<Image>{
-        LogicalDevice& logicalDevice;
         FileSystem files;
         //FileSystem meta_files;
 
         Hive<Image, 64> data_arena;
         KeyValueContainer<AssetHash, Image*> association_container{};
 
-        [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path);
+        [[nodiscard]] explicit Manager(std::filesystem::path const& root_path);
 
         static AssetHash GetHash(Image const& img){
             return CrossPlatformPathHash(img.name);
@@ -33,7 +32,7 @@ namespace Asset{
         void Destroy(Image* img);
 
         Image* Get(AssetHash hash);
-        Image* Get(std::string_view name);
+        Image* Get(std::filesystem::path const& name);
 
 #ifdef EWE_IMGUI
         void Imgui();

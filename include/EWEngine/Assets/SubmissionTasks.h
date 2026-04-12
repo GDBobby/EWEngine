@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EWEngine/Assets/Manager.h"
+#include "EWEngine/Assets/Base.h"
 #include "EightWinds/RenderGraph/SubmissionTask.h"
 
 #include "EightWinds/Data/KeyValueContainer.h"
@@ -10,13 +10,12 @@ namespace Asset{
 
     template<>
     struct Manager<SubmissionTask>{
-        LogicalDevice& logicalDevice;
         FileSystem files;
 
         Hive<SubmissionTask, 64> data_arena;
         KeyValueContainer<AssetHash, SubmissionTask*> association_container{};
 
-        [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path);
+        [[nodiscard]] explicit Manager(std::filesystem::path const& root_path);
 
         static AssetHash GetHash(SubmissionTask const& task){
             return CrossPlatformPathHash(task.name);

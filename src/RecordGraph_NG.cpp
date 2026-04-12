@@ -1,5 +1,5 @@
-#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
-#include "EWEngine/NodeGraph/Record_NG.h"
+#include "EWEngine/Imgui/ImNodes/Graph/InstructionPackage_NG.h"
+#include "EWEngine/Imgui/ImNodes/Graph/Record_NG.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
 #include "imgui.h"

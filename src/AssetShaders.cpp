@@ -6,9 +6,8 @@ namespace Asset{
 
 
 
-    Manager<Shader>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path root_directory)
-    : logicalDevice{_logicalDevice},
-        files{root_directory, {".spv"}}
+    Manager<Shader>::Manager(std::filesystem::path root_directory)
+    : files{root_directory, {".spv"}}
     {
 
     }
@@ -29,7 +28,7 @@ namespace Asset{
             std::filesystem::path full_file_name = files.root_directory / file_name;
 
             if(iter != files.hashed_path.end()){
-                auto emp_back = shaders.try_emplace(file_name, new Shader(logicalDevice, full_file_name.string().c_str()));
+                auto emp_back = shaders.try_emplace(file_name, new Shader(*Global::logicalDevice, full_file_name.string().c_str()));
                 EWE_ASSERT(emp_back.second);
                 return emp_back.first->second;
             }

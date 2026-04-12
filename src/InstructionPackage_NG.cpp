@@ -1,4 +1,4 @@
-#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
+#include "EWEngine/Imgui/ImNodes/Graph/InstructionPackage_NG.h"
 #include "EWEngine/Global.h"
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
 #include "EWEngine/Imgui/Objects.h"
@@ -14,28 +14,29 @@
 namespace EWE{
 namespace Node{
 
-    InstructionPackageNodeGraph::InstructionPackageNodeGraph()
+    InstructionPackage_NG::InstructionPackage_NG()
     : ImNodes::EWE::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions.push_back(".eip");
+        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
         acceptable_add_instructions = std::vector<Inst::Type>{
             Command::InstructionPackage::allowed_instructions.begin(), 
             Command::InstructionPackage::allowed_instructions.end()
         }; 
+        package_payload = nullptr;
     }
 
-    InstructionPackageNodeGraph::InstructionPackageNodeGraph(Command::InstructionPackage& pkg)
+    InstructionPackage_NG::InstructionPackage_NG(Command::InstructionPackage& pkg)
     : ImNodes::EWE::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions.push_back(".eip");
-        InitFromPackage(pkg);
+        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+        InitFromObject(pkg);
     }
 
-    ImNodes::EWE::Node* InstructionPackageNodeGraph::CreateHeadNode(){
+    ImNodes::EWE::Node* InstructionPackage_NG::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
         auto* node_payload = new InstNodePayload();
@@ -47,18 +48,18 @@ namespace Node{
         return &head;
     } 
 
-    Inst::Type InstructionPackageNodeGraph::GetInstructionFromNode(ImNodes::EWE::Node& node){
+    Inst::Type InstructionPackage_NG::GetInstructionFromNode(ImNodes::EWE::Node& node){
         return reinterpret_cast<InstNodePayload*>(node.payload)->iType;
     }
 
-    void InstructionPackageNodeGraph::ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const {
+    void InstructionPackage_NG::ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const {
         if(node.id != 0){
             auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
             ImGui::Text("node.id[%d] : inst[%s] - pos[%.2f:%.2f]", node.id, Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), temp_pos.x, temp_pos.y);
         }
     }
 
-    void InstructionPackageNodeGraph::PrintNode(ImNodes::EWE::Node& node) const{
+    void InstructionPackage_NG::PrintNode(ImNodes::EWE::Node& node) const{
         Logger::Print<Logger::Debug>("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
             node.id, 
             Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
@@ -67,7 +68,7 @@ namespace Node{
         );
     }
 
-    void InstructionPackageNodeGraph::RenderEditorTitle(){
+    void InstructionPackage_NG::RenderEditorTitle(){
         ImGui::BulletText("param data - inst count[%zu] : param heap size[%zu] : param count[%zu]", paramPool.instructions.size(), paramPool.params[0].Size(), paramPool.param_data.size());
         ImNodes::EWE::Editor::RenderEditorTitle();
         if(packageType == Command::InstructionPackage::Object){
@@ -80,20 +81,57 @@ namespace Node{
         }
     }
 
-    void InstructionPackageNodeGraph::RenderNodes() {
+    void InstructionPackage_NG::SetPackageType(Command::InstructionPackage::Type pkg_type){
+        packageType = pkg_type;
+        if(previous_package_type != pkg_type){
+            if(package_payload != nullptr){
+                switch(previous_package_type){
+                    case Command::InstructionPackage::Base: 
+                        break;
+                    case Command::InstructionPackage:: Object:
+                        delete reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload);
+                        break;
+                    default: EWE_UNREACHABLE;
+                }
+            }
+
+            switch(pkg_type){
+                case Command::InstructionPackage::Base:
+                    acceptable_add_instructions = std::vector<Inst::Type>{
+                        Command::InstructionPackage::allowed_instructions.begin(), 
+                        Command::InstructionPackage::allowed_instructions.end()
+                    };
+                    explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+                    break;
+                case Command::InstructionPackage::Object:
+                    acceptable_add_instructions = std::vector<Inst::Type>{
+                        Command::ObjectPackage::allowed_instructions.begin(), 
+                        Command::ObjectPackage::allowed_instructions.end()
+                    };
+                    package_payload = new Command::ObjectPackage::Payload();
+                    explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
+                    break;
+                default: break;
+            }
+        }
+        previous_package_type = packageType;
+    }
+
+    void InstructionPackage_NG::RenderNodes() {
+        if(previous_package_type != packageType){
+            SetPackageType(packageType);
+        }
+
         ImNodes::EWE::Editor::RenderNodes();
         Inst::Type* inst_type;
         if(DragDropPtr::Target(inst_type)) {
-            auto temp_min = ImGui::GetItemRectMin();
-            auto temp_max =ImGui::GetItemRectMax();
             auto& added_node = CreateRGNode(*inst_type);
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
-            auto window_pos =  ImGui::GetWindowPos();
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }
     }
 
-    ImNodes::EWE::Node& InstructionPackageNodeGraph::CreateRGNode(Inst::Type iType) {
+    ImNodes::EWE::Node& InstructionPackage_NG::CreateRGNode(Inst::Type iType) {
         auto& added_node = AddNode();
         auto* node_payload = new InstNodePayload();
         node_payload->type = InstNodePayload::Instruction;
@@ -107,7 +145,7 @@ namespace Node{
         return added_node;
     }
 
-    std::vector<Inst::Type> InstructionPackageNodeGraph::CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const{
+    std::vector<Inst::Type> InstructionPackage_NG::CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const{
         std::vector<Inst::Type> ret{};
         
         ImNodes::EWE::Node* current_node = nullptr;
@@ -152,7 +190,7 @@ namespace Node{
         return ret;
     }
 
-    void InstructionPackageNodeGraph::InsertNodeToParamPool(ImNodes::EWE::Node* inserted_node){
+    void InstructionPackage_NG::InsertNodeToParamPool(ImNodes::EWE::Node* inserted_node){
         UpdateNodeOffsets();
         auto* node_payload = reinterpret_cast<InstNodePayload*>(inserted_node->payload);
         if(node_payload->distanceFromHead >= 0){
@@ -160,7 +198,7 @@ namespace Node{
         }
     }
 
-    void InstructionPackageNodeGraph::UpdateNodeOffsets() {
+    void InstructionPackage_NG::UpdateNodeOffsets() {
 
         InstNodePayload* current_payload = nullptr;
         for(auto& node : nodes){
@@ -193,11 +231,11 @@ namespace Node{
         }
     }
 
-    void InstructionPackageNodeGraph::OpenAddMenu() {
+    void InstructionPackage_NG::OpenAddMenu() {
         add_menu_is_open = true;
     }
 
-    bool InstructionPackageNodeGraph::InsertLink(ImNodes::EWE::Node& added_node, ImNodes::EWE::Node* otherNode){
+    bool InstructionPackage_NG::InsertLink(ImNodes::EWE::Node& added_node, ImNodes::EWE::Node* otherNode){
         //printf("creating in between\n");
         //this is added an inst in between two connected nodes
         //first, find the link that connects those two
@@ -235,7 +273,7 @@ namespace Node{
         return true;
     }
 
-    bool InstructionPackageNodeGraph::AddInstructionButton(Inst::Type itype){
+    bool InstructionPackage_NG::AddInstructionButton(Inst::Type itype){
         if (filter.PassFilter(Reflect::Enum::ToString(itype).data())){ 
             if(ImGui::Button(Reflect::Enum::ToString(itype).data())){
                 auto& added_node = CreateRGNode(itype);
@@ -297,7 +335,7 @@ namespace Node{
         return false;
     }
 
-    bool InstructionPackageNodeGraph::RenderAddMenu() {
+    bool InstructionPackage_NG::RenderAddMenu() {
         bool wantsClose = false;
 
         bool window_not_focused;
@@ -347,7 +385,7 @@ namespace Node{
         return wantsClose | window_not_focused;
     }
 
-    void InstructionPackageNodeGraph::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+    void InstructionPackage_NG::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
         //auto const& instructions = CollectInstructionsUpTo(&src_node);
 
         menu_pos = ImGui::GetMousePos();
@@ -355,7 +393,7 @@ namespace Node{
         link_empty_drop.node = &src_node;
         link_empty_drop.offset = pin_offset;
     }
-    void InstructionPackageNodeGraph::LinkCreated(ImNodes::EWE::NodePair& link) {
+    void InstructionPackage_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
         if(link.start.node->pins[link.start.offset].payload != nullptr 
             || link.end.node->pins[link.end.offset].payload != nullptr
         ){
@@ -402,7 +440,7 @@ namespace Node{
             UpdateNodeOffsets();
         }
     }
-    void InstructionPackageNodeGraph::LinkDestroyed(ImNodes::EWE::NodePair& link) {
+    void InstructionPackage_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
         Logger::Print<Logger::Debug>("ipng::link destroyed\n");
         
         link.start.node->pins[link.start.offset].payload = nullptr;
@@ -417,7 +455,7 @@ namespace Node{
         ImNodes::EWE::Editor::LinkDestroyed(link);
     }
 
-    void InstructionPackageNodeGraph::RenderNode(ImNodes::EWE::Node& node) {
+    void InstructionPackage_NG::RenderNode(ImNodes::EWE::Node& node) {
         auto node_payload = reinterpret_cast<InstNodePayload*>(node.payload);
 
         ImNodes::BeginNodeTitleBar();
@@ -451,7 +489,7 @@ namespace Node{
                 }
             }
             ImNodes::EndNodeTitleBar();
-            ImGui::Text(""); //nodes need some abritrary filler
+            ImGui::Text(" "); //nodes need some abritrary filler
             return;
         }
         else if(node_payload->type == InstNodePayload::Package){
@@ -476,7 +514,7 @@ namespace Node{
         }
     }
 
-    void InstructionPackageNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void InstructionPackage_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
@@ -489,14 +527,15 @@ namespace Node{
         ImNodes::EndPinAttribute();
     }
 
-    bool InstructionPackageNodeGraph::SaveFunc() {
+    bool InstructionPackage_NG::SaveFunc() {
         explorer.enabled = save_open;
         explorer.state = ExplorerContext::State::Save;
         if(ImGui::Begin("file save")){
             explorer.Imgui();
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
-                EWE::Global::instPackages->WriteToFile(paramPool, package_payload, packageType, saved_path);
+                const std::filesystem::path proximate = std::filesystem::proximate(saved_path, Global::assetManager->root_directory);
+                Asset::WriteToInstPkgFile(paramPool, package_payload, packageType, proximate);
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }
@@ -509,7 +548,7 @@ namespace Node{
         return !explorer.enabled;
     }
 
-    void InstructionPackageNodeGraph::RecreateLinks(){
+    void InstructionPackage_NG::RecreateLinks(){
         links.clear();
 
         if(headNode->pins[0].payload == nullptr){
@@ -548,9 +587,10 @@ namespace Node{
         UpdateNodeOffsets();
     }
 
-    void InstructionPackageNodeGraph::InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type){
+    void InstructionPackage_NG::InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type){
         nodes.Clear();
         links.clear();
+
 
         try{
             paramPool = pp;
@@ -588,32 +628,18 @@ namespace Node{
 
         nodes.ShrinkToFit();
 
-        switch(pkg_type){
-            case Command::InstructionPackage::Base:
-                acceptable_add_instructions = std::vector<Inst::Type>{
-                    Command::InstructionPackage::allowed_instructions.begin(), 
-                    Command::InstructionPackage::allowed_instructions.end()
-                };
-                break;
-            case Command::InstructionPackage::Object:
-                acceptable_add_instructions = std::vector<Inst::Type>{
-                    Command::ObjectPackage::allowed_instructions.begin(), 
-                    Command::ObjectPackage::allowed_instructions.end()
-                };
-                package_payload = new Command::ObjectPackage::Payload();
-                EWE_ASSERT(payload != nullptr);
-                memcpy(package_payload, payload, sizeof(Command::ObjectPackage::Payload));
-                break;
-            default: break;
-        }
+        SetPackageType(pkg_type);
         RecreateLinks();
     }
-    void InstructionPackageNodeGraph::InitFromPackage(Command::InstructionPackage& pkg){
+    void InstructionPackage_NG::InitFromObject(Command::InstructionPackage& pkg){
+        packageType = Command::InstructionPackage::Base;
         switch(pkg.type){
             case Command::InstructionPackage::Base: 
+                explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
                 InitFromFile(pkg.paramPool, nullptr, pkg.type);
                 break;
             case Command::InstructionPackage::Object:
+                explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
                 InitFromFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, pkg.type);
                 break;
             default: 
@@ -623,7 +649,7 @@ namespace Node{
         return;
     }
 
-    bool InstructionPackageNodeGraph::LoadFunc() {
+    bool InstructionPackage_NG::LoadFunc() {
         explorer.enabled = load_open;
         explorer.state = ExplorerContext::State::Load;
         if(ImGui::Begin("file load")){
@@ -631,10 +657,25 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 //put the record somewhere
-                auto* pkg = EWE::Global::instPackages->ReadFile(load_path);
-                InitFromPackage(*pkg);
+                
+                const auto proximate_path = std::filesystem::proximate(load_path, Global::assetManager->root_directory);
 
-                Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
+                switch(packageType){
+                    case Command::InstructionPackage::Base:{
+                        auto& pkg = EWE::Global::assetManager->instPkg.Get(proximate_path);
+                        InitFromObject(pkg);
+                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg.paramPool.instructions.size(), paramPool.instructions.size());
+                        break;
+                    }
+                    case Command::InstructionPackage::Object:{
+                        auto& pkg = EWE::Global::assetManager->objPkg.Get(proximate_path);
+                        InitFromObject(pkg);
+                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg.paramPool.instructions.size(), paramPool.instructions.size());
+                        break;
+                    }
+                    default: EWE_UNREACHABLE;
+                }
+
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }

@@ -1,4 +1,7 @@
 //example
+#include "EightWinds/Command/InstructionPackage.h"
+#include "EightWinds/Command/InstructionPointer.h"
+#include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/Preprocessor.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/VulkanHeader.h"
@@ -19,16 +22,11 @@
 
 #include "EWEngine/Tools/ImguiHandler.h"
 
-#include "EightWinds/RenderGraph/RasterTask.h"
+#include "EightWinds/RenderGraph/RasterPackage.h"
 
 #include "EWEngine/Reflect/ImguiReflection.h"
 
-#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
-#include "EWEngine/NodeGraph/RenderGraph_NG.h"
-#include "EWEngine/NodeGraph/Record_NG.h"
-#include "EWEngine/NodeGraph/InstructionPackage_NG.h"
-#include "EWEngine/NodeGraph/PackageRecord_NG.h"
-#include "EWEngine/NodeGraph/SubmissionTask_NG.h"
+#include "EWEngine/Imgui/ImNodes/NodeGraph_Manager.h"
 
 #include "EWEngine/InputData.h"
 #include "EWEngine/Imgui/DragDrop.h"
@@ -157,10 +155,11 @@ int main(int argc, char* argv[]) {
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
-    EWE::Shader* triangle_vert = EWE::Global::shaders->Get("basic.vert.spv");
-    EWE::Shader* triangle_frag = EWE::Global::shaders->Get("basic.frag.spv");
+    EWE::Shader* triangle_vert = EWE::Global::assetManager->shader.Get("basic.vert.spv");
+    EWE::Shader* triangle_frag = EWE::Global::assetManager->shader.Get("basic.frag.spv");
 
-    EWE::PipeLayout triangle_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ triangle_vert, triangle_frag });
+    EWE::Shader* triangle_shaders[] = { triangle_vert, triangle_frag };
+    EWE::PipeLayout triangle_layout(logicalDevice, triangle_shaders);
     //passconfig should be using a full rendergraph setup
     EWE::TaskRasterConfig passConfig;
     passConfig.SetDefaults();
@@ -191,14 +190,6 @@ int main(int argc, char* argv[]) {
     depth_temp.clearValue.depthStencil.depth = 0.f;
     depth_temp.clearValue.depthStencil.stencil = 0; //idk what to set this to tbh
 
-    EWE::FullRenderInfo triangle_render_info{
-        "triangle",
-        logicalDevice, *renderQueue,
-        passConfig.attachment_set_info
-    };
-
-    EWE::RasterTask triangle_raster_task{"triangle raster task", logicalDevice, *renderQueue, passConfig, &triangle_render_info};
-
     EWE::ObjectRasterData triangle_rasterObj;
     triangle_rasterObj.layout = &triangle_layout;
     triangle_rasterObj.config.SetDefaults();
@@ -206,37 +197,9 @@ int main(int argc, char* argv[]) {
     triangle_rasterObj.config.depthClamp = false;
     triangle_rasterObj.config.rasterizerDiscard = false;
     triangle_rasterObj.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-     
-    //VertexDrawData has a copy of a deferred<VertexParamPack> that will be automatically adjusted
-    //also has a push constant, which will be automatically applied
-    EWE::VertexDrawData triangle_drawData{};
-    triangle_drawData.use_labelPack = true;
-    triangle_raster_task.AddDraw(triangle_rasterObj, &triangle_drawData);
-
-    EWE::Command::Record triangleRecord{};
-    triangle_raster_task.Record(triangleRecord, true);
 
     EWE::RenderGraph& renderGraph = engine.renderGraph;
-    EWE::GPUTask& renderTask = renderGraph.tasks.AddElement("main render", logicalDevice, *renderQueue, triangleRecord);
-
-    triangle_raster_task.scissor = EWE::Global::window->screenDimensions;
-    triangle_raster_task.viewport.x = 0.f;
-    triangle_raster_task.viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
-    triangle_raster_task.viewport.width = static_cast<float>(EWE::Global::window->screenDimensions.width);
-    triangle_raster_task.viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
-    triangle_raster_task.viewport.minDepth = 0.0f;
-    triangle_raster_task.viewport.maxDepth = 1.f;
-    triangle_raster_task.AdjustPipelines();
-    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-        if (triangle_drawData.deferred_label != nullptr) {
-            auto& triangle_label = triangle_drawData.deferred_label->GetRef(i);
-            triangle_label.name = "triangle";
-            triangle_label.red = 1.f;
-            triangle_label.green = 0.f;
-            triangle_label.blue = 0.f;
-        }
-    }
-
+    EWE::GPUTask& renderTask = renderGraph.tasks.AddElement("main render", logicalDevice, *renderQueue);
 
     VmaAllocationCreateInfo vmaAllocInfo{
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -258,13 +221,11 @@ int main(int argc, char* argv[]) {
 
 #if EWE_DEBUG_BOOL
             EWE::Logger::Print<EWE::Logger::Debug>("size comparison - %zu : %zu\n", str.size, sizeof(TriangleVertex));
-            //im getting fucked by spv. its forcing 32bit alignment, even tho spirvcross says 20bit
-            //EWE_ASSERT(str.size == sizeof(TriangleVertex));
 #endif
         }
     }
 
-    auto& vertex_buffer = EWE::Global::buffers->Get("triangle vertex buffer", sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    auto& vertex_buffer = EWE::Global::assetManager->buffer.Get("triangle vertex buffer", sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
     {
         TriangleVertex* mappedData = reinterpret_cast<TriangleVertex*>(vertex_buffer.Map());
 
@@ -293,23 +254,11 @@ int main(int argc, char* argv[]) {
         vertex_buffer.Unmap();
     }
 
-    triangle_drawData.buffers[0] = &vertex_buffer;
-    if (triangle_drawData.deferred_push != nullptr) {
-        triangle_drawData.UpdateBuffer();
-    }
-    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-        if (triangle_drawData.paramPack != nullptr) {
-            triangle_drawData.paramPack->GetRef(i).firstInstance = 0;
-            triangle_drawData.paramPack->GetRef(i).firstVertex = 0;
-            triangle_drawData.paramPack->GetRef(i).instanceCount = 1;
-            triangle_drawData.paramPack->GetRef(i).vertexCount = 3;
-        }
-    }
-
     passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
-    EWE::Shader* merge_vert = EWE::Global::shaders->Get("merge.vert.spv");
-    EWE::Shader* merge_frag = EWE::Global::shaders->Get("merge.frag.spv");
-    EWE::PipeLayout merge_layout(logicalDevice, std::initializer_list<EWE::Shader*>{ merge_vert, merge_frag });
+    EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
+    EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
+    EWE::Shader* merge_shaders[] = {merge_vert, merge_frag};
+    EWE::PipeLayout merge_layout(logicalDevice, merge_shaders);
 
     EWE::Command::Record mergeRecord{};
 
@@ -324,34 +273,52 @@ int main(int argc, char* argv[]) {
         logicalDevice, *renderQueue,
         passConfig.attachment_set_info
     };
-    EWE::RasterTask mergeRaster{ "merge raster", logicalDevice, *renderQueue, passConfig, &merge_render_info };
+    EWE::RasterPackage mergeRaster{ "merge raster", logicalDevice, *renderQueue, passConfig, &merge_render_info };
     color_temp.format = engine.swapchain.swapCreateInfo.imageFormat;
     mergeRaster.task_config.attachment_set_info.colors.push_back(color_temp);
 
-    mergeRaster.scissor = triangle_raster_task.scissor;
-    mergeRaster.viewport = triangle_raster_task.viewport;
+    mergeRaster.scissor = EWE::Global::window->screenDimensions;
+    mergeRaster.viewport.x = 0.f;
+    mergeRaster.viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
+    mergeRaster.viewport.width = static_cast<float>(EWE::Global::window->screenDimensions.width);
+    mergeRaster.viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
+    mergeRaster.viewport.minDepth = 0.0f;
+    mergeRaster.viewport.maxDepth = 1.f;
 
     EWE::ObjectRasterData merge_rasterObj{
         .layout = &merge_layout,
         .config = triangle_rasterObj.config
     };
-    EWE::VertexDrawData merge_drawData{};
-    mergeRaster.AddDraw(merge_rasterObj, &merge_drawData);
-    mergeRaster.Record(mergeRecord);
+    EWE::Command::ObjectPackage merge_object_pkg{};
+    merge_object_pkg.payload.config = triangle_rasterObj.config;
+    merge_object_pkg.payload.shaders[EWE::Shader::Stage::Vertex] = merge_vert;
+    merge_object_pkg.payload.shaders[EWE::Shader::Stage::Fragment] = merge_frag;
+
+    EWE::InstructionPointer<EWE::ParamPack<EWE::Inst::Push>> mergePush;
+    {
+        merge_object_pkg.paramPool.PushBack(EWE::Inst::Push);
+        EWE::ParamPack<EWE::Inst::Draw> draw_pack{
+            .vertexCount = 4,
+            .instanceCount = 1,
+            .firstVertex = 0,
+            .firstInstance = 0
+        };
+        merge_object_pkg.paramPool.PushBack(draw_pack);
+    }
+    mergePush = *reinterpret_cast<EWE::InstructionPointer<EWE::ParamPack<EWE::Inst::Push>>*>(&merge_object_pkg.paramPool.param_data[0]);
+    mergeRaster.objectPackages.push_back(&merge_object_pkg);
+
+    mergeRaster.Compile();
+
+    EWE::Command::PackageRecord merge_pkgRecord{};
+    merge_pkgRecord.queue = renderQueue;
+    merge_pkgRecord.packages.push_back(reinterpret_cast<EWE::Command::InstructionPackage*>(&mergeRaster));
 
     EWE::GPUTask& mergeTask = renderGraph.tasks.AddElement(
         "merge task",
-        logicalDevice, *renderQueue,
-        mergeRecord
+        logicalDevice,
+        merge_pkgRecord, false
     );
-    mergeRaster.AdjustPipelines();
-
-    for (uint8_t i = 0; i < EWE::max_frames_in_flight; i++) {
-        merge_drawData.paramPack->GetRef(i).firstInstance = 0;
-        merge_drawData.paramPack->GetRef(i).firstVertex = 0;
-        merge_drawData.paramPack->GetRef(i).vertexCount = 4;
-        merge_drawData.paramPack->GetRef(i).instanceCount = 1;
-    }
 
     EWE::UsageData<EWE::Image> initial_acquire_usage{
         .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -359,8 +326,6 @@ int main(int argc, char* argv[]) {
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
 
-    uint32_t render_att_index = renderTask.resources.AddResource(triangle_raster_task.renderInfo->full.color_images[0], initial_acquire_usage);
-    renderGraph.syncManager.AddAcquisition_Image(renderTask, render_att_index);
     uint32_t present_img_att_index = mergeTask.resources.AddResource<EWE::Image>(initial_acquire_usage);
     renderGraph.syncManager.AddAcquisition_Image(mergeTask, present_img_att_index);
 
@@ -375,11 +340,8 @@ int main(int argc, char* argv[]) {
         .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     };
 
-    uint32_t acquire_render_output_index = mergeTask.resources.AddResource(triangle_raster_task.renderInfo->full.color_images[0], merge_acquire_usage);
-    renderGraph.syncManager.AddTransition_Image(renderTask, render_att_index, mergeTask, acquire_render_output_index);
     uint32_t acquire_imgui_output_index = mergeTask.resources.AddResource(imguiHandler.renderInfo.full.color_images[0], merge_acquire_usage);
     renderGraph.syncManager.AddTransition_Image(imguiTask, imgui_att_index, mergeTask, acquire_imgui_output_index);
-    //renderGraph.syncManager.PopulateAffixes(); //from here, no more resources can be added
 
     renderGraph.presentBridge.SetSubresource(
         VkImageSubresourceRange{
@@ -394,20 +356,8 @@ int main(int argc, char* argv[]) {
     renderTask.GenerateWorkload();
     mergeTask.GenerateWorkload();
 
-    EWE::SubmissionTask& world_render_submission = renderGraph.submissions.AddElement("world render", *EWE::Global::logicalDevice, *renderQueue);
-    world_render_submission.packaged_tasks.push_back(renderTask.workload);
     EWE::SubmissionTask& imgui_submission = renderGraph.submissions.AddElement("imgui", *EWE::Global::logicalDevice, *renderQueue);
     imgui_submission.specializedSubmission = true;
-
-    imguiHandler.Begin();
-    EWE::Node::RenderGraphNodeGraph rgng{renderGraph};
-    //EWE::Node::RasterTaskNodeGraph rtng{};
-    EWE::Node::RecordNodeGraph rng{};
-    EWE::Node::InstructionPackageNodeGraph ipng{};
-    EWE::Node::PackageRecord_NG prng{};
-    EWE::Node::SubmissionTask_NG stng{};
-    //EWE::Node::GPUTask_NG gtng{};
-    imguiHandler.End();
 
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
         ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -449,27 +399,6 @@ int main(int argc, char* argv[]) {
             current_im_vp->Pos.y = vp.current_viewport.offset.y;
             
             ImGui::DragInt2("extent", reinterpret_cast<int*>(&vp.current_viewport.extent.width), 1.f, 0.f, EWE::Global::window->screenDimensions.width - vp.current_viewport.offset.x);
-
-            std::string butt_str = std::string("split right##") + extension_string;
-            if(ImGui::Button(butt_str.c_str())){
-                vp.current_viewport.extent.width /= 2;
-                //vp.current_viewport.extent.height /= 2;
-
-                //this reference will most likely be invalidated
-                auto exec_func_copy = vp.exec_func;
-                auto rect_copy = vp.current_viewport;
-                auto& back_vp = imguiHandler.viewports.emplace_back();
-
-                back_vp.context = imguiHandler.InitializeContext();
-                back_vp.current_viewport = rect_copy;
-                back_vp.current_viewport.offset.x += rect_copy.extent.width;
-                //back_vp.current_viewport.offset.y += rect_copy.extent.height;
-                back_vp.exec_func = exec_func_copy;
-            }
-
-            if(ImGui::Button("bring next to front")){
-                ImGui::SetNextWindowFocus();
-            }
         //}
         //ImGui::End();
         if(ImGui::Begin("test mover")){
@@ -479,59 +408,17 @@ int main(int argc, char* argv[]) {
         ImGui::End();
     };
 
+    EWE::NG_Manager ng_manager{};
+    ng_manager.DefaultFillGraphs();
+    ng_manager.SetOpenGraphFunc();
+
     auto node_imgui_vp = [&](EWE::ImguiViewport& vp){
         //ImGui::Checkbox("Use work area instead of main area", &use_work_area);
 
-        auto dragdrop_payload = ImGui::GetDragDropPayload();
-        if (dragdrop_payload == NULL){
-            ImGui::Text("payload null");
-        }
-        else{
-            const int payload_count = (int)dragdrop_payload->DataSize / (int)sizeof(ImGuiID);
-            ImGui::Text("payload count : %d : %s", payload_count, reinterpret_cast<const char*>(dragdrop_payload->Data));
-        }
-
-        if(ImGui::BeginTabBar("node editors")){
-        
-            if(ImGui::BeginTabItem("render graph")){
-                rgng.RenderNodes();
-
-                ImGui::EndTabItem();
-            }
-            if(ImGui::BeginTabItem("raster task")){
-                //rtng.editor.RenderNodes();
-                ImGui::EndTabItem();
-            }
-            if(ImGui::BeginTabItem("record")){
-                rng.RenderNodes();
-                ImGui::EndTabItem();
-            }
-            if(ImGui::BeginTabItem("inst pckg")){
-                ipng.RenderNodes();
-                ImGui::EndTabItem();
-            }
-            if(ImGui::BeginTabItem("pkg rec")){
-                prng.RenderNodes();
-                ImGui::EndTabItem();
-            }
-            if(ImGui::BeginTabItem("submission task")){
-                stng.RenderNodes();
-                ImGui::EndTabItem();
-            }
-            /*
-            if(ImGui::BeginTabItem("gpu task")){
-                gtng.RenderNodes();
-                ImGui::EndTabItem();
-            }
-            */
-
-            ImGui::EndTabBar();
-        }
+        ng_manager.Render();
     };
 
     auto assets_imgui_window = [&](EWE::ImguiViewport& vp){
-        //EWE::ImguiExtension::Imgui(triangle_raster_task);
-        //EWE::ImguiExtension::Imgui(mergeRaster);
         if(ImGui::TreeNode("resources")){
             if(ImGui::TreeNode("buffers")){
                 logicalDevice.buffers.mut.lock();
@@ -593,46 +480,13 @@ int main(int argc, char* argv[]) {
             ImGui::TreePop();
         }
 
-        if(ImGui::TreeNode("shaders")){
-            EWE::Global::shaders->Imgui();
-
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("dii")){
-            EWE::Global::diis->Imgui();
-
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("images")){
-            EWE::Global::images->Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("samplers")){
-            EWE::Global::samplers->Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("records")){
-            EWE::Global::records->Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("buffers")){
-            EWE::Global::buffers->Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("inst pkgs")){
-            EWE::Global::instPackages->Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("pkg records")){
-            EWE::Global::pkgRecords->Imgui();
-            ImGui::TreePop();
-        }
+        EWE::Global::assetManager->Imgui();
 
     };
 
     auto engine_imgui_window = [&](EWE::ImguiViewport& vp){
         engine.Imgui();
-        ImGui::BulletText("asset root directory : %s", EWE::Global::records->files.root_directory.string().c_str());
+        ImGui::BulletText("asset root directory : %s", EWE::Global::assetManager->root_directory.string().c_str());
         ImGui::BulletText("mouse pos : %.2f:%.2f", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
         static EWE::Inst::Type inst_type = EWE::Inst::Type::BindPipeline;
         Reflect::Enum::Imgui_Combo_Selectable("inst dd", inst_type);
@@ -650,6 +504,14 @@ int main(int argc, char* argv[]) {
             Reflect::ImguiReflect<^^EWE::HeapBlock>();
             ImGui::TreePop();
         }
+        auto dragdrop_payload = ImGui::GetDragDropPayload();
+        if (dragdrop_payload == NULL){
+            ImGui::Text("payload null");
+        }
+        else{
+            const int payload_count = (int)dragdrop_payload->DataSize / (int)sizeof(ImGuiID);
+            ImGui::Text("payload count : %d : %s", payload_count, reinterpret_cast<const char*>(dragdrop_payload->Data));
+        }
     };
     {
         auto& vp_back = imguiHandler.viewports.emplace_back();
@@ -660,7 +522,6 @@ int main(int argc, char* argv[]) {
     }
     {
         auto& vp_back = imguiHandler.viewports[0];
-        //imguiHandler.viewports.emplace_back();
         vp_back.exec_func = node_imgui_vp;
         vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.8f;
         vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.2f;
@@ -672,14 +533,10 @@ int main(int argc, char* argv[]) {
         vp_back.context = imguiHandler.InitializeContext();
         vp_back.current_viewport.offset.x = EWE::Global::window->screenDimensions.width * 0.8f;
         vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.2f;
-        //vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.7f;
-        //vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.3f;
     }
 
-    //imguiHandler.SetSubmissionData(imgui_submission.submitInfo);
     imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
 #ifdef EWE_IMGUI
-        //imguiHandler.BeginCommandBuffer();
         imguiTask.prefix.Execute(cmdBuf, frameIndex);
         imguiHandler.Render(cmdBuf);
         return true;
@@ -711,13 +568,8 @@ int main(int argc, char* argv[]) {
         .unnormalizedCoordinates = VK_FALSE
     };
 
-    EWE::Sampler& attachmentSampler = EWE::Global::samplers->Get(samplerCreateInfo);
+    EWE::Sampler& attachmentSampler = EWE::Global::assetManager->sampler.Get(samplerCreateInfo);
 
-
-    EWE::PerFlight<EWE::DescriptorImageInfo> world_attachment_descriptor(
-        EWE::DescriptorImageInfo{attachmentSampler, triangle_raster_task.renderInfo->full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-        EWE::DescriptorImageInfo{attachmentSampler, triangle_raster_task.renderInfo->full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
-    );
     EWE::PerFlight<EWE::DescriptorImageInfo> imgui_attachment_descriptor(
         EWE::DescriptorImageInfo{attachmentSampler, imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
         EWE::DescriptorImageInfo{attachmentSampler, imguiHandler.renderInfo.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
@@ -726,13 +578,7 @@ int main(int argc, char* argv[]) {
     std::size_t currentMergeTaskIndex = 0;
 
     attachment_blit_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
-        //i dont really know how to bridge tasks in different submisisons yet
-        //fully explicit right now
-
-        merge_drawData.textures[0] = &world_attachment_descriptor[frameIndex];
-        merge_drawData.textures[1] = &imgui_attachment_descriptor[frameIndex];
-
-        merge_drawData.UpdateBuffer();
+        mergePush.GetRef(frameIndex).texture_indices[0] = imgui_attachment_descriptor[frameIndex].index;
 
         VkRenderingAttachmentInfo presentAttachmentInfo{
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -746,27 +592,20 @@ int main(int argc, char* argv[]) {
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .clearValue = {0.f, 0.f, 0.f, 0.f}
         };
-        mergeRaster.deferred_vk_render_info->GetRef(frameIndex).colorAttachmentCount = 1;
-        mergeRaster.deferred_vk_render_info->GetRef(frameIndex).pColorAttachments = &presentAttachmentInfo;
+        auto& vri = mergeRaster.deferred_vk_render_info->GetRef(frameIndex);
+        vri.colorAttachmentCount = 1;
+        vri.pColorAttachments = &presentAttachmentInfo;
 
         mergeTask.workload(cmdBuf, frameIndex);
         renderGraph.presentBridge.Execute(cmdBuf);
         return true;
     });
 
-    
-
     renderGraph.execution_order = {
-        std::vector<EWE::SubmissionTask*>{&imgui_submission, &world_render_submission},
+        std::vector<EWE::SubmissionTask*>{&imgui_submission},//, &world_render_submission},
         std::vector<EWE::SubmissionTask*>{&attachment_blit_submission}
     };
     attachment_blit_submission.uses_present_image = true;
-
-    for (auto iter = renderGraph.tasks.begin(); iter != renderGraph.tasks.end(); iter.operator++()) { //why am i manually calling the operator
-        //testing hive iterator
-        auto& task = *iter;
-        EWE::Logger::Print<EWE::Logger::Debug>("Task name - %s\n", task.name.c_str());
-    }
 
     renderGraph.InitializeSemaphores();
     try { //beginning of render loop
@@ -790,13 +629,11 @@ int main(int argc, char* argv[]) {
                     swapImage.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
                     mouseData.UpdatePosition(EWE::Global::window->window);
-                    //nodeGraph.UpdateRender(mouseData, EWE::Global::frameIndex);
                     renderGraph.ChangeResource(mergeTask, present_img_att_index, &swapImage, EWE::Global::frameIndex);
                     renderGraph.presentBridge.UpdateSrcData(&mergeTask.queue, &mergeTask.resources.images[present_img_att_index], EWE::Global::frameIndex);
                     renderGraph.RecreateBarriers(EWE::Global::frameIndex);
 
                     renderGraph.Execute(EWE::Global::frameIndex);
-                    //renderGraph.presentSubmission.Present(EWE::Global::frameIndex);
 
                     EWE::Global::frameIndex = (EWE::Global::frameIndex + 1) % EWE::max_frames_in_flight;
                     engine.totalFramesSubmitted++;

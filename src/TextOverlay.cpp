@@ -23,12 +23,12 @@ namespace EWE {
 
 	TextOverlay::TextOverlay(LogicalDevice& _logicalDevice, float screenWidth, float screenHeight)
 		: logicalDevice{ _logicalDevice }, 
-		scale{ framebuffer_width / DEFAULT_WIDTH },
+		scale{ screenWidth / DEFAULT_WIDTH },
 		framebuffer_width {screenWidth},
 		framebuffer_height{ screenHeight },
 		vertShader{ logicalDevice, "common/shaders/textoverlay.vert.spv" },
 		fragShader{ logicalDevice, "common/shaders/textoverlay.frag.spv" },
-		pipeLayout{ logicalDevice, {&vertShader, &fragShader} }
+		pipeLayout{ nullptr }
 	{
 		EWE_ASSERT(textOverlayPtr == nullptr, "trying to recreate textoverlay??");
 		textOverlayPtr = this;

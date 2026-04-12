@@ -69,7 +69,20 @@ namespace ImNodes{
         struct Editor {
             [[nodiscard]] explicit Editor();
             [[nodiscard]] explicit Editor(bool saveFunc, bool loadFunc);
+            virtual ~Editor();
+
             std::string name;
+
+            enum class Type{
+                InstructionPackage,
+                ObjectPackage,
+                PackageRecord,
+                SubmissionTask,
+                RenderGraph,
+                RasterPackage,
+
+                Other
+            };
 
             ImNodes::ImNodesEditorContext* context;
             NodeAndPin link_empty_drop;
@@ -82,6 +95,9 @@ namespace ImNodes{
 
             ImVec2 node_editor_window_pos{0.f, 0.f};
             ImVec2 node_editor_window_size{0.f, 0.f};
+
+            //payload is what will be used to initialzie the graph, most likely the object the graph edits
+            inline static std::function<void(Type, void*)> OpenGraph = nullptr;
 
             Node& AddNode() {
                 return nodes.AddElement();

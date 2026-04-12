@@ -7,10 +7,11 @@
 
 namespace EWE{
     namespace Node{
-        struct RenderGraphNodeGraph : public ImNodes::EWE::Editor {
-            RenderGraph& renderGraph;
+        struct RenderGraph_NG : public ImNodes::EWE::Editor {
+            RenderGraph* renderGraph;
 
-            [[nodiscard]] explicit RenderGraphNodeGraph(RenderGraph& _renderGraph);
+            [[nodiscard]] explicit RenderGraph_NG();
+            [[nodiscard]] explicit RenderGraph_NG(RenderGraph& _renderGraph);
 
             void RenderEditorTitle() override final;
             ImNodes::EWE::Node& CreateRGNode(SubmissionTask* subTask);
@@ -19,6 +20,8 @@ namespace EWE{
             bool RenderAddMenu() override final;
             void RenderNode(ImNodes::EWE::Node& node) override final;
             void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
+
+            void InitFromObject(RenderGraph& _renderGraph);
         };
     }
 }

@@ -23,7 +23,7 @@ namespace EWE{
 	FWD_DEC_IMGUI(Image);
 	FWD_DEC_IMGUI(ImageView);
 	FWD_DEC_IMGUI(RenderGraph);
-	FWD_DEC_IMGUI(RasterTask);
+	FWD_DEC_IMGUI(RasterPackage);
 	FWD_DEC_IMGUI(TaskRasterConfig);
 	FWD_DEC_IMGUI(ObjectRasterConfig);
 	FWD_DEC_IMGUI(ObjectRasterData);

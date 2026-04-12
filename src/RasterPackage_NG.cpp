@@ -1,16 +1,17 @@
-#include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
+#include "EWEngine/Imgui/ImNodes/Graph/RasterPackage_NG.h"
 
 #include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/InstructionPackage.h"
-#include "EightWinds/Command/PackageRecord.h"
+#include "EightWinds/Command/ObjectInstructionPackage.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 
+
 namespace EWE{
 namespace Node{
-    PackageRecord_NG::PackageRecord_NG()
+    RasterPackage_NG::RasterPackage_NG()
     : ImNodes::EWE::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
@@ -18,7 +19,7 @@ namespace Node{
         explorer.acceptable_extensions = Global::assetManager->pkgRecord.files.acceptable_extensions;
     }
 
-    ImNodes::EWE::Node* PackageRecord_NG::CreateHeadNode(){
+    ImNodes::EWE::Node* RasterPackage_NG::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
 
@@ -27,20 +28,19 @@ namespace Node{
         return &head;
     } 
     
-    void PackageRecord_NG::RenderNodes() {
+    void RasterPackage_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        Command::InstructionPackage** pkg;
+        Command::ObjectPackage** pkg;
         if(DragDropPtr::Target(pkg)) {
-            auto temp_min = ImGui::GetItemRectMin();
-            auto temp_max =ImGui::GetItemRectMax();
-            auto& added_node = CreateRGNode(*pkg);
-            auto temp_mouse_pos =ImGui::GetIO().MousePos;
-            auto window_pos =  ImGui::GetWindowPos();
-            added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+            if((*pkg)->type == Command::InstructionPackage::Type::Object){
+                auto& added_node = CreateRGNode(*pkg);
+                auto temp_mouse_pos =ImGui::GetIO().MousePos;
+                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+            }
         }
     }
 
-    ImNodes::EWE::Node& PackageRecord_NG::CreateRGNode(Command::InstructionPackage* pkg) {
+    ImNodes::EWE::Node& RasterPackage_NG::CreateRGNode(Command::ObjectPackage* pkg) {
         auto& added_node = AddNode();
         added_node.payload = pkg;
         added_node.pos = menu_pos;
@@ -50,12 +50,12 @@ namespace Node{
         return added_node;
     }
 
-    void PackageRecord_NG::OpenAddMenu() {
+    void RasterPackage_NG::OpenAddMenu() {
         add_menu_is_open = true;
         
     }
 
-    bool PackageRecord_NG::RenderAddMenu() {
+    bool RasterPackage_NG::RenderAddMenu() {
         bool wantsClose = false;
 
         bool window_not_focused;
@@ -74,19 +74,19 @@ namespace Node{
         return wantsClose | window_not_focused;
     }
 
-    void PackageRecord_NG::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+    void RasterPackage_NG::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
 
         menu_pos = ImGui::GetMousePos();
         add_menu_is_open = true;
     }
 
-    void PackageRecord_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
+    void RasterPackage_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
         //Logger::Print<Logger::Debug>("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
-    void PackageRecord_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
+    void RasterPackage_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
         //Logger::Print<Logger::Debug>("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
@@ -94,19 +94,18 @@ namespace Node{
         ImNodes::EWE::Editor::LinkDestroyed(link);
     }
 
-    void PackageRecord_NG::RenderNode(ImNodes::EWE::Node& node){
+    void RasterPackage_NG::RenderNode(ImNodes::EWE::Node& node){
         ImNodes::BeginNodeTitleBar();
         if(node.payload == nullptr){
             EWE_ASSERT(headNode == &node);
             //ImGui::InputText("name of package record");
             ImGui::Text("head node");
             ImNodes::EndNodeTitleBar();
+            ImGui::Text(" ");
 
-            ImGui::SetNextItemWidth(150.f);
-            Reflect::Enum::Imgui_Combo_Selectable("Queue type", queue_type);
             return;
         }
-        auto* node_payload = reinterpret_cast<Command::InstructionPackage*>(node.payload);
+        auto* node_payload = reinterpret_cast<Command::ObjectPackage*>(node.payload);
         ImGui::Text(node_payload->name.c_str());
 
         ImNodes::EndNodeTitleBar();
@@ -120,7 +119,7 @@ namespace Node{
         }
     }
 
-    void PackageRecord_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void RasterPackage_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
@@ -129,7 +128,7 @@ namespace Node{
         ImNodes::EndPinAttribute();
     }
 
-    bool PackageRecord_NG::SaveFunc() {
+    bool RasterPackage_NG::SaveFunc() {
         explorer.enabled = save_open;
         explorer.state = ExplorerContext::State::Save;
         if(ImGui::Begin("file save")){
@@ -137,15 +136,13 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                Command::PackageRecord record{};
-                record.queue = &Global::stcManager->GetQueue(queue_type);
-                record.name = saved_path;
+                RasterPackage rt{saved_path.string(), *Global::logicalDevice, Global::stcManager->renderQueue, task_config, nullptr};
                 ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
                 while(current_node != nullptr){
-                    record.packages.push_back(reinterpret_cast<Command::InstructionPackage*>(current_node->payload));
+                    rt.objectPackages.push_back(reinterpret_cast<Command::ObjectPackage*>(current_node->payload));
                     current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                 }
-                EWE::Global::assetManager->pkgRecord.WriteToFile(record);
+                EWE::Global::assetManager->rasterTask.WriteToFile(rt);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -159,7 +156,7 @@ namespace Node{
         return !explorer.enabled;
     }
 
-    bool PackageRecord_NG::LoadFunc() {
+    bool RasterPackage_NG::LoadFunc() {
         explorer.enabled = load_open;
         explorer.state = ExplorerContext::State::Load;
         if(ImGui::Begin("file load")){
@@ -167,9 +164,9 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 
-                const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->pkgRecord.files.root_directory);
-                auto& record = Global::assetManager->pkgRecord.Get(localized_path);
-                InitFromObject(record);
+                const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->rasterTask.files.root_directory);
+                auto& rt = Global::assetManager->rasterTask.Get(localized_path);
+                InitFromObject(rt);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -183,17 +180,17 @@ namespace Node{
         return !explorer.enabled;
     }
 
-    void PackageRecord_NG::InitFromObject(Command::PackageRecord& record){
+    void RasterPackage_NG::InitFromObject(RasterPackage& record){
         nodes.Clear();
         CreateHeadNode();
         links.clear();
 
-        if(record.packages.size() == 0){
+        if(record.objectPackages.size() == 0){
             return;
         }
         ImNodes::EWE::Node* last_node = nullptr;
         {
-            auto& node = CreateRGNode(record.packages.front());
+            auto& node = CreateRGNode(record.objectPackages.front());
             last_node = &node;
             node.pins[0].payload = headNode;
             headNode->pins[0].payload = &node;
@@ -211,8 +208,8 @@ namespace Node{
                 }
             }
         );
-        for(std::size_t i = 1; i < record.packages.size(); i++){
-            auto& node = CreateRGNode(record.packages[i]);
+        for(std::size_t i = 1; i < record.objectPackages.size(); i++){
+            auto& node = CreateRGNode(record.objectPackages[i]);
             last_node->pins[1].payload = &node;
             node.pins[0].payload = last_node;
 

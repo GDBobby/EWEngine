@@ -9,7 +9,7 @@
 #include "EightWinds/Image.h"
 #include "EightWinds/ImageView.h"
 #include "EightWinds/RenderGraph/RenderGraph.h"
-#include "EightWinds/RenderGraph/RasterTask.h"
+#include "EightWinds/RenderGraph/RasterPackage.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
 #include "EightWinds/RenderGraph/Resources.h"
 #include "EightWinds/GlobalPushConstant.h"
@@ -131,7 +131,7 @@ namespace EWE{
     
     
     
-	FUNC_ENTRY(RasterTask){
+	FUNC_ENTRY(RasterPackage){
         int raster_task_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
 		ImGui::PushID(raster_task_id);
 		ImGui::Text("Raster Task : %s", obj.name.c_str());
@@ -140,10 +140,6 @@ namespace EWE{
             ImGui::TreePop();
         }
         ImGui::Checkbox("owns attachment lifetime", &obj.ownsAttachmentLifetime);
-
-        for (auto& def_pipe : obj.deferred_pipelines) {
-            auto* graphics_pipe = reinterpret_cast<GraphicsPipeline*>(def_pipe.pipeline);
-        }
         
         ImGui::PopID();
     }

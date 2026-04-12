@@ -21,36 +21,40 @@ namespace Asset{
     
     
 #if EWE_IMGUI
-    ImTextureRef GetTextureRef(DescriptorImageInfo& dii){
+
+    bool CanAttemptImguiRef(DescriptorImageInfo const& dii){
+
         if(!dii.view.image.owningQueue){
-            return ImTextureID_Invalid;
+            return false;
         }
         if(*dii.view.image.owningQueue != Global::stcManager->GetQueue(Queue::Graphics)){
-            return ImTextureID_Invalid;
+            return false;
         }
         if(dii.type != DescriptorType::Combined){
-            return ImTextureID_Invalid;
+            return false;
         }
         if(dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_GENERAL){
-            return ImGui_ImplVulkan_AddTexture(dii.sampler != nullptr ? dii.sampler->sampler : VK_NULL_HANDLE, dii.view.view, dii.imageInfo.imageLayout);
+            return true;
         }
-        else{
+        return false;
+    }
+
+    ImTextureRef GetTextureRef(DescriptorImageInfo const& dii){
+        if(!CanAttemptImguiRef(dii)){
             return ImTextureID_Invalid;
         }
-
+        return ImGui_ImplVulkan_AddTexture(dii.sampler != nullptr ? dii.sampler->sampler : VK_NULL_HANDLE, dii.view.view, dii.imageInfo.imageLayout);
     }
 #endif
 
     Manager<DescriptorImageInfo>::Manager(
-        LogicalDevice& _logicalDevice,
+        std::filesystem::path const& root_path,
         Manager<Sampler>& _samplers,
-        Manager<ImageView>& _views,
-        std::filesystem::path const& root_path
+        Manager<ImageView>& _views
     )
-    : logicalDevice{_logicalDevice},
+    : files{root_path, std::vector<std::string>{".dii"}},
         samplers{_samplers},
-        views{_views},
-        files{root_path, std::vector<std::string>{".dii"}}
+        views{_views}
     {
 
     }
@@ -205,7 +209,7 @@ namespace Asset{
             Image* img_target = nullptr;
             if(DragDropPtr::Target(img_target)){
                 AssetHash img_hash = Asset::INVALID_HASH;
-                for(auto& img_kvp : Global::images->association_container){
+                for(auto& img_kvp : Global::assetManager->image.association_container){
                     if(img_kvp.value == img_target){
                         img_hash = img_kvp.key;
                         break;
@@ -249,6 +253,14 @@ namespace Asset{
                         static_cast<float>(found_image->key->view.image.data.extent.height)
                     };
                     ImGui::Image(found_image->value, image_size);
+                }
+                else if(CanAttemptImguiRef(*kvp.value)){
+                    if(ImGui::Button("attempt to load preview")){
+                        auto tex_ref = GetTextureRef(*kvp.value);
+                        if(tex_ref != ImTextureID_Invalid){
+                            imgui_texture_refs.push_back(kvp.value, tex_ref);
+                        }
+                    }
                 }
 
                 if(kvp.value->sampler != nullptr){

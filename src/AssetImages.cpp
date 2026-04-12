@@ -12,9 +12,8 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<Image>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
-    : logicalDevice{_logicalDevice},
-        files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
+    Manager<Image>::Manager(std::filesystem::path const& root_path)
+    : files{root_path, std::vector<std::string>{".png", ".jpg", ".bmp", ".dds"}}//,
         //meta_files{root_path, std::vector<std::string>{".mie"}}
     {
 
@@ -102,7 +101,7 @@ namespace Asset{
         else{
             auto image_path_hash_data = files.hashed_path.at(hash);
             auto const& fs_path = image_path_hash_data.value;
-            Image& img = data_arena.AddElement(logicalDevice);
+            Image& img = data_arena.AddElement(*Global::logicalDevice);
             img.name = fs_path;
             association_container.push_back(hash, &img);
 
@@ -125,7 +124,7 @@ namespace Asset{
             return &img;
         }
     }
-    Image* Manager<Image>::Get(std::string_view name){
+    Image* Manager<Image>::Get(std::filesystem::path const& name){
         return Get(CrossPlatformPathHash(name));
     }
 

@@ -6,7 +6,7 @@
 #include "EightWinds/Buffer.h"
 #include "EightWinds/Shader.h"
 #include "EightWinds/Command/Record.h"
-#include "EightWinds/RenderGraph/RasterTask.h"
+#include "EightWinds/RenderGraph/RasterPackage.h"
 #include "EightWinds/Sampler.h"
 #include "EightWinds/ImageView.h"
 
@@ -111,7 +111,7 @@ namespace EWE {
 
 		Shader vertShader;
 		Shader fragShader;
-		PipeLayout pipeLayout;
+		PipeLayout* pipeLayout;
 
 		uint32_t numLetters;
 
@@ -156,11 +156,9 @@ namespace EWE {
 			framebuffer_height = Global::window->screenDimensions.height;
 			scale = framebuffer_width / DEFAULT_WIDTH;
 		}
-		
-		VertexIndirectCountDrawData indirect_vert_raw;
 
 
-		void Record(RasterTask& task){
+		void Record(RasterPackage& task){
 			objectConfig.config.SetDefaults();
 
 			//task.Add_Vert_IndirectCountDraw(objectConfig, indirect_vert_raw);

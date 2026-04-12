@@ -12,34 +12,16 @@ namespace EWE{
         marl::Scheduler scheduler;
         STC_Manager& stcManager;
 
-        Asset::Manager<Shader> shaderManager;
-        Asset::Manager<Sampler> samplerManager;
-        Asset::Manager<Image> images;
-        Asset::Manager<ImageView> views;
-        Asset::Manager<DescriptorImageInfo> diis;
-        Asset::Manager<Command::Record> records;
-        Asset::Manager<Buffer> buffers;
-        Asset::Manager<Command::InstructionPackage> instPackages;
-        Asset::Manager<Command::PackageRecord> pkgRecords;
-        Asset::Manager<SubmissionTask> subTasks;
+        AssetManager assetManager;
 
         [[nodiscard]] explicit GlobalData(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& root_path)
         : logicalDevice{_logicalDevice},
             window{_window},
             scheduler{marl::Scheduler::Config::allCores()},
             stcManager{_stcManager},
-            shaderManager{logicalDevice, root_path / "shaders"},
-            samplerManager{logicalDevice},
-            images{logicalDevice, root_path},
-            views{logicalDevice, images},
-            diis{logicalDevice, samplerManager, views, root_path},
-            records{logicalDevice, root_path},
-            buffers{logicalDevice, root_path},
-            instPackages{logicalDevice, root_path},
-            pkgRecords{logicalDevice, root_path},
-            subTasks{logicalDevice, root_path}
+            assetManager{root_path}
         {
-
+            glfwSetDropCallback(window.window, GLFW_Drop_Callback);
         }
     };
 
@@ -57,16 +39,7 @@ namespace EWE{
         marl::Scheduler* scheduler;
         STC_Manager* stcManager;
 
-        Asset::Manager<Shader>* shaders;
-        Asset::Manager<Sampler>* samplers;
-        Asset::Manager<Image>* images;
-        Asset::Manager<ImageView>* views;
-        Asset::Manager<DescriptorImageInfo>* diis;
-        Asset::Manager<Command::Record>* records;
-        Asset::Manager<Buffer>* buffers;
-        Asset::Manager<Command::InstructionPackage>* instPackages;
-        Asset::Manager<Command::PackageRecord>* pkgRecords;
-        Asset::Manager<SubmissionTask>* subTasks;
+        AssetManager* assetManager;
 
         
         bool Create(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& _root_path) {
@@ -80,16 +53,7 @@ namespace EWE{
             frameIndex = 0; 
             ::EWE::Global::scheduler = &globalData->scheduler;
             ::EWE::Global::stcManager = &globalData->stcManager;
-            ::EWE::Global::shaders = &globalData->shaderManager;
-            ::EWE::Global::samplers = &globalData->samplerManager;
-            ::EWE::Global::images = &globalData->images;
-            ::EWE::Global::views = &globalData->views;
-            ::EWE::Global::diis = &globalData->diis;
-            ::EWE::Global::records = &globalData->records;
-            ::EWE::Global::buffers = &globalData->buffers;
-            ::EWE::Global::instPackages = &globalData->instPackages;
-            ::EWE::Global::pkgRecords = &globalData->pkgRecords;
-            ::EWE::Global::subTasks = &globalData->subTasks;
+            ::EWE::Global::assetManager = &globalData->assetManager;
 
             return true;
         }

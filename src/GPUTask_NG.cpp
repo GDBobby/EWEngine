@@ -1,4 +1,4 @@
-#include "EWEngine/NodeGraph/GPUTask_NG.h"
+#include "EWEngine/Imgui/ImNodes/Graph/GPUTask_NG.h"
 
 #include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
@@ -97,7 +97,7 @@ namespace Node{
             //ImGui::InputText("name of package record");
             ImGui::Text("head node");
             ImNodes::EndNodeTitleBar();
-            ImGui::Text(""); //filler text
+            ImGui::Text(" "); //filler text
             return;
         }
         auto* node_payload = reinterpret_cast<Command::InstructionPackage*>(node.payload);

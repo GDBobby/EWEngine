@@ -1,31 +1,34 @@
-#include "EWEngine/NodeGraph/RenderGraph_NG.h"
+#include "EWEngine/Imgui/ImNodes/Graph/RenderGraph_NG.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
 
 namespace EWE{
 namespace Node{
-    RenderGraphNodeGraph::RenderGraphNodeGraph(RenderGraph& _renderGraph)
+    RenderGraph_NG::RenderGraph_NG()
         : ImNodes::EWE::Editor{},
-        renderGraph{_renderGraph}
+        renderGraph{nullptr}
+    {
+        name = "render graph ng";
+    }
+    RenderGraph_NG::RenderGraph_NG(RenderGraph& _renderGraph)
+        : ImNodes::EWE::Editor{},
+        renderGraph{&_renderGraph}
     {
         name = "render graph ng";
     }
 
 
-    void RenderGraphNodeGraph::RenderNodes() {
+    void RenderGraph_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
         SubmissionTask** subTask;
         if(DragDropPtr::Target(subTask)) {
-            auto temp_min = ImGui::GetItemRectMin();
-            auto temp_max =ImGui::GetItemRectMax();
             auto& added_node = CreateRGNode(*subTask);
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
-            auto window_pos =  ImGui::GetWindowPos();
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }
     }
 
-    ImNodes::EWE::Node& RenderGraphNodeGraph::CreateRGNode(SubmissionTask* subTask) {
+    ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(SubmissionTask* subTask) {
         auto& added_node = AddNode();
         added_node.payload = subTask;
         added_node.pos = menu_pos;
@@ -35,7 +38,7 @@ namespace Node{
         return added_node;
     }
 
-    void RenderGraphNodeGraph::RenderEditorTitle() {
+    void RenderGraph_NG::RenderEditorTitle() {
 
         ImNodes::EWE::Editor::RenderEditorTitle();
 
@@ -46,7 +49,7 @@ namespace Node{
             links.clear();
 
             float horizontalPos = node_editor_window_pos.x;
-            for(auto& sub_group : renderGraph.execution_order){
+            for(auto& sub_group : renderGraph->execution_order){
                 float verticalPos = node_editor_window_pos.y;
 
                 for(auto& ind_sub : sub_group){
@@ -75,7 +78,7 @@ namespace Node{
         
     }
 
-    bool RenderGraphNodeGraph::RenderAddMenu(){
+    bool RenderGraph_NG::RenderAddMenu(){
 
         bool wantsClose = false;
 
@@ -83,7 +86,7 @@ namespace Node{
         if(ImGui::Begin("add menu")){
             
             //ImGui::Text("%d", ImGui::IsWindowHovered());
-            for(auto& submission : renderGraph.submissions){
+            for(auto& submission : renderGraph->submissions){
                 if(ImGui::Button(submission.name.c_str())){
                     wantsClose = true;
                 }
@@ -102,7 +105,7 @@ namespace Node{
         return wantsClose;
     }
 
-    void RenderGraphNodeGraph::RenderNode(ImNodes::EWE::Node& node) {
+    void RenderGraph_NG::RenderNode(ImNodes::EWE::Node& node) {
         EWE::SubmissionTask* payload = reinterpret_cast<EWE::SubmissionTask*>(node.payload);
 
         ImNodes::BeginNodeTitleBar();
@@ -112,7 +115,7 @@ namespace Node{
         ImGui::Text("queue family index : %u", payload->queue->FamilyIndex());
     }
 
-    void RenderGraphNodeGraph::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void RenderGraph_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
         auto* payload = reinterpret_cast<VkSemaphoreSubmitInfo*>(pin.payload);
 
@@ -123,6 +126,11 @@ namespace Node{
             ImGui::Text("%zu", static_cast<uint64_t>(payload->stageMask));
         }
         ImNodes::EndPinAttribute();
+    }
+
+
+    void RenderGraph_NG::InitFromObject(RenderGraph& _renderGraph){
+
     }
 
 } //namespace Node

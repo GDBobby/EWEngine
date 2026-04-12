@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EWEngine/Assets/Manager.h"
+#include "EWEngine/Assets/Base.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
 
 namespace EWE{
@@ -8,13 +8,12 @@ namespace Asset{
 
     template<>
     struct Manager<GPUTask>{
-        LogicalDevice& logicalDevice;
         FileSystem files;
 
         Hive<GPUTask, 64> data_arena;
-        KeyValueContainer<AssetHash, GPUTask> association_container{};
+        KeyValueContainer<AssetHash, GPUTask*> association_container{};
 
-        [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path);
+        [[nodiscard]] explicit Manager(std::filesystem::path const& root_path);
 
         static AssetHash GetHash(GPUTask const& task){
             return CrossPlatformPathHash(task.name);

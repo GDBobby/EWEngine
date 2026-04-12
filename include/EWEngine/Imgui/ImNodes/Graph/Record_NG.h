@@ -1,17 +1,20 @@
 #pragma once
 
 
-#include "EightWinds/Command/ParamPool.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/Command/Record.h"
-#include "EightWinds/Command/InstructionPackage.h"
-#include "EightWinds/Command/ObjectInstructionPackage.h"
+
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
+#include "EWEngine/Imgui/ImNodes/Graph/InstructionPackage_NG.h"
+#include "imgui.h"
+
+#include <fstream>
 
 namespace EWE{
 namespace Node{
+
     /*
         i can stop links from being made if it's not a valid instruction (binding descriptor out of a pipeline)
 
@@ -19,56 +22,29 @@ namespace Node{
 
         im putting that ^^^^ off for now
     */
-    
-    struct InstNodePayload{
-        enum Type{
-            Head,
-            Instruction,
-            Package //maybe only a record can contain a package? idk
-        };
-        Type type;
-        Inst::Type iType;
 
-        //if this is negative, the node is not connected to head
-        int distanceFromHead = -1; 
-    };
-
-    struct InstructionPackageNodeGraph : ImNodes::EWE::Editor {
-
+    struct RecordNodeGraph : ImNodes::EWE::Editor {
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
         std::vector<Inst::Type> acceptable_add_instructions{};
+        ImNodes::EWE::Node* link_empty_drop_srcNode = nullptr;
         ImGuiTextFilter filter;
 
-        Command::ParamPool paramPool;
+        [[nodiscard]] explicit RecordNodeGraph();
 
-        Command::InstructionPackage::Type packageType = Command::InstructionPackage::Base;
-        bool changing_package_type_allowed = true;
-        void* package_payload;
-
-        [[nodiscard]] explicit InstructionPackageNodeGraph();
-        //this is just going to call InitFromPkg
-        [[nodiscard]] explicit InstructionPackageNodeGraph(Command::InstructionPackage& pkg);
-
-        void RecreateLinks();
-        void InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type);
-        void InitFromPackage(Command::InstructionPackage& pkg);
+        void RenderNodes() override final;
 
         ImNodes::EWE::Node* CreateHeadNode();
         static Inst::Type GetInstructionFromNode(ImNodes::EWE::Node& node);
         void PrintNode(ImNodes::EWE::Node& node) const;
-        void RenderEditorTitle() override final;
-        void RenderNodes() override final;
-        ImNodes::EWE::Node& CreateRGNode(Inst::Type iType);
+        ImNodes::EWE::Node& CreateRGNode(Inst::Type inst_index);
         std::vector<Inst::Type> CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const;
         inline std::vector<Inst::Type> CollectInstructions() const{
             return CollectInstructionsUpTo(nullptr);
         }
-        void InsertNodeToParamPool(ImNodes::EWE::Node* inserted_node);
         void UpdateNodeOffsets();
+        void CreateFromInstructions(std::span<const Inst::Type> create_instructions);
         bool AddInstructionButton(Inst::Type itype);
-
-        bool InsertLink(ImNodes::EWE::Node& added_node, ImNodes::EWE::Node* node);
 
         void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
         void OpenAddMenu() override final;
@@ -81,5 +57,5 @@ namespace Node{
         bool SaveFunc() override final;
         bool LoadFunc() override final;
     };
-} //namespace Node
+} //namespace Node 
 } //namespace EWE

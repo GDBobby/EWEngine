@@ -14,22 +14,22 @@ namespace EWE{
 				ImGui::TableNextColumn();
 				if(iter < GlobalPushConstant_Raw::buffer_count){
 					if(mem_addr->buffer_addr[iter] != null_buffer){
-						auto& buf = Global::buffers->Get(Global::buffers->ConvertBDAToHash(mem_addr->buffer_addr[iter]));
+						auto& buf = Global::assetManager->buffer.Get(Global::assetManager->buffer.ConvertBDAToHash(mem_addr->buffer_addr[iter]));
 						ImGui::Text("%u:%s", iter, buf.name.c_str());
 						ImGui::SetItemTooltip(buf.name.c_str());
 					}
 					else{
 						ImGui::Text("%u:null", iter);
 					}
-					Buffer* temp_drop_ptr = nullptr;
-					if(DragDropPtr::Target<Buffer>(temp_drop_ptr)){
-						mem_addr->buffer_addr[iter] = temp_drop_ptr->deviceAddress;
+					Buffer** temp_drop_ptr = nullptr;
+					if(DragDropPtr::Target<Buffer*>(temp_drop_ptr)){
+						mem_addr->buffer_addr[iter] = (*temp_drop_ptr)->deviceAddress;
 					}
 				}
 				ImGui::TableNextColumn();
 				if(iter < GlobalPushConstant_Raw::texture_count){
 					if(mem_addr->texture_indices[iter] != null_texture){
-						auto& dii = Global::diis->Get(Global::diis->ConvertTextureIndexToHash(mem_addr->texture_indices[iter]));
+						auto& dii = Global::assetManager->dii.Get(Global::assetManager->dii.ConvertTextureIndexToHash(mem_addr->texture_indices[iter]));
 						ImGui::Text("%u:%s", iter, dii.name.c_str());
 						ImGui::SetItemTooltip(dii.name.c_str());
 					}

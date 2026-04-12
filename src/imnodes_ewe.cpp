@@ -15,22 +15,26 @@ namespace ImNodes{
             
             int ret = globalPinID - id - 1;
 
-            if((ret >= pins.size())){
+            //if its negative, it's greater than size, returns -1, which is desired behavior
+            if(ret >= pins.size()){
                 return -1;
             }
             return ret;
         }
 
-        bool context_created = false;
+        std::mutex global_imnodes_context_mutex{};
+        int global_imnodes_context_depth = 0;
 
         Editor::Editor()
         : context{ImNodes::EditorContextCreate()}
         {
-		    if(!context_created){
-                context_created = true;
-
-        		ImNodes::CreateContext();
+            global_imnodes_context_mutex.lock();
+		    if(global_imnodes_context_depth == 0) {
+                ImNodes::CreateContext();
             }
+            global_imnodes_context_depth++;
+            global_imnodes_context_mutex.unlock();
+
             ImNodes::PushAttributeFlag(ImNodes::ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
 
             //begin imgui before this constructor, and end it after
@@ -38,10 +42,22 @@ namespace ImNodes{
             
             ImNodes::EditorContextSet(context);
             ImNodes::BeginNodeEditor();
+            ImNodes::EditorContextResetPanning(ImVec2(0.f, 0.f));
+            
 
             node_editor_window_pos = ImGui::GetItemRectMin();
             node_editor_window_size = ImGui::GetItemRectSize();
             ImNodes::EndNodeEditor();
+        }
+        Editor::~Editor(){
+            global_imnodes_context_mutex.lock();
+            EWE_ASSERT(global_imnodes_context_depth > 0);
+            global_imnodes_context_depth--;
+            if(global_imnodes_context_depth == 0){
+                ImNodes::DestroyContext();
+            }
+            
+            global_imnodes_context_mutex.unlock();
         }
 
 
@@ -120,7 +136,7 @@ namespace ImNodes{
             node_editor_window_pos = ImGui::GetWindowPos();
             node_editor_window_size = ImGui::GetWindowSize();
 
-            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImNodes::IsEditorHovered()) {
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) && ImNodes::IsEditorHovered()) {
 
                 if (ImGui::IsKeyPressed(ImGuiKey_A) && !submissionReady) {
                     submissionReady = true;

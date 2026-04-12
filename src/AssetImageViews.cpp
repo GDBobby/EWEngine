@@ -7,9 +7,8 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<ImageView>::Manager(LogicalDevice& _logicalDevice, Manager<Image>& _images)
-    : logicalDevice{_logicalDevice},
-        images{_images}
+    Manager<ImageView>::Manager(std::filesystem::path const& root_dir, Manager<Image>& _images)
+    : images{_images}
     {
 
     }

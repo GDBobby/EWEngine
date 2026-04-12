@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EWEngine/Assets/Manager.h"
+#include "EWEngine/Assets/Base.h"
 #include "EightWinds/Command/PackageRecord.h"
 
 namespace EWE{
@@ -8,13 +8,12 @@ namespace Asset{
 
     template<>
     struct Manager<Command::PackageRecord>{
-        LogicalDevice& logicalDevice;
         FileSystem files;
 
         Hive<Command::PackageRecord, 64> data_arena;
         KeyValueContainer<AssetHash, Command::PackageRecord*> association_container{};
 
-        [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice, std::filesystem::path const& root_path);
+        [[nodiscard]] explicit Manager(std::filesystem::path const& root_path);
 
         static AssetHash GetHash(Command::PackageRecord const& rec){
             return CrossPlatformPathHash(rec.name);

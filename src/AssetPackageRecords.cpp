@@ -7,9 +7,8 @@
 
 namespace EWE{
 namespace Asset{
-    Manager<Command::PackageRecord>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
-    : logicalDevice{_logicalDevice},
-        files{root_path, std::vector<std::string>{".epr"}}
+    Manager<Command::PackageRecord>::Manager(std::filesystem::path const& root_path)
+    : files{root_path, std::vector<std::string>{".epr"}}
     {
 
     }
@@ -93,7 +92,7 @@ auto iter = association_container.find(hash);
         outFile.write(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
 
         for(auto* pkg : rec.packages){
-            AssetHash hash_buffer = EWE::Global::instPackages->GetHash(*pkg);
+            AssetHash hash_buffer = EWE::Global::assetManager->instPkg.GetHash(*pkg);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
         return true;
@@ -107,7 +106,7 @@ auto iter = association_container.find(hash);
         EWE_ASSERT(temp_buffer == current_file_version, "needs support otherwise");
         
         auto& ret = data_arena.AddElement();
-        ret.name = name;
+        ret.name = std::filesystem::proximate(name, files.root_directory);
         association_container.push_back(GetHash(ret), &ret);
         Queue::Type queue_type;
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
@@ -119,7 +118,7 @@ auto iter = association_container.find(hash);
         for(std::size_t i = 0; i < temp_buffer; i++){
             AssetHash hash_buffer;
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
-            ret.packages.push_back(EWE::Global::instPackages->Get(hash_buffer));
+            ret.packages.push_back(&Global::assetManager->objPkg.Get(hash_buffer));
         }
 
         return ret;

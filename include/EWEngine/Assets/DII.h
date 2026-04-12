@@ -4,7 +4,7 @@
 #include "EightWinds/DescriptorImageInfo.h"
 #include "EightWinds/Data/KeyValueContainer.h"
 
-#include "EWEngine/Assets/Manager.h"
+#include "EWEngine/Assets/Base.h"
 
 #include "EWEngine/Assets/Samplers.h"
 #include "EWEngine/Assets/ImageViews.h"
@@ -15,16 +15,14 @@ namespace Asset{
 
     template<>
     struct Manager<DescriptorImageInfo>{
-        LogicalDevice& logicalDevice;
+        FileSystem files;
         Manager<Sampler>& samplers;
         Manager<ImageView>& views;
-        FileSystem files;
 
         [[nodiscard]] explicit Manager(
-            LogicalDevice& logicalDevice,
+            std::filesystem::path const& root_path,
             Manager<Sampler>& samplers,
-            Manager<ImageView>& views,
-            std::filesystem::path const& root_path
+            Manager<ImageView>& views
         );
 
         static AssetHash GetHash(DescriptorImageInfo const& dii){
@@ -63,5 +61,6 @@ namespace Asset{
         void Imgui();
 #endif
     };
+
 } //namespace Asset
 } //namespace EWE

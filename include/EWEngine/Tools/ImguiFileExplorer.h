@@ -11,6 +11,26 @@
 
 namespace EWE{
 
+	struct ImguiInputFilters{
+		static int Alphanumeric(ImGuiInputTextCallbackData* data) {
+			if (isalnum((unsigned char)data->EventChar)) {
+				return 0;
+			}
+			return 1;
+		};
+		static int File(ImGuiInputTextCallbackData* data) {
+			if (isalnum((unsigned char)data->EventChar)) {
+				return 0;
+			}
+			switch(data->EventChar){
+				case '.': return 0;
+				case '_': return 0;
+				default: return 1;
+			}
+			return 1;
+		};
+	};
+
 	struct ExplorerContext{
 
 		enum class State{
@@ -30,7 +50,7 @@ namespace EWE{
 		[[nodiscard]] explicit ExplorerContext(std::string_view path);
 		[[nodiscard]] explicit ExplorerContext(std::filesystem::path path);
 		
-		static constexpr std::size_t path_length = 256;
+		static constexpr std::size_t path_length = 128;
 		char path_buffer[path_length];
 		
 		ImGuiTableFlags table_flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
@@ -46,12 +66,14 @@ namespace EWE{
 		bool AcceptableEntry(std::filesystem::path const& entry, bool is_dir) const noexcept;
 		bool ProcessDirectoryEntry(std::filesystem::path const& entry, bool isSelected, bool is_dir);
 
-		private:
-			std::optional<std::filesystem::path> save_path{};
-			char file_create_buf[64] = "";
+		char file_save_buf[path_length] = "";
+		char file_create_buf[path_length] = "";
+	private:
+		std::optional<std::filesystem::path> save_path{};
 
-			int selection_index = -1;
-			bool popup_opened = false;
+		bool want_save_open = false;
+		int selection_index = -1;
+		bool popup_opened = false;
 	};
 
 	/*

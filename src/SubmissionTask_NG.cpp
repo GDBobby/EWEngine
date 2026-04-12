@@ -1,7 +1,8 @@
-#include "EWEngine/NodeGraph/SubmissionTask_NG.h"
+#include "EWEngine/Imgui/ImNodes/Graph/SubmissionTask_NG.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Global.h"
+//#include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
 #include "EightWinds/Command/PackageRecord.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -14,7 +15,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions.push_back(".ewrg");
+        explorer.acceptable_extensions = Global::assetManager->subTask.files.acceptable_extensions;
     }
 
     ImNodes::EWE::Node* SubmissionTask_NG::CreateHeadNode(){
@@ -31,12 +32,9 @@ namespace Node{
         Command::PackageRecord** pkg;
         if(DragDropPtr::Target(pkg)) {
             Logger::Print("dropping in sub task\n");
-            auto temp_min = ImGui::GetItemRectMin();
-            auto temp_max =ImGui::GetItemRectMax();
-            GPUTask* task = new GPUTask((*pkg)->name, *Global::logicalDevice, **pkg);
+            GPUTask* task = new GPUTask((*pkg)->name, *Global::logicalDevice, **pkg, false);
             auto& added_node = CreateRGNode(task);
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
-            auto window_pos =  ImGui::GetWindowPos();
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }
     }
@@ -102,13 +100,20 @@ namespace Node{
             //ImGui::InputText("name of package record");
             ImGui::Text("head node");
             ImNodes::EndNodeTitleBar();
-            ImGui::Text(""); //filler text
+            ImGui::SetNextItemWidth(150.f);
+            if(ImGui::InputText("name", explorer.file_save_buf, explorer.path_length, ImGuiInputTextFlags_CallbackCharFilter, ImguiInputFilters::File)){
+                //name = name_buffer;
+            }
             return;
         }
         auto* node_payload = reinterpret_cast<GPUTask*>(node.payload);
         ImGui::Text(node_payload->name.c_str());
 
         ImNodes::EndNodeTitleBar();
+        if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
+            //open the graph for the package
+            OpenGraph(Type::PackageRecord, node_payload->pkgRecord);
+        }
 
         if(node_payload->pkgRecord->packages.size() == 0){
             ImGui::Text("no packages");
@@ -136,7 +141,8 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-
+                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
+                name = temp_path;
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -158,10 +164,10 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
 
-                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::subTasks->files.root_directory);
+                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
 
-                auto& subTask = Global::subTasks->Get(temp);
-                LoadFromTask(subTask);
+                auto& subTask = Global::assetManager->subTask.Get(temp);
+                InitFromObject(subTask);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -175,7 +181,7 @@ namespace Node{
         return !explorer.enabled;
     }
 
-    void SubmissionTask_NG::CreateFromGraph(SubmissionTask& subTask){
+    void SubmissionTask_NG::PopulateFromGraph(SubmissionTask& subTask){
         subTask.tasks.clear();
         ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
         while(current_node != nullptr){
@@ -185,7 +191,7 @@ namespace Node{
         subTask.CollectTaskWorkloads();
     }
 
-    void SubmissionTask_NG::LoadFromTask(SubmissionTask& subTask){
+    void SubmissionTask_NG::InitFromObject(SubmissionTask& subTask){
         nodes.Clear();
         CreateHeadNode();
         links.clear();

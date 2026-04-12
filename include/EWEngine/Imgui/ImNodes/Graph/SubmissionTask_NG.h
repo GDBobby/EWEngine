@@ -1,27 +1,24 @@
 #pragma once
 
-
-#include "EightWinds/Reflect/Enum.h"
-#include "EightWinds/Command/PackageRecord.h"
-
+#include "EightWinds/RenderGraph/GPUTask.h"
+#include "EightWinds/RenderGraph/SubmissionTask.h"
 #include "EWEngine/Tools/ImguiFileExplorer.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
-#include "imgui.h"
 
 namespace EWE{
 namespace Node{
 
-    struct PackageRecord_NG : ImNodes::EWE::Editor {
+    struct SubmissionTask_NG : ImNodes::EWE::Editor {
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
 
-        [[nodiscard]] explicit PackageRecord_NG();
+        [[nodiscard]] explicit SubmissionTask_NG();
 
         void RenderNodes() override final;
 
         ImNodes::EWE::Node* CreateHeadNode();
-        ImNodes::EWE::Node& CreateRGNode(Command::InstructionPackage* record);
+        ImNodes::EWE::Node& CreateRGNode(GPUTask* task);
 
         //void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
         void OpenAddMenu() override final;
@@ -33,6 +30,11 @@ namespace Node{
         void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
         bool SaveFunc() override final;
         bool LoadFunc() override final;
+
+        void PopulateFromGraph(SubmissionTask& subTask);
+
+
+        void InitFromObject(SubmissionTask& subTask);
     };
 } //namespace Node 
 } //namespace EWE

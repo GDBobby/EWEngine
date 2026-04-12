@@ -6,5 +6,3 @@ glslc merge.frag -o ../merge.frag.spv
 
 glslc textoverlay.vert -o ../textoverlay.vert.spv
 glslc textoverlay.frag -o ../textoverlay.frag.spv
-
-pause

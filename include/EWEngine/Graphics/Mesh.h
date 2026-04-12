@@ -5,7 +5,7 @@
 
 
 namespace EWE{
-    struct RasterTask;
+    struct RasterPackage;
 
     struct Mesh{ //also a meshlet
         struct Layout{
@@ -32,6 +32,6 @@ namespace EWE{
 
 
 
-        void AddToRasterTask(RasterTask& rasterTask);
+        void AddToRasterPackage(RasterPackage& rasterTask);
     };
 }

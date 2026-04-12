@@ -3,9 +3,8 @@
 namespace EWE{
 namespace Asset{
     
-    Manager<Command::Record>::Manager(LogicalDevice& _logicalDevice, std::filesystem::path const& root_path)
-    : logicalDevice{_logicalDevice},
-        files{root_path, std::vector<std::string>{".eri"}}
+    Manager<Command::Record>::Manager(std::filesystem::path const& root_path)
+    : files{root_path, std::vector<std::string>{".eri"}}
     {
         
     }

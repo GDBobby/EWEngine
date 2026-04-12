@@ -1,24 +1,26 @@
 #pragma once
 
-#include "EightWinds/RenderGraph/GPUTask.h"
-#include "EightWinds/RenderGraph/SubmissionTask.h"
-#include "EWEngine/Tools/ImguiFileExplorer.h"
 
+#include "EightWinds/RenderGraph/RasterPackage.h"
+#include "EWEngine/Tools/ImguiFileExplorer.h"
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
 
 namespace EWE{
 namespace Node{
 
-    struct SubmissionTask_NG : ImNodes::EWE::Editor {
+    struct RasterPackage_NG : ImNodes::EWE::Editor {
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
 
-        [[nodiscard]] explicit SubmissionTask_NG();
+        TaskRasterConfig task_config;
+        AssetHash render_info_hash = Asset::INVALID_HASH;
+
+        [[nodiscard]] explicit RasterPackage_NG();
 
         void RenderNodes() override final;
 
         ImNodes::EWE::Node* CreateHeadNode();
-        ImNodes::EWE::Node& CreateRGNode(GPUTask* task);
+        ImNodes::EWE::Node& CreateRGNode(Command::ObjectPackage* pkg);
 
         //void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
         void OpenAddMenu() override final;
@@ -31,8 +33,7 @@ namespace Node{
         bool SaveFunc() override final;
         bool LoadFunc() override final;
 
-        void CreateFromGraph(SubmissionTask& subTask);
-        void LoadFromTask(SubmissionTask& subTask);
+        void InitFromObject(RasterPackage& rt);
     };
 } //namespace Node 
 } //namespace EWE
