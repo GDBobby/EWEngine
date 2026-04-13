@@ -72,11 +72,11 @@ namespace Asset{
         }
         for(auto& kvp : association_container){
             if(ImGui::TreeNode(kvp.value->name.c_str())){
-                DragDropPtr::Source(kvp.value); //specifically i want to drag the pointer
+                DragDropPtr::Source(*kvp.value);
                 ImGui::TreePop();
             }
             //Logger::Print("%s\n", kvp.value->name.c_str());
-            DragDropPtr::Source(kvp.value); //specifically i want to drag the pointer
+            DragDropPtr::Source(*kvp.value);
         }
     }
 #endif

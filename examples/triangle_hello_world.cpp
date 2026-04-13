@@ -155,8 +155,8 @@ int main(int argc, char* argv[]) {
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
-    EWE::Shader* triangle_vert = EWE::Global::assetManager->shader.Get("basic.vert.spv");
-    EWE::Shader* triangle_frag = EWE::Global::assetManager->shader.Get("basic.frag.spv");
+    EWE::Shader* triangle_vert = &EWE::Global::assetManager->shader.Get("basic.vert.spv");
+    EWE::Shader* triangle_frag = &EWE::Global::assetManager->shader.Get("basic.frag.spv");
 
     EWE::Shader* triangle_shaders[] = { triangle_vert, triangle_frag };
     EWE::PipeLayout triangle_layout(logicalDevice, triangle_shaders);
@@ -255,8 +255,8 @@ int main(int argc, char* argv[]) {
     }
 
     passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
-    EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
-    EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
+    EWE::Shader* merge_vert = &EWE::Global::assetManager->shader.Get("merge.vert.spv");
+    EWE::Shader* merge_frag = &EWE::Global::assetManager->shader.Get("merge.frag.spv");
     EWE::Shader* merge_shaders[] = {merge_vert, merge_frag};
     EWE::PipeLayout merge_layout(logicalDevice, merge_shaders);
 
@@ -419,6 +419,9 @@ int main(int argc, char* argv[]) {
     };
 
     auto assets_imgui_window = [&](EWE::ImguiViewport& vp){
+
+        EWE::Global::assetManager->ApplyGLFWDrops();
+
         if(ImGui::TreeNode("resources")){
             if(ImGui::TreeNode("buffers")){
                 logicalDevice.buffers.mut.lock();

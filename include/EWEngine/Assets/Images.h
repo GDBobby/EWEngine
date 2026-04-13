@@ -31,8 +31,8 @@ namespace Asset{
         void Destroy(AssetHash hash);
         void Destroy(Image* img);
 
-        Image* Get(AssetHash hash);
-        Image* Get(std::filesystem::path const& name);
+        Image& Get(AssetHash hash);
+        Image& Get(std::filesystem::path const& name);
 
 #ifdef EWE_IMGUI
         void Imgui();

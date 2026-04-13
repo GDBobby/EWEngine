@@ -1,9 +1,9 @@
 #include "EWEngine/Assets/Manager.h"
 
 #include "EWEngine/Global.h"
-#include "GLFW/glfw3.h"
-#include <X11/Xlib.h>
 
+#include "EightWinds/Reflect/Reflect.h"
+#include "imgui.h"
 
 namespace EWE{
 namespace Asset{
@@ -79,18 +79,63 @@ namespace Asset{
 #endif
 
     template<typename T>
+    std::string_view GetTypeName_Please(){
+        return Reflect::GetName<^^T>();
+    }
+
+    template<typename T>
     bool CheckExtension(T& container, std::filesystem::path const& dropped_ext, std::filesystem::path const& path){
         if constexpr(requires{container.files;}){
             auto const& extensions = container.files.acceptable_extensions;
                 for(auto const& ext : extensions){
                     if(dropped_ext == ext){
-                        container.Get(path);
+                        auto& temp = container.Get(path);
+                        /*
+                            if constexpr(std::meta::has_template_arguments(^^T)){
+                                static constexpr auto template_args = Reflect::GetMetaSpan<^^T, std::meta::template_arguments_of, false, std::meta::has_template_arguments(^^T)>();
+
+                                Logger::Print("template arg : %s", Reflect::GetName(template_args.at(0)).data());
+                            }
+                        */
+
+                        if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)){
+                            std::size_t reint_ptr = reinterpret_cast<std::size_t>(&temp);
+
+
+                            auto temp_name = GetTypeName_Please<std::decay_t<decltype(temp)>>();
+
+                            ImGui::SetDragDropPayload(temp_name.data(), &reint_ptr, sizeof(std::size_t));
+                        
+                            ImGui::EndDragDropSource();
+                        }
                         
                         return true;
                     }
                 }
         }
         return false;
+    }
+
+    void Manager<AssetHash>::ApplyGLFWDrops(){
+
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^Manager<AssetHash>, std::meta::access_context::current()));
+
+        for(auto const& proximate : glfw_drops){
+            auto dropped_ext = proximate.extension();
+
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+            template for(constexpr auto mem : members){
+                if(CheckExtension(this->[:mem:], dropped_ext, proximate)){
+                    glfw_drops.clear();
+                    return;
+                }
+            }
+#pragma GCC diagnostic pop
+        
+        }
+        glfw_drops.clear();
     }
 
     bool CheckWithinRootDir(std::filesystem::path const& proximate){
@@ -100,28 +145,16 @@ namespace Asset{
     void Manager<AssetHash>::DropCallback(std::filesystem::path const& path){
         Logger::Print("droppe a file : %s\n", path.string().c_str());
 
-        auto proximate = std::filesystem::proximate(path, root_directory);
-
+        const auto proximate = std::filesystem::proximate(path, root_directory);
         if(!CheckWithinRootDir(proximate)){
             Logger::Print<Logger::Warning>("attempted to drop a file from outside the asset directory\n");
             return;
         }
 
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^Manager<AssetHash>, std::meta::access_context::current()));
-
         if(path.has_extension()){
-            auto dropped_ext = proximate.extension();
-
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-            template for(constexpr auto mem : members){
-                if(CheckExtension(this->[:mem:], dropped_ext, proximate)){
-                    return;
-                }
-            }
-#pragma GCC diagnostic pop
+            glfw_drops.push_back(proximate);
         }
+
         Logger::Print("failed to find a match\n");
     }
 

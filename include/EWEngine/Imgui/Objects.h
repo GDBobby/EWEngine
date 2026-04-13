@@ -69,6 +69,8 @@ namespace EWE{
 	template<> void ImguiExtension::Imgui(UsageData<Image>& obj);
 	template<> void ImguiExtension::Imgui(UsageData<Buffer>& obj);
 
+	template<> void ImguiExtension::Imgui(std::array<Shader*, Shader::Stage::Bits::COUNT>& obj);
+
 
 		
 } //namespace EWE

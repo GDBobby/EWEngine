@@ -27,13 +27,10 @@ namespace Node{
     
     void GPUTask_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        Command::PackageRecord** pkg;
+        Command::PackageRecord* pkg;
         if(DragDropPtr::Target(pkg)) {
-            auto temp_min = ImGui::GetItemRectMin();
-            auto temp_max =ImGui::GetItemRectMax();
-            auto& added_node = CreateRGNode(*pkg);
+            auto& added_node = CreateRGNode(pkg);
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
-            auto window_pos =  ImGui::GetWindowPos();
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }
     }

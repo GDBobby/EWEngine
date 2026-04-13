@@ -175,7 +175,9 @@ namespace Asset{
                 return kvp.key;
             }
         }
+#if !EWE_DEBUG_BOOL
         EWE_UNREACHABLE;
+#endif
         return INVALID_HASH;
     }
 

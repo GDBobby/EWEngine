@@ -72,6 +72,12 @@ namespace Node{
         ImGui::BulletText("param data - inst count[%zu] : param heap size[%zu] : param count[%zu]", paramPool.instructions.size(), paramPool.params[0].Size(), paramPool.param_data.size());
         ImNodes::EWE::Editor::RenderEditorTitle();
         if(packageType == Command::InstructionPackage::Object){
+            auto& shaders = reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload)->shaders;
+            if(ImGui::TreeNode("shaders")){
+                ImguiExtension::Imgui(shaders);
+                ImGui::TreePop();
+            }
+
             ObjectRasterConfig& rasterConfig = reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload)->config;
             //ImGui::SameLine();
             if(ImGui::TreeNode("object config")){

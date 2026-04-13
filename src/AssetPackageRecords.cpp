@@ -59,12 +59,12 @@ auto iter = association_container.find(hash);
         }
         for(auto& kvp : association_container){
             if(ImGui::TreeNode(kvp.value->name.c_str())) {
-                DragDropPtr::Source(kvp.value);
+                DragDropPtr::Source(*kvp.value);
                 //ImGuiExtension::Imgui(*kvp.value);
                 ImGui::TreePop();
             }
             else{
-                DragDropPtr::Source(kvp.value);
+                DragDropPtr::Source(*kvp.value);
             }
             
         }

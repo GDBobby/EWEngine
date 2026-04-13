@@ -12,12 +12,12 @@ namespace Asset{
 
     }
 
-    Shader* Manager<Shader>::Get(std::filesystem::path const& file_name){
+    Shader& Manager<Shader>::Get(std::filesystem::path const& file_name){
 
         auto foundShader = shaders.find(file_name);
         
         if(foundShader != shaders.end()){
-            return foundShader->second;
+            return *foundShader->second;
         }
         else{
             auto iter = std::find_if(files.hashed_path.begin(), files.hashed_path.end(), [&](const auto& p) {
@@ -30,12 +30,12 @@ namespace Asset{
             if(iter != files.hashed_path.end()){
                 auto emp_back = shaders.try_emplace(file_name, new Shader(*Global::logicalDevice, full_file_name.string().c_str()));
                 EWE_ASSERT(emp_back.second);
-                return emp_back.first->second;
+                return *emp_back.first->second;
             }
         }
 
         Logger::Print<Logger::Error>("returning nullptr from GetShader : %s - %s\n", files.root_directory.string().c_str(), file_name.string().c_str());
-        return nullptr;
+        EWE_UNREACHABLE;
     }
 
 #ifdef EWE_IMGUI

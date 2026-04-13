@@ -30,10 +30,10 @@ namespace Node{
     
     void RasterPackage_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        Command::ObjectPackage** pkg;
+        Command::ObjectPackage* pkg;
         if(DragDropPtr::Target(pkg)) {
-            if((*pkg)->type == Command::InstructionPackage::Type::Object){
-                auto& added_node = CreateRGNode(*pkg);
+            if(pkg->type == Command::InstructionPackage::Type::Object){
+                auto& added_node = CreateRGNode(pkg);
                 auto temp_mouse_pos =ImGui::GetIO().MousePos;
                 added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
             }

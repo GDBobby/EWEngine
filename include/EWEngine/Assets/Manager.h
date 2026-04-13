@@ -42,6 +42,9 @@ namespace Asset{
 
         void DropCallback(std::filesystem::path const& path);
 
+        std::vector<std::filesystem::path> glfw_drops{};
+        void ApplyGLFWDrops();
+
 #ifdef EWE_IMGUI
         void Imgui();
 #endif

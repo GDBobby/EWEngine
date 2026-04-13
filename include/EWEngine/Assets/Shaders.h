@@ -22,7 +22,7 @@ namespace Asset{
 
         std::unordered_map<std::filesystem::path, Shader*> shaders;
 
-        Shader* Get(std::filesystem::path const& file_path);
+        Shader& Get(std::filesystem::path const& file_path);
 
 #if EWE_IMGUI
         void Imgui();

@@ -29,10 +29,10 @@ namespace Node{
     
     void SubmissionTask_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        Command::PackageRecord** pkg;
+        Command::PackageRecord* pkg;
         if(DragDropPtr::Target(pkg)) {
             Logger::Print("dropping in sub task\n");
-            GPUTask* task = new GPUTask((*pkg)->name, *Global::logicalDevice, **pkg, false);
+            GPUTask* task = new GPUTask(pkg->name, *Global::logicalDevice, *pkg, false);
             auto& added_node = CreateRGNode(task);
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);

@@ -20,9 +20,9 @@ namespace Node{
 
     void RenderGraph_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        SubmissionTask** subTask;
+        SubmissionTask* subTask;
         if(DragDropPtr::Target(subTask)) {
-            auto& added_node = CreateRGNode(*subTask);
+            auto& added_node = CreateRGNode(subTask);
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }

@@ -83,9 +83,8 @@ namespace Asset{
     }
 
     void Manager<Image>::Destroy(AssetHash hash){
-        Image* img = Get(hash);
-        EWE_ASSERT(img != nullptr);
-        data_arena.DestroyElement(img);
+        Image& img = Get(hash);
+        data_arena.DestroyElement(&img);
         association_container.Remove(hash);
     }
     void Manager<Image>::Destroy(Image* img){
@@ -93,10 +92,10 @@ namespace Asset{
         AssetHash hash = GetHash(*img);
         Destroy(hash);
     }
-    Image* Manager<Image>::Get(AssetHash hash){
+    Image& Manager<Image>::Get(AssetHash hash){
         auto iter = association_container.find(hash);
         if(iter != association_container.end()){
-            return iter->value;
+            return *iter->value;
         }
         else{
             auto image_path_hash_data = files.hashed_path.at(hash);
@@ -121,10 +120,10 @@ namespace Asset{
             //thats extent, format, miplevels
 
 
-            return &img;
+            return img;
         }
     }
-    Image* Manager<Image>::Get(std::filesystem::path const& name){
+    Image& Manager<Image>::Get(std::filesystem::path const& name){
         return Get(CrossPlatformPathHash(name));
     }
 
@@ -144,7 +143,7 @@ namespace Asset{
             else{
                 ImGui::PushID(kvp.key);
                 if(ImGui::TreeNode(kvp.value.string().c_str())){
-                    DragDropPtr::Source<Image>(*found->value);
+                    DragDropPtr::Source(*found->value);
                     ImguiExtension::Imgui(*found->value);
                     if(ImGui::Button("update meta values")){
                         UpdateMetaFile(kvp.key, *found->value);

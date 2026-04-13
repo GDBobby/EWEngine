@@ -70,26 +70,15 @@ namespace Asset{
     void Manager<Buffer>::Imgui(){
         //filesystem.Imgui();
         for(auto& kvp : association_container){
-            //auto found = association_container.find(kvp.key);
-            //if(found == association_container.end()){
-                auto addr = &kvp.value;
-                if(ImGui::TreeNode(kvp.value->name.c_str())){
-                    Get(kvp.key);
-                    DragDropPtr::Source(kvp.value);
+            if(ImGui::TreeNode(kvp.value->name.c_str())){
+                Get(kvp.key);
+                DragDropPtr::Source(*kvp.value);
 
-                    ImGui::TreePop();
-                }
-                else{
-                    DragDropPtr::Source(kvp.value);
-                }
-            //}
-            //else{
-            //    ImGui::PushID(kvp.key);
-            //    ImGui::Text(kvp.value.string().c_str());
-            //    DragDropPtr::Source<Buffer>(*found->value);
-            //    
-            //    ImGui::PopID();
-            //}
+                ImGui::TreePop();
+            }
+            else{
+                DragDropPtr::Source(*kvp.value);
+            }
         }
     }
 #endif

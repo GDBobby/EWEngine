@@ -523,6 +523,12 @@ namespace EWE{
         }
     }
 
+	template<> void ImguiExtension::Imgui(std::array<Shader*, Shader::Stage::Bits::COUNT>& obj){
+        for(std::size_t i = 0; i < shaders.size(); i++){
+            Reflect::Enum::enum_data<Shader::Stage::Bits>[i].name
+        }
+    }
+
 
     void ImguiExpandInstruction(void* mem_addr, Inst::Type itype){
             static constexpr auto type_mems = std::define_static_array(std::meta::enumerators_of(^^Inst::Type));

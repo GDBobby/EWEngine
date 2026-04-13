@@ -21,23 +21,34 @@ namespace EWE{
 					else{
 						ImGui::Text("%u:null", iter);
 					}
-					Buffer** temp_drop_ptr = nullptr;
-					if(DragDropPtr::Target<Buffer*>(temp_drop_ptr)){
-						mem_addr->buffer_addr[iter] = (*temp_drop_ptr)->deviceAddress;
+					Buffer* temp_drop_ptr = nullptr;
+					if(DragDropPtr::Target(temp_drop_ptr)){
+						mem_addr->buffer_addr[iter] = temp_drop_ptr->deviceAddress;
 					}
 				}
 				ImGui::TableNextColumn();
 				if(iter < GlobalPushConstant_Raw::texture_count){
 					if(mem_addr->texture_indices[iter] != null_texture){
-						auto& dii = Global::assetManager->dii.Get(Global::assetManager->dii.ConvertTextureIndexToHash(mem_addr->texture_indices[iter]));
-						ImGui::Text("%u:%s", iter, dii.name.c_str());
-						ImGui::SetItemTooltip(dii.name.c_str());
+						const AssetHash temp_hash = Global::assetManager->dii.ConvertTextureIndexToHash(mem_addr->texture_indices[iter]);
+#if EWE_DEBUG_BOOL
+						if(temp_hash == Asset::INVALID_HASH) {
+							Logger::Print<Logger::Warning>("caught an invalid push texture index\n");
+							mem_addr->texture_indices[iter] = null_texture;
+						}
+						else{
+#endif			
+							auto& dii = Global::assetManager->dii.Get(temp_hash);
+							ImGui::Text("%u:%s", iter, dii.name.c_str());
+							ImGui::SetItemTooltip(dii.name.c_str());
+#if EWE_DEBUG_BOOL
+						}
+#endif
 					}
 					else{
 						ImGui::Text("%u:null", iter);
 					}
 					DescriptorImageInfo* temp_drop_ptr = nullptr;
-					if(DragDropPtr::Target<DescriptorImageInfo>(temp_drop_ptr)){
+					if(DragDropPtr::Target(temp_drop_ptr)){
 						mem_addr->texture_indices[iter] = temp_drop_ptr->index;
 					}
 				}
