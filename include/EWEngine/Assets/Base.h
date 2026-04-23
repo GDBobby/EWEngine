@@ -8,8 +8,19 @@
 
 namespace EWE{
 namespace Asset{
+
     template<typename T>
-    struct Manager;
+    AssetHash GetHash(T& res);
+
+    template<typename T>
+    bool LoadAssetFromFile(T* ptr_to_raw_mem, std::filesystem::path const& path);
+
+    template<typename T>
+    bool WriteAssetToFile(T& resource, std::filesystem::path const& path);
+
+    template<typename T>
+    bool UpdateMetaFile();
+    
 
 } //namespace Asset
 } //namespace EWE

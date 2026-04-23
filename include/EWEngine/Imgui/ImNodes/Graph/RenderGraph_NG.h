@@ -8,6 +8,15 @@
 namespace EWE{
     namespace Node{
         struct RenderGraph_NG : public ImNodes::EWE::Editor {
+            enum NodeType{
+                Task,
+                RenderInfo,
+            };
+            struct NodePayload{
+                NodeType type;
+                void* payload;
+            };
+
             RenderGraph* renderGraph;
 
             [[nodiscard]] explicit RenderGraph_NG();
@@ -15,6 +24,7 @@ namespace EWE{
 
             void RenderEditorTitle() override final;
             ImNodes::EWE::Node& CreateRGNode(SubmissionTask* subTask);
+            ImNodes::EWE::Node& CreateRGNode(FullRenderInfo* renderInfo);
 
             void RenderNodes() override final;
             bool RenderAddMenu() override final;

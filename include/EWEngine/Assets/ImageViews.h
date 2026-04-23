@@ -11,6 +11,8 @@ namespace Asset{
 
     template<>
     struct Manager<ImageView>{
+        using Type = ImageView;
+
         Manager<Image>& images;
 
         [[nodiscard]] explicit Manager(std::filesystem::path const& root_dir, Manager<Image>& images);

@@ -13,9 +13,11 @@
 
 
 //its mandatory to use this exact layout
+/*
 layout(push_constant) uniform Basic_Push {
     //0 is invalid
     uint64_t buffer_address[ARBITRARY_MAX_BUFFER_COUNT];
     // [-1] is the invalid index
     int texture_index[ARBITRARY_MAX_TEXTURE_COUNT];
-} push;
+} basic_push;
+*/

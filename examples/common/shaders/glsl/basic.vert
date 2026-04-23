@@ -12,14 +12,8 @@ layout(buffer_reference, scalar) readonly buffer Vertex_Buffer {
 };
 
 
-#define ARBITRARY_MAX_BUFFER_COUNT 8
-#define ARBITRARY_MAX_TEXTURE_COUNT 8
 layout(push_constant) uniform Push {
-    //0 is invalid
     Vertex_Buffer vertex_address;
-    uint64_t buffer_address[7];
-    // [-1] is the invalid index
-    int texture_index[ARBITRARY_MAX_TEXTURE_COUNT];
 } push;
 
 layout(location = 0) out vec3 outColor;

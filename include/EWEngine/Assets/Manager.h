@@ -39,6 +39,7 @@ namespace Asset{
         Manager<DescriptorImageInfo> dii;
         Manager<SubmissionTask> subTask;
         Manager<Shader> shader;
+        Manager<RenderGraph> renderGraph;
 
         void DropCallback(std::filesystem::path const& path);
 

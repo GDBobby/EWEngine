@@ -1,5 +1,8 @@
+#include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/Shaders.h"
 
+#include "EWEngine/Imgui/Objects.h"
+#include "EWEngine/Imgui/DragDrop.h"
 
 namespace EWE{
 namespace Asset{
@@ -11,31 +14,104 @@ namespace Asset{
     {
 
     }
+    bool Manager<Shader>::GetMeta(ShaderMeta& meta, std::filesystem::path const& file_path){
+        auto const meta_path = files.root_directory / "meta" / file_path;
+        if(!std::filesystem::exists(meta_path)){
+            return false;
+        }
+        return meta.ReadFromFile(meta_path);
+    }
+    bool Manager<Shader>::GetMeta(ShaderMeta& meta, AssetHash hash){
+        for(auto& kvp : files.hashed_path){
+            if(kvp.key == hash){
+                return GetMeta(meta, kvp.value);
+            }
+        }
+        return false;
+    }
 
-    Shader& Manager<Shader>::Get(std::filesystem::path const& file_name){
+    void Manager<Shader>::Destroy(AssetHash hash){
+        for(auto iter = association_container.begin(); iter != association_container.end(); iter++){
+            if(iter->key == hash){
+                data_arena.DestroyElement(iter->value);
+                association_container.erase(iter);
+                return;
+            }
+        }
+        EWE_UNREACHABLE;
+    }
+    void Manager<Shader>::Destroy(Shader& shader){
+        for(auto iter = association_container.begin(); iter != association_container.end(); iter++){
+            if(iter->value == &shader){
+                data_arena.DestroyElement(iter->value);
+                association_container.erase(iter);
+                return;
+            }
+        }
+        EWE_UNREACHABLE;
+    }
 
-        auto foundShader = shaders.find(file_name);
+    Shader& Manager<Shader>::Get(AssetHash hash){
+        auto foundShader = association_container.find(hash);
         
-        if(foundShader != shaders.end()){
-            return *foundShader->second;
+        if(foundShader != association_container.end()){
+            return *foundShader->value;
         }
         else{
             auto iter = std::find_if(files.hashed_path.begin(), files.hashed_path.end(), [&](const auto& p) {
-                    return p.value == file_name;
+                    return p.key == hash;
                 }
             );
-
-            std::filesystem::path full_file_name = files.root_directory / file_name;
-
             if(iter != files.hashed_path.end()){
-                auto emp_back = shaders.try_emplace(file_name, new Shader(*Global::logicalDevice, full_file_name.string().c_str()));
-                EWE_ASSERT(emp_back.second);
-                return *emp_back.first->second;
+                const auto shader_asset_path = files.root_directory / iter->value;
+                Shader& ret = data_arena.AddElement(*Global::logicalDevice, shader_asset_path);
+                ret.filepath = iter->value;
+
+                if(GetMeta(ret.meta, iter->value)){
+                    if(ret.meta.buffer_written_to.Size() != ret.pushRange.buffers.size()){
+                        Logger::Print<Logger::Warning>("incorrect meta buffer - %zu:%zu\n", ret.meta.buffer_written_to.Size(), ret.pushRange.buffers.size());
+                        const auto lower_size = std::min(ret.meta.buffer_written_to.Size(), ret.pushRange.buffers.size());
+                        ret.meta.buffer_written_to.ClearAndResize(lower_size);
+
+                        //if the shader's buffer count is larger, the rest are assumed read only
+                        for(std::size_t i = 0; i < lower_size; i++){ 
+                            ret.meta.buffer_written_to[i] = ret.meta.buffer_written_to[i];
+                        }
+
+                    }
+                    if(ret.meta.texture_written_to.Size() != ret.pushRange.textures.size()){
+                        Logger::Print<Logger::Warning>("incorrect meta buffer - %zu:%zu\n", ret.meta.texture_written_to.Size(), ret.pushRange.textures.size());
+                        const auto lower_size = std::min(ret.meta.texture_written_to.Size(), ret.pushRange.textures.size());
+                        ret.meta.texture_written_to.ClearAndResize(lower_size);
+
+                        //if the shader's buffer count is larger, the rest are assumed read only
+                        for(std::size_t i = 0; i < lower_size; i++){ 
+                            ret.meta.texture_written_to[i] = ret.meta.texture_written_to[i];
+                        }
+                    }
+                }
+                else{
+                    ret.meta.buffer_written_to.ClearAndResize(ret.pushRange.buffers.size());
+                    ret.meta.texture_written_to.ClearAndResize(ret.pushRange.textures.size());
+                    for(auto& buf : ret.meta.buffer_written_to){
+                        buf = false;
+                    }
+                    for(auto& img : ret.meta.texture_written_to){
+                        img = false;
+                    }
+                }
+                association_container.push_back(GetHash(ret), &ret);
+
+                return ret;
             }
+            
         }
 
-        Logger::Print<Logger::Error>("returning nullptr from GetShader : %s - %s\n", files.root_directory.string().c_str(), file_name.string().c_str());
+        Logger::Print<Logger::Error>("returning nullptr from GetShader : %s - %zu\n", files.root_directory.string().c_str(), hash);
         EWE_UNREACHABLE;
+    }
+    Shader& Manager<Shader>::Get(std::filesystem::path const& file_name){
+        return Get(CrossPlatformPathHash(file_name));
     }
 
 #ifdef EWE_IMGUI
@@ -46,44 +122,15 @@ namespace Asset{
         }
 
         for(auto& file : files.hashed_path){
-            auto foundShader = shaders.find(file.value);
-            if(foundShader != shaders.end()) {
+            auto foundShader = association_container.find(file.key);
+            if(foundShader != association_container.end()) {
 
                 bool tree_open = ImGui::TreeNode(file.value.string().c_str());
-                if (ImGui::BeginDragDropSource()) {
-
-                    ImGui::SetDragDropPayload("SHADER", file.value.string().c_str(), file.value.string().size() + 1);
-                    ImGui::PushID(6942068);
-                    ImGui::Text("%s",file.value.string().c_str());
-                    ImGui::PopID();
-                    ImGui::EndDragDropSource();
-                }
+                DragDropPtr::Source(*foundShader->value);
 
                 if(tree_open) {
-                    auto& shader = *foundShader->second;
-                    ImGui::Text("address : %zu", reinterpret_cast<std::size_t>(&shader));
-                    for(auto& str : shader.BDA_data){
-                        if(ImGui::BeginTable("this name doesnt matter", 4)){
-                            ImGui::TableSetupColumn(str.name.c_str());
-                            ImGui::TableSetupColumn("member name");
-                            ImGui::TableSetupColumn("size");
-                            ImGui::TableSetupColumn("offset");
-
-                            ImGui::TableHeadersRow();
-                            for(auto& data : str.members){
-                                ImGui::TableNextColumn();
-                                ImGui::TableNextColumn();
-                                ImGui::Text("%s", data.name.c_str());
-                                ImGui::TableNextColumn();
-                                ImGui::Text("%u", data.size);
-                                ImGui::TableNextColumn();
-                                ImGui::Text("%u", data.offset);
-                                ImGui::TableNextRow();
-                            }
-
-                            ImGui::EndTable();
-                        }
-                    }
+                    auto& shader = *foundShader->value;
+                    ImguiExtension::Imgui(shader);
                     ImGui::TreePop();
                 }
             }

@@ -107,16 +107,7 @@ namespace Asset{
         //just checking sizes now, and going to write that size to file
         for(std::size_t i = 0; i < param_pool.instructions.size(); i++){
             const auto current_param_size = Inst::GetParamSize(param_pool.instructions[i]);
-            if(current_param_size > 0){
-                if(param_pool.instructions[i] == Inst::Push){
-                    //the globalpushconstant_raw is 96 bytes, but giving it some padding will help keep the file version stable
-                    //im expecting ^ something there in the future to make push larger (April 2nd, 2026)
-                    written_param_size += 128;
-                }
-                else{
-                    written_param_size += current_param_size;
-                }
-            }
+            written_param_size += current_param_size;
         }
         Logger::Print("current write position, before written param size : %zu\n", outFile.tellp());
         outFile.write(reinterpret_cast<char*>(&written_param_size), sizeof(std::size_t));
@@ -134,24 +125,29 @@ namespace Asset{
                     //convert the texture index to a dii hash
                     if(param_pool.instructions[i] == Inst::Push){
                         Logger::Print("writing push at [%zu] : frame[%u]\n", outFile.tellp(), frame);
-                        GlobalPushConstant_Raw* temp_push = reinterpret_cast<GlobalPushConstant_Raw*>(param_pool.param_data[param_index].data[frame]);
+                        auto* temp_push = reinterpret_cast<ParamPack<Inst::Push>*>(param_pool.param_data[param_index].data[frame]);
+                        outFile.write(reinterpret_cast<char*>(&temp_push->buffer_count), sizeof(temp_push->buffer_count));
+                        outFile.write(reinterpret_cast<char*>(&temp_push->texture_count), sizeof(temp_push->texture_count));
                         AssetHash hash_buffer;
                         
-                        for(uint8_t j = 0; j < GlobalPushConstant_Raw::buffer_count; j++){
-                            if(temp_push->buffer_addr[j] == null_buffer){
+                        for(uint8_t j = 0; j < temp_push->buffer_count; j++){
+                            //EWE_ASSERT(bda_array[j] != null_buffer);
+                            if(temp_push->GetDeviceAddress(j) == null_buffer){
+                                Logger::Print<Logger::Warning>("invalid push buffer being writen to file\n");
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
-                                hash_buffer = Global::assetManager->buffer.ConvertBDAToHash(temp_push->buffer_addr[j]);
+                                hash_buffer = Global::assetManager->buffer.ConvertBDAToHash(temp_push->GetDeviceAddress(j));
                             }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
-                        for(uint8_t j = 0; j < GlobalPushConstant_Raw::texture_count; j++){
-                            if(temp_push->texture_indices[j] == null_texture){
+                        for(uint8_t j = 0; j < temp_push->texture_count; j++){
+                            if(temp_push->GetTextureIndex(j) == null_texture){
+                                Logger::Print<Logger::Warning>("invalid push texture being writen to file\n");
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
-                                hash_buffer = Global::assetManager->dii.ConvertTextureIndexToHash(temp_push->texture_indices[j]);
+                                hash_buffer = Global::assetManager->dii.ConvertTextureIndexToHash(temp_push->GetTextureIndex(j));
                             }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
@@ -248,25 +244,29 @@ namespace Asset{
                     //convert the texture index to a dii hash
                     if(ret->paramPool.instructions[i] == Inst::Push){
                         Logger::Print("reading push at [%zu] : frame[%u]\n", inFile.tellg(), frame);
-                        GlobalPushConstant_Raw* temp_push = reinterpret_cast<GlobalPushConstant_Raw*>(ret->paramPool.param_data[param_index].data[frame]);
+                        auto* temp_push = reinterpret_cast<ParamPack<Inst::Push>*>(ret->paramPool.param_data[param_index].data[frame]);
+                        inFile.read(reinterpret_cast<char*>(&temp_push->buffer_count), sizeof(temp_push->buffer_count));
+                        inFile.read(reinterpret_cast<char*>(&temp_push->texture_count), sizeof(temp_push->texture_count));
+
                         AssetHash hash_buffer;
-                        for(uint8_t j = 0; j < GlobalPushConstant_Raw::buffer_count; j++){
+                        for(uint8_t j = 0; j < temp_push->buffer_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
-                                temp_push->buffer_addr[j] = Global::assetManager->buffer.Get(hash_buffer).deviceAddress;
+                                temp_push->GetDeviceAddress(j) = Global::assetManager->buffer.Get(hash_buffer).deviceAddress;
+                                
                             }
                             else{
-                                temp_push->buffer_addr[j] = null_buffer;
+                                temp_push->GetDeviceAddress(j) = null_buffer;
                             }
                         }
-                        for(uint8_t j = 0; j < GlobalPushConstant_Raw::texture_count; j++){
+                        for(uint8_t j = 0; j < temp_push->texture_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
                                 auto& temp_dii = Global::assetManager->dii.Get(hash_buffer);
-                                temp_push->texture_indices[j] = temp_dii.index;
+                                temp_push->GetTextureIndex(j) = temp_dii.index;
                             }
                             else{
-                                temp_push->texture_indices[j] = null_texture;
+                                temp_push->GetTextureIndex(j) = null_texture;
                             }
                         }
                     }

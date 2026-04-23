@@ -14,14 +14,24 @@ namespace Asset{
         struct Manager<Shader>{
         FileSystem files;
 
+        Hive<Shader, 64> data_arena;
+        KeyValueContainer<AssetHash, Shader*> association_container;
+
         static AssetHash GetHash(Shader const& shader){
             return CrossPlatformPathHash(shader.filepath);
         }
 
+        //read from file
+        //optional
+        bool GetMeta(ShaderMeta& meta, AssetHash hash);
+        bool GetMeta(ShaderMeta& meta, std::filesystem::path const& file_path);
+
         [[nodiscard]] explicit Manager(std::filesystem::path root_directory);
 
-        std::unordered_map<std::filesystem::path, Shader*> shaders;
+        void Destroy(AssetHash hash);
+        void Destroy(Shader& shader);
 
+        Shader& Get(AssetHash hash);
         Shader& Get(std::filesystem::path const& file_path);
 
 #if EWE_IMGUI

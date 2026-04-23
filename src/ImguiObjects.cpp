@@ -2,6 +2,7 @@
 
 #include "EWEngine/Global.h"
 #include "EWEngine/Imgui/Params.h"
+#include "EightWinds/VulkanHeader.h"
 
 #ifdef EWE_IMGUI
 #include "imgui.h"
@@ -202,23 +203,6 @@ namespace EWE{
         ImguiExtension::Imgui(obj.config);
         ImGui::PopID();
     }
-    FUNC_ENTRY(GlobalPushConstant_Abstract) {
-        int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
-        ImGui::PushID(temp_id);
-        for (std::size_t i = 0; i < GlobalPushConstant_Raw::buffer_count; i++) {
-            if (obj.buffers[i]) {
-                const std::string temp_name{ std::string("[") + std::to_string(i) + ']' + obj.buffers[i]->name };
-                ImGui::Text(temp_name.c_str());
-            }
-        }
-        for (std::size_t i = 0; i < GlobalPushConstant_Raw::texture_count; i++) {
-            if (obj.textures[i]) {
-                const std::string temp_name{ std::string("[") + std::to_string(i) + ']' + obj.textures[i]->view.image.name };
-                ImGui::Text(temp_name.c_str());
-            }
-        }
-        ImGui::PopID();
-    }
 
     template<> void ImguiExtension::Imgui(Command::Executor& obj) {
         
@@ -258,6 +242,10 @@ namespace EWE{
 
         ImGui::PopID();
     }
+    FUNC_ENTRY(SubmissionTask){
+
+    }
+
     FUNC_ENTRY(TaskResourceUsage) {
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
@@ -272,6 +260,13 @@ namespace EWE{
 
         ImGui::PopID();
     }
+    FUNC_ENTRY(AttachmentInfo){
+        Reflect::Enum::Imgui_Combo_Selectable("format", obj.format);
+        Reflect::Enum::Imgui_Combo_Selectable("load op", obj.loadOp);
+        Reflect::Enum::Imgui_Combo_Selectable("store op", obj.storeOp);
+
+        ImGui::ColorEdit4("clear value", obj.clearValue.color.float32);
+    }
     //FUNC_ENTRY(TaskAffix); //no valuable info i think, rebuilt every frame
     FUNC_ENTRY(AttachmentSetInfo) {
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
@@ -282,18 +277,53 @@ namespace EWE{
         //come back to this
         //Reflect::Enum::Imgui_Combo_Selectable("rendering flags", obj.renderingFlags);
 
-        int col_count = obj.colors.size();
+        int col_count = obj.colors.Size();
         if (ImGui::DragInt("color count", &col_count, 0, 16)) {
-            obj.colors.resize(col_count);
+            Logger::Print<Logger::Warning>("need to support this\n");
+            //obj.colors.ClearAndResize(col_count);
         }
         for (auto& col : obj.colors) {
             //imgui_enum("format", col.format, 0, 256);
-            Reflect::Enum::Imgui_Combo_Selectable("format", col.format);
+            ImguiExtension::Imgui(col);
         }
         ImguiExtension::Imgui(obj.depth);
 
         ImGui::PopID();
     }
+	FUNC_ENTRY(RenderAttachments){
+        if(ImGui::BeginTable("per frame", max_frames_in_flight, ImGuiTableFlags_Borders)){
+            ImGui::TableSetupColumn("frame 0");
+            ImGui::TableSetupColumn("frame 1");
+            ImGui::TableHeadersRow();
+
+            for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+                for(auto& img : obj.color_images){
+                    if(img[frame] != nullptr){
+                        ImGui::Button("generated\n");
+                        //dragdrpo
+                    }
+                    else{
+                        ImGui::Button(img[frame]->name.c_str());
+                    }
+                    DragDropPtr::Target(img[frame]);
+                }
+            }
+            for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+                if(obj.depth_image[frame] == nullptr){
+                        ImGui::Button("generated\n");
+                        //dragdrpo
+                    }
+                    else{
+                        ImGui::Button(obj.depth_image[frame]->name.c_str());
+                    }
+                    DragDropPtr::Target(obj.depth_image[frame]);
+            }
+            for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+
+            }
+        }
+    }
+
     FUNC_ENTRY(VkPipelineDepthStencilStateCreateInfo) {
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
@@ -402,12 +432,12 @@ namespace EWE{
     FUNC_ENTRY(PipeLayout) {
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
-        for (std::size_t i = 0; i < Shader::Stage::COUNT; i++) {
+        for (std::size_t i = 0; i < ShaderStage::COUNT; i++) {
             if (obj.shaders[i]) {
-                Shader::Stage temp_val{ static_cast<Shader::Stage::Bits>(i) };
+                ShaderStage temp_val{ static_cast<ShaderStage::Bits>(i) };
                 ImGui::Text(Reflect::Enum::ToString(temp_val.value).data());
                 ImGui::SameLine();
-                ImGui::Text(" : %s", obj.shaders[i]->name.c_str());
+                ImGui::Text(" : %s", obj.shaders[i]->filepath.string().c_str());
                 ImguiExtension::Imgui(*obj.shaders[i]);
             }
 
@@ -420,20 +450,122 @@ namespace EWE{
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
 
+        ImGui::Text("filepath : %s", obj.filepath.string().c_str());
+        auto stage_val = ShaderStage{obj.shaderStageCreateInfo.stage}.value;
+        ImGui::Text("stage : %s", Reflect::Enum::ToString(stage_val).data());
+        const std::string layout_tree_name = std::string{"descriptors["} + std::to_string(obj.descriptorSets.sets.size()) + ']';
+        if(ImGui::TreeNode(layout_tree_name.c_str())){
 
+            ImGui::TreePop();
+        }
 
-        ImGui::PopID();
-    }
+        //Push
+        if(obj.pushRange.size > 0){
+            ImGui::Text("Push - size[%u] : offset[%u]", obj.pushRange.size, obj.pushRange.offset);
+            if(ImGui::BeginTable("push meta", 2, ImGuiTableFlags_Borders)){
+                ImGui::TableSetupColumn("buffer write");
+                ImGui::TableSetupColumn("texture write");
+                ImGui::TableHeadersRow();
+                
+                auto higher_count = std::max(obj.meta.buffer_written_to.Size(), obj.meta.texture_written_to.Size());
+                for(std::size_t i = 0; i < higher_count ; i++){
+                    ImGui::TableNextColumn();
+                    if(i < obj.meta.buffer_written_to.Size()){
+                        ImGui::Checkbox(obj.pushRange.buffers[i].c_str(), &obj.meta.buffer_written_to[i]);
+                    }
+                    ImGui::TableNextColumn();
+                    if(i < obj.meta.texture_written_to.Size()){
+                        ImGui::Checkbox(obj.pushRange.textures[i].c_str(), &obj.meta.texture_written_to[i]);
+                    }
+                }
+                ImGui::EndTable();
+            }
+            if(ImGui::Button("write meta to file")){
+                obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.filepath);
+                Logger::Print("wrote shader meta to file\n");
+            }
+        }
+        else{
+            ImGui::Text("no push constant");
+        }
 
-    FUNC_ENTRY(AttachmentInfo) {
-        int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
-        ImGui::PushID(temp_id);
-        //imgui_enum("format", obj.format, 0, 256);
-        Reflect::Enum::Imgui_Combo_Selectable("format", obj.format);
-        ImguiExtension::Imgui(obj.loadOp);
-        ImguiExtension::Imgui(obj.storeOp);
-        ImGui::DragFloat4("clear value", reinterpret_cast<float*>(obj.clearValue.color.float32), 0.f, 1.f);
+        //defualt spec constants
 
+        //variable data
+        const std::string var_tree_name = std::string("Variables : [") + std::to_string(obj.variables.Size()) + ']';
+        if(ImGui::TreeNode(var_tree_name.c_str())){
+            for(auto& var : obj.variables){
+                if(var.baseType == ShaderVariable::Type::Struct){
+                    if(var.name != ""){
+                        if(ImGui::TreeNode(var.name.c_str())){
+                            ImGui::Text("size : %zu", var.size);
+                            if(ImGui::BeginTable("var members", 6, ImGuiTableFlags_Borders)){
+                                ImGui::TableSetupColumn("name");
+                                ImGui::TableSetupColumn("fundamental type");
+                                ImGui::TableSetupColumn("size");
+                                ImGui::TableSetupColumn("offset");
+                                ImGui::TableSetupColumn("vec size");
+                                ImGui::TableSetupColumn("array size");
+                                ImGui::TableHeadersRow();
+                                
+                                for(auto& mem : var.members){
+                                    ImGui::TableNextColumn();
+                                    ImGui::Text(mem->name.c_str());
+                                    ImGui::TableNextColumn();
+                                    ImGui::Text(Reflect::Enum::ToString(mem->baseType).data());
+                                    ImGui::TableNextColumn();
+                                    ImGui::Text("%u", mem->offset);
+                                    ImGui::TableNextColumn();
+                                    ImGui::Text("%u", mem->size);
+
+                                    ImGui::TableNextColumn();
+                                    if(mem->vecsize > 1){
+                                        ImGui::Text("%u", mem->vecsize);
+                                    }
+                                    ImGui::TableNextColumn();
+                                    if(mem->array_lengths.Size() > 0){
+                                        ImGui::Text("%u : %u", mem->array_lengths.Size(), mem->array_lengths[0]);
+                                    }
+                                }
+
+                                ImGui::EndTable();
+                            }
+                            ImGui::TreePop();
+                        }
+                    }
+                }
+            }
+
+            if(ImGui::BeginTable("remaining vars", 5, ImGuiTableFlags_Borders)) {
+                ImGui::TableSetupColumn("name");
+                ImGui::TableSetupColumn("fundamental type");
+                ImGui::TableSetupColumn("size");
+                ImGui::TableSetupColumn("vec size");
+                ImGui::TableSetupColumn("array size");
+                ImGui::TableHeadersRow();
+                for(auto& var : obj.variables){
+                    if(var.baseType != ShaderVariable::Type::Struct){
+                        if(var.name != ""){
+                            ImGui::TableNextColumn();
+                            ImGui::Text(var.name.c_str());
+                            ImGui::TableNextColumn();
+                            ImGui::Text(Reflect::Enum::ToString(var.baseType).data());
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%u", var.size);
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%u", var.vecsize);
+                            ImGui::TableNextColumn();
+                            if(var.array_lengths.Size() > 0){
+                                ImGui::Text("%u : %u", var.array_lengths.Size(), var.array_lengths[0]);
+                            }
+                        }
+                    }
+                }
+                ImGui::EndTable();
+            }
+            ImGui::TreePop();
+        }
         ImGui::PopID();
     }
 
@@ -502,11 +634,6 @@ namespace EWE{
     }
 
     template<> void ImguiExtension::Imgui(VkStencilOpState& obj) {
-        //imgui_enum("fail op", obj.failOp, 0, 8);
-        //imgui_enum("pass op", obj.passOp, 0, 8);
-        //imgui_enum("depth fail op", obj.depthFailOp, 0, 8);
-        //imgui_enum("compare op", obj.compareOp, 0, 8);
-
         Reflect::Enum::Imgui_Combo_Selectable("fail op", obj.failOp);
         Reflect::Enum::Imgui_Combo_Selectable("pass op", obj.passOp);
         Reflect::Enum::Imgui_Combo_Selectable("depth fail op", obj.depthFailOp);
@@ -514,7 +641,6 @@ namespace EWE{
         ImGui::DragInt("compare mask", reinterpret_cast<int*>(&obj.compareMask), 0, INT32_MAX);
         ImGui::DragInt("write mask", reinterpret_cast<int*>(&obj.compareMask), 0, INT32_MAX);
         ImGui::DragInt("reference", reinterpret_cast<int*>(&obj.reference), 0, INT32_MAX);
-
     }
 
     template<> void ImguiExtension::Imgui(Command::Record& obj) {
@@ -523,9 +649,30 @@ namespace EWE{
         }
     }
 
-	template<> void ImguiExtension::Imgui(std::array<Shader*, Shader::Stage::Bits::COUNT>& obj){
-        for(std::size_t i = 0; i < shaders.size(); i++){
-            Reflect::Enum::enum_data<Shader::Stage::Bits>[i].name
+	template<> void ImguiExtension::Imgui(std::array<Shader*, ShaderStage::Bits::COUNT>& obj){
+        if(ImGui::BeginTable("shader table", 2, ImGuiTableFlags_Borders)){
+            ImGui::TableSetupColumn("Stage");
+            ImGui::TableSetupColumn("File");
+            ImGui::TableHeadersRow();
+
+            for(std::size_t i = 0; i < obj.size(); i++){
+                ImGui::TableNextColumn();
+                ImGui::Text(Reflect::Enum::enum_data<ShaderStage::Bits>[i].name.data());
+                ImGui::TableNextColumn();
+                if(obj[i] != nullptr){
+                    ImGui::Text(obj[i]->filepath.string().c_str());
+                }
+                else{
+                    ImGui::Text("nullptr");
+                }
+            }
+            ImGui::EndTable();
+            Shader* shaderPtr_table;
+            if(DragDropPtr::Target(shaderPtr_table)){
+                auto stage_val = ShaderStage{shaderPtr_table->shaderStageCreateInfo.stage}.value;
+                EWE_ASSERT(stage_val < ShaderStage::COUNT);
+                obj[stage_val] = shaderPtr_table;
+            }
         }
     }
 

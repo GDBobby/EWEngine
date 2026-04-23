@@ -7,6 +7,7 @@
 #include "EightWinds/Backend/STC_Helper.h"
 
 
+#include "EightWinds/VulkanHeader.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
 
@@ -61,29 +62,29 @@ namespace EWE{
 			"imgui render info",
 			*Global::logicalDevice, queue,
 			AttachmentSetInfo{
-				.width = Global::window->screenDimensions.width, 
-				.height = Global::window->screenDimensions.height,
-				.renderingFlags = 0,
-				.colors = {
+				Global::window->screenDimensions.width,  Global::window->screenDimensions.height,
+				VkRenderingFlags{0},
+				std::span<const AttachmentInfo>{
 					AttachmentInfo{
 						.format = VK_FORMAT_R8G8B8A8_UNORM,
 						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-						.clearValue = {0.f, 0.f, 0.f, 0.f}
+						.clearValue{0.f, 0.f, 0.f, 0.f}
 
 					}
 				},
-				.depth = AttachmentInfo{
+				AttachmentInfo{
 					.format = VK_FORMAT_D16_UNORM,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.clearValue = {0.f, 0.f, 0.f, 0.f}
+					.clearValue{0.f, 0.f, 0.f, 0.f}
 				}
 			}
 		},
 		image_count{imageCount},
 		sample_count{sampleCount}
     {
+		renderInfo.Init();
 
 		IMGUI_CHECKVERSION();
 		
@@ -92,6 +93,7 @@ namespace EWE{
 		ImGui::CreateDragDropContext();
 
 		TakeCallbackControl(Global::window->window);
+
     }
 
 	ImguiHandler::~ImguiHandler() {
@@ -159,10 +161,6 @@ namespace EWE{
 
 		if(viewports.size() > 0){
 			isRendering = true;
-
-			//auto& main_io = ImGui::GetIO(viewports[0].context);
-
-
 
 			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
 

@@ -31,6 +31,7 @@ namespace EWE{
 	FWD_DEC_IMGUI(GPUTask);
 	FWD_DEC_IMGUI(TaskResourceUsage);
 	//FWD_DEC_IMGUI(TaskAffix); //no valuable info i think, rebuilt every frame
+	FWD_DEC_IMGUI(AttachmentInfo);
 	FWD_DEC_IMGUI(AttachmentSetInfo);
 	template<> void ImguiExtension::Imgui(VkPipelineDepthStencilStateCreateInfo&);
 	template<> void ImguiExtension::Imgui(VkPipelineRenderingCreateInfo&);
@@ -40,6 +41,8 @@ namespace EWE{
 	FWD_DEC_IMGUI(PipeLayout);
 	FWD_DEC_IMGUI(Shader);
 	FWD_DEC_IMGUI(AttachmentInfo);
+	FWD_DEC_IMGUI(RenderAttachments);
+	FWD_DEC_IMGUI(SubmissionTask);
 
     //putting these in the macro leads to weird compiler behavior (as of gcc 16.0.1 20260217 (experimental))
 	template<> void ImguiExtension::Imgui(VkAttachmentLoadOp&);
@@ -69,7 +72,7 @@ namespace EWE{
 	template<> void ImguiExtension::Imgui(UsageData<Image>& obj);
 	template<> void ImguiExtension::Imgui(UsageData<Buffer>& obj);
 
-	template<> void ImguiExtension::Imgui(std::array<Shader*, Shader::Stage::Bits::COUNT>& obj);
+	template<> void ImguiExtension::Imgui(std::array<Shader*, ShaderStage::Bits::COUNT>& obj);
 
 
 		

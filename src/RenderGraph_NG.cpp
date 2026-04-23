@@ -1,6 +1,11 @@
 #include "EWEngine/Imgui/ImNodes/Graph/RenderGraph_NG.h"
 
+#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
+#include "EightWinds/Backend/RenderInfo.h"
+#include "EightWinds/RenderGraph/SubmissionTask.h"
+
+#include "EWEngine/Imgui/Objects.h"
 
 namespace EWE{
 namespace Node{
@@ -28,9 +33,25 @@ namespace Node{
         }
     }
 
+    ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(FullRenderInfo* renderInfo){
+        auto& added_node = AddNode();
+        added_node.payload = new NodePayload{
+            .type = NodeType::RenderInfo,
+            .payload = renderInfo
+        };
+        added_node.pos = menu_pos;
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+
+        return added_node;
+    }
     ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(SubmissionTask* subTask) {
         auto& added_node = AddNode();
-        added_node.payload = subTask;
+        added_node.payload = new NodePayload{
+            .type = NodeType::RenderInfo,
+            .payload = subTask
+        };
+        added_node.pos = menu_pos;
         added_node.pos = menu_pos;
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
@@ -85,9 +106,15 @@ namespace Node{
         ImGui::SetNextWindowPos(menu_pos);
         if(ImGui::Begin("add menu")){
             
+            if(ImGui::Button("add render info")){
+                CreateRGNode(new FullRenderInfo("unnamed", *Global::logicalDevice, Global::stcManager->renderQueue, AttachmentSetInfo{}));
+                    wantsClose = true;
+            }
+
             //ImGui::Text("%d", ImGui::IsWindowHovered());
             for(auto& submission : renderGraph->submissions){
                 if(ImGui::Button(submission.name.c_str())){
+                    CreateRGNode(&submission);
                     wantsClose = true;
                 }
             }
@@ -106,13 +133,23 @@ namespace Node{
     }
 
     void RenderGraph_NG::RenderNode(ImNodes::EWE::Node& node) {
-        EWE::SubmissionTask* payload = reinterpret_cast<EWE::SubmissionTask*>(node.payload);
+        auto* payload = reinterpret_cast<NodePayload*>(node.payload);
 
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(payload->name.c_str());
+        if(payload->type == NodeType::Task){
+            ImGui::TextUnformatted(reinterpret_cast<SubmissionTask*>(payload->payload)->name.c_str());
+        }
+        else{
+            ImGui::Text("render info");
+        }
         ImNodes::EndNodeTitleBar();
 
-        ImGui::Text("queue family index : %u", payload->queue->FamilyIndex());
+        if(payload->type == NodeType::Task){
+            ImguiExtension::Imgui(*reinterpret_cast<SubmissionTask*>(payload->payload));
+        }
+        else{
+            ImguiExtension::Imgui(reinterpret_cast<FullRenderInfo*>(payload->payload)->full);
+        }
     }
 
     void RenderGraph_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {

@@ -434,12 +434,12 @@ namespace Node{
             paramPool.PushBack(end_payload->iType);
             if(end_payload->iType == Inst::Push){
                 for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
-                    GlobalPushConstant_Raw* push = reinterpret_cast<GlobalPushConstant_Raw*>(paramPool.param_data.back().data[frame]);
-                    for(uint8_t i = 0; i < GlobalPushConstant_Raw::buffer_count; i++){
-                        push->buffer_addr[i] = null_buffer;
+                    auto* push = reinterpret_cast<ParamPack<Inst::Push>*>(paramPool.param_data.back().data[frame]);
+                    for(uint8_t i = 0; i < push->buffer_count; i++){
+                        push->GetDeviceAddress(i) = null_buffer;
                     }
-                    for(uint8_t i = 0; i < GlobalPushConstant_Raw::texture_count; i++){
-                        push->texture_indices[i] = null_texture;
+                    for(uint8_t i = 0; i < push->texture_count; i++){
+                        push->GetTextureIndex(i) = null_texture;
                     }
                 }
             }

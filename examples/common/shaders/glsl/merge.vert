@@ -1,7 +1,5 @@
 #version 450
 
-#include "GlobalPushConstant.glsl"
-
 layout(location = 0) out vec2 outUV;
 
 const vec2 fullscreen_positions[4] = vec2[4](

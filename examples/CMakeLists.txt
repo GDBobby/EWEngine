@@ -20,7 +20,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE -freflection)
+target_compile_options(${PROJECT_NAME} PRIVATE -freflection -gdwarf-4)
 
-target_compile_options(EWEngine PRIVATE -g)
-target_compile_options(EWFramework PRIVATE -g)
+target_compile_options(EWEngine PRIVATE -g -gdwarf-4)
+target_compile_options(EWFramework PRIVATE -g -gdwarf-4)

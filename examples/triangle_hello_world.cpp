@@ -129,6 +129,9 @@ int main(int argc, char* argv[]) {
 
     EWE::EWEngine engine{ "triangle hello world" };
     EWE::LogicalDevice& logicalDevice = engine.logicalDevice;
+    EWE::Global::assetManager->submissions.AddElement("graphics STC task", logicalDevice, EWE::Global->stcManager->renderQueue);
+    EWE::Global::assetManager->submissions.AddElement("compute STC task", logicalDevice, EWE::Global->stcManager->computeQueue)
+    
 
     EWE::Queue* renderQueue = nullptr;
     for (auto& queue : logicalDevice.queues) {
@@ -170,12 +173,12 @@ int main(int argc, char* argv[]) {
     passConfig.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
     passConfig.depthStencilInfo.stencilTestEnable = VK_FALSE;
 
-    passConfig.attachment_set_info.colors.clear();
+    passConfig.attachment_set_info.colors.ClearAndResize(1);
     passConfig.attachment_set_info.width = EWE::Global::window->screenDimensions.width;
     passConfig.attachment_set_info.height = EWE::Global::window->screenDimensions.height;
     passConfig.attachment_set_info.renderingFlags = 0;
 
-    auto& color_back = passConfig.attachment_set_info.colors.emplace_back();
+    auto& color_back = passConfig.attachment_set_info.colors[0];
     color_back.format = VK_FORMAT_R8G8B8A8_UNORM;
     color_back.clearValue.color.float32[0] = 0.f;
     color_back.clearValue.color.float32[1] = 0.f;
@@ -216,7 +219,7 @@ int main(int argc, char* argv[]) {
         lab::vec2 pos; //xy
         lab::vec3 color; //rgb, the 4th element isnt read, but i need it for alignment
     };
-    for (auto& str : triangle_vert->BDA_data) {
+    for (auto& str : triangle_vert->variables) {
         if (str.name == "Vertex") {
 
 #if EWE_DEBUG_BOOL
@@ -263,9 +266,6 @@ int main(int argc, char* argv[]) {
     EWE::Command::Record mergeRecord{};
 
     auto color_temp = passConfig.attachment_set_info.colors[0];
-    //by poppin the color and then putting it back, the image won't be constructed with the raster task
-    //then putting it back in after construction, the pipelines will be constructed correctly
-    passConfig.attachment_set_info.colors.clear(); 
     passConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     
     EWE::FullRenderInfo merge_render_info{
@@ -273,9 +273,11 @@ int main(int argc, char* argv[]) {
         logicalDevice, *renderQueue,
         passConfig.attachment_set_info
     };
+    merge_render_info.Init();
+
     EWE::RasterPackage mergeRaster{ "merge raster", logicalDevice, *renderQueue, passConfig, &merge_render_info };
     color_temp.format = engine.swapchain.swapCreateInfo.imageFormat;
-    mergeRaster.task_config.attachment_set_info.colors.push_back(color_temp);
+    mergeRaster.task_config.attachment_set_info.colors[0] = color_temp;
 
     mergeRaster.scissor = EWE::Global::window->screenDimensions;
     mergeRaster.viewport.x = 0.f;
@@ -291,12 +293,18 @@ int main(int argc, char* argv[]) {
     };
     EWE::Command::ObjectPackage merge_object_pkg{};
     merge_object_pkg.payload.config = triangle_rasterObj.config;
-    merge_object_pkg.payload.shaders[EWE::Shader::Stage::Vertex] = merge_vert;
-    merge_object_pkg.payload.shaders[EWE::Shader::Stage::Fragment] = merge_frag;
+    merge_object_pkg.payload.shaders[EWE::ShaderStage::Vertex] = merge_vert;
+    merge_object_pkg.payload.shaders[EWE::ShaderStage::Fragment] = merge_frag;
 
     EWE::InstructionPointer<EWE::ParamPack<EWE::Inst::Push>> mergePush;
     {
-        merge_object_pkg.paramPool.PushBack(EWE::Inst::Push);
+        EWE::ParamPack<EWE::Inst::Push> push_pack{
+           .buffer_count = 0,
+           .texture_count = 2,
+        };
+        push_pack.size = push_pack.Size();
+
+        merge_object_pkg.paramPool.PushBack(push_pack);
         EWE::ParamPack<EWE::Inst::Draw> draw_pack{
             .vertexCount = 4,
             .instanceCount = 1,
@@ -574,14 +582,15 @@ int main(int argc, char* argv[]) {
     EWE::Sampler& attachmentSampler = EWE::Global::assetManager->sampler.Get(samplerCreateInfo);
 
     EWE::PerFlight<EWE::DescriptorImageInfo> imgui_attachment_descriptor(
-        EWE::DescriptorImageInfo{attachmentSampler, imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-        EWE::DescriptorImageInfo{attachmentSampler, imguiHandler.renderInfo.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+        EWE::DescriptorImageInfo{attachmentSampler, *imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        EWE::DescriptorImageInfo{attachmentSampler, *imguiHandler.renderInfo.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
     );
 
     std::size_t currentMergeTaskIndex = 0;
 
     attachment_blit_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
-        mergePush.GetRef(frameIndex).texture_indices[0] = imgui_attachment_descriptor[frameIndex].index;
+        auto& push = mergePush.GetRef(frameIndex);
+        push.GetTextureIndex(0) = imgui_attachment_descriptor[frameIndex].index;
 
         VkRenderingAttachmentInfo presentAttachmentInfo{
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,

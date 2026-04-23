@@ -13,10 +13,7 @@ layout(location = 0) out vec4 outColor;
 //texture descriptor set
 
 layout(push_constant) uniform Push {
-    //0 is invalid
-    uint64_t buffer_address[ARBITRARY_MAX_BUFFER_COUNT];
-    // [-1] is the invalid index
-    int texture_index[ARBITRARY_MAX_TEXTURE_COUNT];
+    int texture_index[2];
 } push;
 
 void main(){
