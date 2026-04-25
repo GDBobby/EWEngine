@@ -342,7 +342,7 @@ namespace EWE {
     void STC_Manager::AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue::Type dstQueueType){
 
 		EWE_ASSERT(!CheckMainThread());
-		std::string thread_name = std::string("AT:") + transferContext.resource.resource[0]->name;
+		std::string thread_name = std::string("AT:") + transferContext.resource.resource[0]->name.string();
 		NameCurrentThread(thread_name);
         Queue& rh_queue = GetQueue(dstQueueType);
 		if (transferContext.generatingMipMaps) {

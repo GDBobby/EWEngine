@@ -1,23 +1,16 @@
 #pragma once
 
 #include "EightWinds/Sampler.h"
-#include "EightWinds/Data/KeyValueContainer.h"
-
 #include "EWEngine/Assets/Base.h"
 
 namespace EWE{
 namespace Asset{
-    inline auto CondenseSampler(Sampler const& sampler){
-        return Sampler::Condense(sampler.info);
-    }
+
+    //specialized, samplers aren't read or written to from file
+    //instead, they are condensed to a 64bit value
 
     template<>
     struct Manager<Sampler>{
-
-        static AssetHash GetHash(Sampler const& sampler){
-            return Sampler::Condense(sampler.info);
-        }
-
         [[nodiscard]] explicit Manager();
         
         Hive<Sampler, 64> data_arena;

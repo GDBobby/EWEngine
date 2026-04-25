@@ -13,24 +13,27 @@ namespace Asset{
 
     }
 
-    ImageView& Manager<ImageView>::Get(AssetHash hash){
+    ImageView* Manager<ImageView>::Get(AssetHash hash){
         for(auto& kvp : association_container){
             if(kvp.key == hash){
-                return *kvp.value;
+                return kvp.value;
             }
         }
         //doesn't already exist
-        Image& img = images.Get(hash);
-        while(!img.readyForUsage){
+        Image* img = images.Get(hash);
+        if(img == nullptr){
+            return nullptr;
+        }
+        while(!img->readyForUsage){
             //just relinquishing control to whatever the OS deems fit
             //could busy wait, idk if it matters
             std::this_thread::sleep_for(std::chrono::nanoseconds(1)); 
             
         }
-        ImageView& view = data_arena.AddElement(img);
+        ImageView& view = data_arena.AddElement(*img);
         association_container.push_back(hash, &view);
 
-        return view;
+        return &view;
     }
 
 

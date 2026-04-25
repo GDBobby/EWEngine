@@ -166,8 +166,8 @@ namespace Node{
 
                 const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
 
-                auto& subTask = Global::assetManager->subTask.Get(temp);
-                InitFromObject(subTask);
+                auto* subTask = Global::assetManager->subTask.Get(temp);
+                InitFromObject(*subTask);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();

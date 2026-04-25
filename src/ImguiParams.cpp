@@ -38,9 +38,9 @@ namespace EWE{
 						}
 						else{
 #endif
-							auto& dii = Global::assetManager->dii.Get(temp_hash);
-							ImGui::Text("%u:%s", iter, dii.name.c_str());
-							ImGui::SetItemTooltip(dii.name.c_str());
+							auto* dii = Global::assetManager->dii.Get(temp_hash);
+							ImGui::Text("%u:%s", iter, dii->name.string().c_str());
+							ImGui::SetItemTooltip(dii->name.string().c_str());
 #if EWE_DEBUG_BOOL
 						}
 #endif

@@ -142,7 +142,14 @@ namespace Node{
                     rt.objectPackages.push_back(reinterpret_cast<Command::ObjectPackage*>(current_node->payload));
                     current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                 }
-                EWE::Global::assetManager->rasterTask.WriteToFile(rt);
+                Asset::WriteAssetToFile(
+                    rt,
+                    EWE::Global::assetManager->rasterTask.files.root_directory,
+                    std::filesystem::proximate(
+                        EWE::Global::assetManager->rasterTask.files.root_directory,
+                        saved_path
+                    )
+                );
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -165,8 +172,8 @@ namespace Node{
                 const std::filesystem::path load_path = *explorer.selected_file;
                 
                 const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->rasterTask.files.root_directory);
-                auto& rt = Global::assetManager->rasterTask.Get(localized_path);
-                InitFromObject(rt);
+                auto* rt = Global::assetManager->rasterTask.Get(localized_path);
+                InitFromObject(*rt);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();

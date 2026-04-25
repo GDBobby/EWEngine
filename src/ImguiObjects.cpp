@@ -109,13 +109,15 @@ namespace EWE{
 
     template<> void ImguiExtension::Imgui(RenderGraph& obj){
         for (auto& task : obj.tasks) {
-            if(ImGui::TreeNode("Task name : %s", task.name.c_str())){
-                ImguiExtension::Imgui(task);
+            if(ImGui::TreeNode("Task name : %s", task->name.string().c_str())){
+                //ImguiExtension::Imgui(task);
                 ImGui::TreePop();
             }
         }
-        for (auto& sub : obj.submissions) {
-            ImGui::Text("submission name : %s", sub.name.c_str());
+        for (auto& sub_group : obj.execution_order) {
+            for(auto& sub : sub_group){
+                ImGui::Text("submission name : %s", sub->name.string().c_str());
+            }
         }
         for (std::size_t i = 0; i < obj.execution_order.size(); i++) {
             const std::string sub_group_name = std::string("submission group[") + std::to_string(i) + ']';
@@ -437,7 +439,7 @@ namespace EWE{
                 ShaderStage temp_val{ static_cast<ShaderStage::Bits>(i) };
                 ImGui::Text(Reflect::Enum::ToString(temp_val.value).data());
                 ImGui::SameLine();
-                ImGui::Text(" : %s", obj.shaders[i]->filepath.string().c_str());
+                ImGui::Text(" : %s", obj.shaders[i]->name.string().c_str());
                 ImguiExtension::Imgui(*obj.shaders[i]);
             }
 
@@ -450,7 +452,7 @@ namespace EWE{
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
 
-        ImGui::Text("filepath : %s", obj.filepath.string().c_str());
+        ImGui::Text("filepath : %s", obj.name.string().c_str());
         auto stage_val = ShaderStage{obj.shaderStageCreateInfo.stage}.value;
         ImGui::Text("stage : %s", Reflect::Enum::ToString(stage_val).data());
         const std::string layout_tree_name = std::string{"descriptors["} + std::to_string(obj.descriptorSets.sets.size()) + ']';
@@ -481,7 +483,7 @@ namespace EWE{
                 ImGui::EndTable();
             }
             if(ImGui::Button("write meta to file")){
-                obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.filepath);
+                obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.name);
                 Logger::Print("wrote shader meta to file\n");
             }
         }
@@ -660,7 +662,7 @@ namespace EWE{
                 ImGui::Text(Reflect::Enum::enum_data<ShaderStage::Bits>[i].name.data());
                 ImGui::TableNextColumn();
                 if(obj[i] != nullptr){
-                    ImGui::Text(obj[i]->filepath.string().c_str());
+                    ImGui::Text(obj[i]->name.string().c_str());
                 }
                 else{
                     ImGui::Text("nullptr");

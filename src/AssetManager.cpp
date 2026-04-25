@@ -30,9 +30,10 @@ namespace Asset{
         pkgRecord{asset_directory},
         rasterTask{asset_directory},
         sampler{},
-        dii{asset_directory, sampler, imageView},
+        dii{asset_directory},
         subTask{asset_directory},
-        shader{asset_directory / "shaders/"}
+        shader{asset_directory / "shaders/"},
+        renderGraph{asset_directory}
 
     {
     }
@@ -89,7 +90,7 @@ namespace Asset{
             auto const& extensions = container.files.acceptable_extensions;
                 for(auto const& ext : extensions){
                     if(dropped_ext == ext){
-                        auto& temp = container.Get(path);
+                        auto* temp = container.Get(path);
                         /*
                             if constexpr(std::meta::has_template_arguments(^^T)){
                                 static constexpr auto template_args = Reflect::GetMetaSpan<^^T, std::meta::template_arguments_of, false, std::meta::has_template_arguments(^^T)>();
@@ -99,10 +100,10 @@ namespace Asset{
                         */
 
                         if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)){
-                            std::size_t reint_ptr = reinterpret_cast<std::size_t>(&temp);
+                            std::size_t reint_ptr = reinterpret_cast<std::size_t>(temp);
 
 
-                            auto temp_name = GetTypeName_Please<std::decay_t<decltype(temp)>>();
+                            auto temp_name = GetTypeName_Please<std::decay_t<decltype(*temp)>>();
 
                             ImGui::SetDragDropPayload(temp_name.data(), &reint_ptr, sizeof(std::size_t));
                         

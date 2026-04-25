@@ -112,12 +112,14 @@ namespace Node{
             }
 
             //ImGui::Text("%d", ImGui::IsWindowHovered());
+            /*
             for(auto& submission : renderGraph->submissions){
                 if(ImGui::Button(submission.name.c_str())){
                     CreateRGNode(&submission);
                     wantsClose = true;
                 }
             }
+            */
             if(!ImGui::IsWindowFocused()){
                 wantsClose = true;
             }

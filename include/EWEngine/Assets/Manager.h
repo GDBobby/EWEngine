@@ -16,6 +16,7 @@
 #include "EWEngine/Assets/Samplers.h"
 #include "EWEngine/Assets/SubmissionTasks.h"
 #include "EWEngine/Assets/Shaders.h"
+#include "EWEngine/Assets/RenderGraphs.h"
 
 namespace EWE{
 

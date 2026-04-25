@@ -1,5 +1,6 @@
 #include "EWEngine/Assets/DII.h"
 
+#include "EWEngine/Assets/Extensions.h"
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/DragDrop.h"
@@ -48,101 +49,33 @@ namespace Asset{
 #endif
 
     Manager<DescriptorImageInfo>::Manager(
-        std::filesystem::path const& root_path,
-        Manager<Sampler>& _samplers,
-        Manager<ImageView>& _views
+        std::filesystem::path const& root_path
     )
-    : files{root_path, std::vector<std::string>{".dii"}},
-        samplers{_samplers},
-        views{_views}
+    : files{root_path, acceptable_extensions<DescriptorImageInfo>}
     {
 
     }
 
-    static constexpr std::size_t dii_version = 0;
-
-    DescriptorImageInfo& Manager<DescriptorImageInfo>::Read(std::filesystem::path const& file_name){
-
-        std::ifstream stream{files.root_directory / file_name, std::ios::binary};
-        EWE_ASSERT(stream.is_open());
-
-        Stream::Operator streamHandler{stream};
-
-        std::size_t buffer;
-        streamHandler.Process(buffer);
-        EWE_ASSERT(buffer == dii_version);
-        //this assumes that only the default view can be used
-        //otherwise, i would need to store a handle for the view
-        AssetHash view_hash;
-        streamHandler.Process(view_hash);
-
-        ImageView& view = views.Get(view_hash);
-
-        Sampler* sampler = nullptr;
-        uint8_t temp_buffer;
-        streamHandler.Process(temp_buffer);
-        if(temp_buffer == 1){
-            //if we're here, and it's nullptr, we're reading. otherwise, writing
-            uint64_t sampler_condensed;
-            streamHandler.Process(sampler_condensed);
-            sampler = &samplers.Get(sampler_condensed);
-        }
-
-        DescriptorType type;
-        streamHandler.Process(type);
-
-        VkImageLayout layout;
-        streamHandler.Process(layout);
-
-        if(sampler != nullptr){
-            return data_arena.AddElement(*sampler, view, type, layout);
-        }
-        else{
-            return data_arena.AddElement(view, type, layout);
-        }
-    }
-
-    void Manager<DescriptorImageInfo>::Write(DescriptorImageInfo const& dii, std::filesystem::path const& file_name){
-
-        std::ofstream stream{file_name, std::ios::binary};
-        EWE_ASSERT(stream.is_open());
-
-        Stream::Operator streamHandler{stream};
-
-        std::size_t buffer = dii_version;
-        streamHandler.Process(buffer);
-
-        //this assumes that only the default view can be used
-        //otherwise, i would need to store a handle for the view
-        auto hash = views.GetHash(dii.view);
-        streamHandler.Process(hash);
-
-        uint8_t temp_buffer = dii.sampler != nullptr;
-        streamHandler.Process(temp_buffer);
-        if(dii.sampler != nullptr){
-            uint64_t sample_condensed = Sampler::Condense(dii.sampler->info);
-            streamHandler.Process(sample_condensed);
-        }
-
-        streamHandler.Process(dii.type);
-        streamHandler.Process(dii.imageInfo.imageLayout);
-    }
-
-    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(AssetHash hash){
+    DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(AssetHash hash){
         for(auto kvp : association_container){
             if(kvp.key == hash){
-                return *kvp.value;
+                return kvp.value;
             }
         }
         //wasnt found, break into the file system
         auto found_file = files.hashed_path.find(hash);
         EWE_ASSERT(found_file != files.hashed_path.end());
-        auto& ret = Read(found_file->value);
-        ret.name = found_file->value;
-        association_container.push_back(found_file->key, &ret);
+        auto* ret = data_arena.GetCell();
+        if(LoadAssetFromFile(ret, files.root_directory, found_file->value)){
+            ret->name = found_file->value;
+            association_container.push_back(found_file->key, ret);
+        }
+        else{
+            data_arena.ReturnCell(ret);
+        }
         return ret;
     }
-    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(std::filesystem::path const& name){
+    DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(std::filesystem::path const& name){
         auto hash = CrossPlatformPathHash(name);
         return Get(hash);
     }
@@ -152,11 +85,11 @@ namespace Asset{
         DescriptorImageInfo* ret = nullptr;
         if(params.sampler){
             ret = &data_arena.AddElement(*params.sampler, *params.view, params.type, params.layout);
-            ret->name = params.view->image.name + std::to_string(Sampler::Condense(params.sampler->info)) + ".dii";
+            ret->name = params.view->image.name / std::to_string(Sampler::Condense(params.sampler->info)) / ".dii";
         }
         else{
             ret = &data_arena.AddElement(*params.view, params.type, params.layout);
-            ret->name = params.view->image.name + ".dii";
+            ret->name = params.view->image.name / ".dii";
         }
         association_container.push_back(CrossPlatformPathHash(ret->name), ret);
 #if EWE_IMGUI
@@ -194,9 +127,9 @@ namespace Asset{
             }
             if(DragDropPtr::Target(creation_params.sampler)){
                 auto rehashed = Sampler::Condense(creation_params.sampler->info);
-                auto found = samplers.association_container.find(rehashed);
-                if(found == samplers.association_container.end()){
-                    samplers.association_container.push_back(rehashed, creation_params.sampler);
+                auto found = Global::assetManager->sampler.association_container.find(rehashed);
+                if(found == Global::assetManager->sampler.association_container.end()){
+                    Global::assetManager->sampler.association_container.push_back(rehashed, creation_params.sampler);
                 }
             }
 
@@ -218,7 +151,7 @@ namespace Asset{
                     }
                 }
                 EWE_ASSERT(img_hash != Asset::INVALID_HASH);
-                creation_params.view = &views.Get(img_hash);
+                creation_params.view = Global::assetManager->imageView.Get(img_hash);
             }
 
             Reflect::Enum::Imgui_Combo_Selectable("descriptor type", creation_params.type);
@@ -283,7 +216,7 @@ namespace Asset{
                 ImGui::Text("layout : %s", Reflect::Enum::ToString(kvp.value->imageInfo.imageLayout).data());
                 
                 if(ImGui::Button("write to file")) {
-                    Write(*kvp.value, files.root_directory / kvp.value->name);
+                    WriteAssetToFile(*kvp.value, files.root_directory, kvp.value->name);
                     Logger::Print("wrote [%s] to file[%s]\n", kvp.value->name.c_str(), files.root_directory.string().c_str());
                 }
                 
@@ -296,6 +229,93 @@ namespace Asset{
         }
     }
 #endif
+
+
+
+    static constexpr std::size_t dii_version = 0;
+
+    template<>
+    bool LoadAssetFromFile(DescriptorImageInfo* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& file_name){
+
+        std::ifstream stream{root_directory / file_name, std::ios::binary};
+        if(!stream.is_open()){
+            return false;
+        }
+
+        Stream::Operator streamHandler{stream};
+
+        std::size_t buffer;
+        streamHandler.Process(buffer);
+        EWE_ASSERT(buffer == dii_version);
+        //this assumes that only the default view can be used
+        //otherwise, i would need to store a handle for the view
+        AssetHash view_hash;
+        streamHandler.Process(view_hash);
+
+        ImageView* view = Global::assetManager->imageView.Get(view_hash);
+
+        Sampler* sampler = nullptr;
+        uint8_t temp_buffer;
+        streamHandler.Process(temp_buffer);
+        if(temp_buffer == 1){
+            //if we're here, and it's nullptr, we're reading. otherwise, writing
+            uint64_t sampler_condensed;
+            streamHandler.Process(sampler_condensed);
+            sampler = &Global::assetManager->sampler.Get(sampler_condensed);
+        }
+
+        DescriptorType type;
+        streamHandler.Process(type);
+
+        VkImageLayout layout;
+        streamHandler.Process(layout);
+
+        if(sampler != nullptr){
+            std::construct_at(ptr_to_raw_mem, *sampler, *view, type, layout);
+        }
+        else{
+            std::construct_at(ptr_to_raw_mem, *view, type, layout);
+        }
+        return true;
+    }
+
+    template<>
+    bool WriteAssetToFile(DescriptorImageInfo const& dii, std::filesystem::path const& root_directory, std::filesystem::path const& file_name){
+
+        std::ofstream stream{root_directory / file_name, std::ios::binary};
+        if(!stream.is_open()){
+            stream.open(root_directory / file_name);
+            if(!stream.is_open()){
+                return false;
+            }
+        }
+
+        Stream::Operator streamHandler{stream};
+
+        std::size_t buffer = dii_version;
+        streamHandler.Process(buffer);
+        if(buffer != dii_version){
+            return false;
+        }
+
+        //this assumes that only the default view can be used
+        //otherwise, i would need to store a handle for the view
+        auto hash = GetHash(dii.view);
+        streamHandler.Process(hash);
+
+        uint8_t temp_buffer = dii.sampler != nullptr;
+        streamHandler.Process(temp_buffer);
+        if(dii.sampler != nullptr){
+            uint64_t sample_condensed = Sampler::Condense(dii.sampler->info);
+            streamHandler.Process(sample_condensed);
+        }
+
+        streamHandler.Process(dii.type);
+        streamHandler.Process(dii.imageInfo.imageLayout);
+
+        stream.close();
+        return true;
+    }
 
 } //namespace Asset
 } //namespace EWE

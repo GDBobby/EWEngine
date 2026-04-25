@@ -1,4 +1,4 @@
-#include "EWEngine/Assets/FileResource.h"
+#include "EWEngine/Assets/FileSystem.h"
 
 #include "EWEngine/Assets/Base.h"
 
@@ -9,10 +9,13 @@
 
 namespace EWE{
 namespace Asset{ 
-    FileSystem::FileSystem(std::filesystem::path const& _root_directory, std::vector<std::string> const& _acceptable_extensions)
+    FileSystem::FileSystem(std::filesystem::path const& _root_directory, std::span<const std::string_view> _acceptable_extensions)
     : root_directory{_root_directory},
-        acceptable_extensions{_acceptable_extensions}
+        acceptable_extensions{}
     {
+        for(auto& str : _acceptable_extensions){
+            acceptable_extensions.emplace_back(str);
+        }
         RefreshFiles();
     }
 

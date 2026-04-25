@@ -1,33 +1,23 @@
 #pragma once
 
-#include "EWEngine/Assets/Hash.h"
-#include "EightWinds/DescriptorImageInfo.h"
-#include "EightWinds/Data/KeyValueContainer.h"
-
 #include "EWEngine/Assets/Base.h"
+#include "EightWinds/DescriptorImageInfo.h"
+
 
 #include "EWEngine/Assets/Samplers.h"
 #include "EWEngine/Assets/ImageViews.h"
-#include <vulkan/vulkan_core.h>
 
 namespace EWE{
 namespace Asset{
 
+    //this is a litle specialized, so I'll leave it as is
     template<>
     struct Manager<DescriptorImageInfo>{
         FileSystem files;
-        Manager<Sampler>& samplers;
-        Manager<ImageView>& views;
 
         [[nodiscard]] explicit Manager(
-            std::filesystem::path const& root_path,
-            Manager<Sampler>& samplers,
-            Manager<ImageView>& views
+            std::filesystem::path const& root_path
         );
-
-        static AssetHash GetHash(DescriptorImageInfo const& dii){
-            return CrossPlatformPathHash(dii.name);
-        }
 
         [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice);
         
@@ -37,11 +27,8 @@ namespace Asset{
         void Destroy(AssetHash hash);
         void Destroy(DescriptorImageInfo* dii);
 
-        DescriptorImageInfo& Get(AssetHash hash);
-        DescriptorImageInfo& Get(std::filesystem::path const& name);
-
-        DescriptorImageInfo& Read(std::filesystem::path const& file_name);
-        void Write(DescriptorImageInfo const& dii, std::filesystem::path const& file_name);
+        DescriptorImageInfo* Get(AssetHash hash);
+        DescriptorImageInfo* Get(std::filesystem::path const& name);
 
         struct Creation{
             Sampler* sampler = nullptr;
@@ -61,6 +48,10 @@ namespace Asset{
         void Imgui();
 #endif
     };
+    template<>
+    bool LoadAssetFromFile(DescriptorImageInfo* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& file_name);
+    template<>
+    bool WriteAssetToFile(DescriptorImageInfo const& dii, std::filesystem::path const& root_directory, std::filesystem::path const& file_name);
 
 } //namespace Asset
 } //namespace EWE

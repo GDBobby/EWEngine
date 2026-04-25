@@ -1,14 +1,14 @@
 #pragma once
 
-#include "EWEngine/Assets/Hash.h"
 #include "EightWinds/Buffer.h"
-#include "EightWinds/Data/KeyValueContainer.h"
-
 #include "EWEngine/Assets/Base.h"
+
 
 
 namespace EWE{
 namespace Asset{
+
+    //buffers are a little specialized, they won't be reading from files
 
     template<>
     struct Manager<Buffer>{
@@ -19,12 +19,6 @@ namespace Asset{
 
         [[nodiscard]] explicit Manager(std::filesystem::path const& root_path);
 
-        static AssetHash GetHash(Buffer const& buf){
-            return CrossPlatformPathHash(buf.name);
-        }
-
-        void UpdateMetaFile(AssetHash hash);
-        void UpdateMetaFile(AssetHash hash, Buffer& img);
 
         void Destroy(AssetHash hash);
         void Destroy(Buffer& buf);
@@ -43,5 +37,9 @@ namespace Asset{
         void Imgui();
 #endif
     };
+
+    //npt currently in use
+    //template<>
+    //void WriteMetaFile(Buffer& buf);
 } //namespace Asset
 } //namespace EWE

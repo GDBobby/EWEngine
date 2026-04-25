@@ -277,13 +277,19 @@ namespace EWE{
         */
     {
         Global::Create(logicalDevice, window, stcManager, std::filesystem::current_path());
+
+
+        renderGraph.graphics_stc_task = &Global::assetManager->subTask.ConstructInto("graphics STC task", logicalDevice, renderQueue);
+        renderGraph.compute_stc_task = &Global::assetManager->subTask.ConstructInto("compute STC task", logicalDevice, computeQueue);
+        renderGraph.graphics_stc_task->specializedSubmission = true;
+        renderGraph.compute_stc_task->specializedSubmission = true;
     }
 
 #if EWE_IMGUI
 
     bool DrawPresentModes(Swapchain& swapchain) {
 
-        std::string_view currentName = Reflect::Enum::ToString(swapchain.swapCreateInfo.presentMode);
+        //std::string_view currentName = Reflect::Enum::ToString(swapchain.swapCreateInfo.presentMode);
 
         static std::vector<const char*> available_presents{};
         if (available_presents.size() == 0) {

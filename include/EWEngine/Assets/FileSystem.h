@@ -4,6 +4,8 @@
 
 #include <span>
 #include <filesystem>
+#include <string_view>
+#include <string>
 
 namespace EWE{
 namespace Asset{
@@ -15,7 +17,10 @@ namespace Asset{
 
         KeyValueContainer<AssetHash, std::filesystem::path> hashed_path;
 
-        [[nodiscard]] explicit FileSystem(std::filesystem::path const& root_directory, std::vector<std::string> const& acceptable_extensions);
+        [[nodiscard]] explicit FileSystem(
+            std::filesystem::path const& root_directory, 
+            std::span<const std::string_view> acceptable_extensions
+        );
 
 #if EWE_IMGUI
         void Imgui();

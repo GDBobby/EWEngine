@@ -129,8 +129,6 @@ int main(int argc, char* argv[]) {
 
     EWE::EWEngine engine{ "triangle hello world" };
     EWE::LogicalDevice& logicalDevice = engine.logicalDevice;
-    EWE::Global::assetManager->submissions.AddElement("graphics STC task", logicalDevice, EWE::Global->stcManager->renderQueue);
-    EWE::Global::assetManager->submissions.AddElement("compute STC task", logicalDevice, EWE::Global->stcManager->computeQueue)
     
 
     EWE::Queue* renderQueue = nullptr;
@@ -158,8 +156,8 @@ int main(int argc, char* argv[]) {
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
-    EWE::Shader* triangle_vert = &EWE::Global::assetManager->shader.Get("basic.vert.spv");
-    EWE::Shader* triangle_frag = &EWE::Global::assetManager->shader.Get("basic.frag.spv");
+    EWE::Shader* triangle_vert = EWE::Global::assetManager->shader.Get("basic.vert.spv");
+    EWE::Shader* triangle_frag = EWE::Global::assetManager->shader.Get("basic.frag.spv");
 
     EWE::Shader* triangle_shaders[] = { triangle_vert, triangle_frag };
     EWE::PipeLayout triangle_layout(logicalDevice, triangle_shaders);
@@ -202,7 +200,7 @@ int main(int argc, char* argv[]) {
     triangle_rasterObj.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
     EWE::RenderGraph& renderGraph = engine.renderGraph;
-    EWE::GPUTask& renderTask = renderGraph.tasks.AddElement("main render", logicalDevice, *renderQueue);
+    EWE::GPUTask* renderTask = new EWE::GPUTask("main render", logicalDevice, *renderQueue);
 
     VmaAllocationCreateInfo vmaAllocInfo{
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -258,8 +256,8 @@ int main(int argc, char* argv[]) {
     }
 
     passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
-    EWE::Shader* merge_vert = &EWE::Global::assetManager->shader.Get("merge.vert.spv");
-    EWE::Shader* merge_frag = &EWE::Global::assetManager->shader.Get("merge.frag.spv");
+    EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
+    EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
     EWE::Shader* merge_shaders[] = {merge_vert, merge_frag};
     EWE::PipeLayout merge_layout(logicalDevice, merge_shaders);
 
@@ -322,7 +320,7 @@ int main(int argc, char* argv[]) {
     merge_pkgRecord.queue = renderQueue;
     merge_pkgRecord.packages.push_back(reinterpret_cast<EWE::Command::InstructionPackage*>(&mergeRaster));
 
-    EWE::GPUTask& mergeTask = renderGraph.tasks.AddElement(
+    EWE::GPUTask* mergeTask = new EWE::GPUTask(
         "merge task",
         logicalDevice,
         merge_pkgRecord, false
@@ -334,13 +332,13 @@ int main(int argc, char* argv[]) {
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
 
-    uint32_t present_img_att_index = mergeTask.resources.AddResource<EWE::Image>(initial_acquire_usage);
-    renderGraph.syncManager.AddAcquisition_Image(mergeTask, present_img_att_index);
+    uint32_t present_img_att_index = mergeTask->resources.AddResource<EWE::Image>(initial_acquire_usage);
+    renderGraph.syncManager.AddAcquisition_Image(*mergeTask, present_img_att_index);
 
-    EWE::GPUTask& imguiTask{ renderGraph.tasks.AddElement("imgui", logicalDevice, *renderQueue) };
+    EWE::GPUTask* imguiTask = new EWE::GPUTask("imgui", logicalDevice, *renderQueue);
 
-    uint32_t imgui_att_index = imguiTask.resources.AddResource(imguiHandler.renderInfo.full.color_images[0], initial_acquire_usage);
-    renderGraph.syncManager.AddAcquisition_Image(imguiTask, imgui_att_index);
+    uint32_t imgui_att_index = imguiTask->resources.AddResource(imguiHandler.renderInfo.full.color_images[0], initial_acquire_usage);
+    renderGraph.syncManager.AddAcquisition_Image(*imguiTask, imgui_att_index);
 
     EWE::UsageData<EWE::Image> merge_acquire_usage{
         .stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
@@ -348,8 +346,8 @@ int main(int argc, char* argv[]) {
         .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     };
 
-    uint32_t acquire_imgui_output_index = mergeTask.resources.AddResource(imguiHandler.renderInfo.full.color_images[0], merge_acquire_usage);
-    renderGraph.syncManager.AddTransition_Image(imguiTask, imgui_att_index, mergeTask, acquire_imgui_output_index);
+    uint32_t acquire_imgui_output_index = mergeTask->resources.AddResource(imguiHandler.renderInfo.full.color_images[0], merge_acquire_usage);
+    renderGraph.syncManager.AddTransition_Image(*imguiTask, imgui_att_index, *mergeTask, acquire_imgui_output_index);
 
     renderGraph.presentBridge.SetSubresource(
         VkImageSubresourceRange{
@@ -361,10 +359,10 @@ int main(int argc, char* argv[]) {
         }
     );
 
-    renderTask.GenerateWorkload();
-    mergeTask.GenerateWorkload();
+    renderTask->GenerateWorkload();
+    mergeTask->GenerateWorkload();
 
-    EWE::SubmissionTask& imgui_submission = renderGraph.submissions.AddElement("imgui", *EWE::Global::logicalDevice, *renderQueue);
+    EWE::SubmissionTask& imgui_submission = EWE::Global::assetManager->subTask.ConstructInto("imgui", *EWE::Global::logicalDevice, *renderQueue);
     imgui_submission.specializedSubmission = true;
 
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
@@ -374,9 +372,6 @@ int main(int argc, char* argv[]) {
         //if(ImGui::Begin("##", nullptr, main_window_flags)){
 
             const std::string extension_string = std::string("##") + std::to_string(reinterpret_cast<std::size_t>(&vp));
-
-            //ImGui::SetNextWindowCollapsed(false);
-            //DemoWindowInputs();
 
             ImGui::Separator();
 
@@ -456,7 +451,7 @@ int main(int argc, char* argv[]) {
                 logicalDevice.images.mut.lock();
                 for(auto res : logicalDevice.images){
                     const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
-                    std::string res_name = res->name + "##" + string_addr;
+                    std::string res_name = res->name.string() + "##" + string_addr;
                     if(res->name == ""){
                         res_name = string_addr;
                     }
@@ -548,14 +543,14 @@ int main(int argc, char* argv[]) {
 
     imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
 #ifdef EWE_IMGUI
-        imguiTask.prefix.Execute(cmdBuf, frameIndex);
+        imguiTask->prefix.Execute(cmdBuf, frameIndex);
         imguiHandler.Render(cmdBuf);
         return true;
 #endif
         return false;
     }
     );
-    EWE::SubmissionTask& attachment_blit_submission = renderGraph.submissions.AddElement("attachment blit", *EWE::Global::logicalDevice, *renderQueue);
+    EWE::SubmissionTask& attachment_blit_submission = EWE::Global::assetManager->subTask.ConstructInto("attachment blit", *EWE::Global::logicalDevice, *renderQueue);
     attachment_blit_submission.specializedSubmission = true;
 
     VkSamplerCreateInfo samplerCreateInfo{
@@ -608,10 +603,13 @@ int main(int argc, char* argv[]) {
         vri.colorAttachmentCount = 1;
         vri.pColorAttachments = &presentAttachmentInfo;
 
-        mergeTask.workload(cmdBuf, frameIndex);
+        mergeTask->workload(cmdBuf, frameIndex);
         renderGraph.presentBridge.Execute(cmdBuf);
         return true;
     });
+
+    renderGraph.tasks.push_back(mergeTask);
+    renderGraph.tasks.push_back(imguiTask);
 
     renderGraph.execution_order = {
         std::vector<EWE::SubmissionTask*>{&imgui_submission},//, &world_render_submission},
@@ -641,8 +639,8 @@ int main(int argc, char* argv[]) {
                     swapImage.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
                     mouseData.UpdatePosition(EWE::Global::window->window);
-                    renderGraph.ChangeResource(mergeTask, present_img_att_index, &swapImage, EWE::Global::frameIndex);
-                    renderGraph.presentBridge.UpdateSrcData(&mergeTask.queue, &mergeTask.resources.images[present_img_att_index], EWE::Global::frameIndex);
+                    renderGraph.ChangeResource(*mergeTask, present_img_att_index, &swapImage, EWE::Global::frameIndex);
+                    renderGraph.presentBridge.UpdateSrcData(&mergeTask->queue, &mergeTask->resources.images[present_img_att_index], EWE::Global::frameIndex);
                     renderGraph.RecreateBarriers(EWE::Global::frameIndex);
 
                     renderGraph.Execute(EWE::Global::frameIndex);

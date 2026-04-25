@@ -82,5 +82,7 @@ namespace Asset{
         }
     }
 #endif
+
+
 } //namespace Asset
 } //namespace EWE

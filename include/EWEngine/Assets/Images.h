@@ -1,42 +1,19 @@
 #pragma once
 
-#include "EWEngine/Assets/Hash.h"
-#include "EightWinds/Sampler.h"
-#include "EightWinds/Data/KeyValueContainer.h"
-
 #include "EWEngine/Assets/Base.h"
+#include "EightWinds/Sampler.h"
+#include "EightWinds/Image.h"
 
 namespace EWE{
 namespace Asset{
 
     template<>
-    struct Manager<Image>{
-        FileSystem files;
-        //FileSystem meta_files;
+    //this is async
+    bool LoadAssetFromFile(Image* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& path);
 
-        Hive<Image, 64> data_arena;
-        KeyValueContainer<AssetHash, Image*> association_container{};
-
-        [[nodiscard]] explicit Manager(std::filesystem::path const& root_path);
-
-        static AssetHash GetHash(Image const& img){
-            return CrossPlatformPathHash(img.name);
-        }
-
-        //Image::Data LoadMetaData(KeyValuePair<AssetHash, std::filesystem::path> const& img_kvp);
-
-        void UpdateMetaFile(AssetHash hash);
-        void UpdateMetaFile(AssetHash hash, Image& img);
-
-        void Destroy(AssetHash hash);
-        void Destroy(Image* img);
-
-        Image& Get(AssetHash hash);
-        Image& Get(std::filesystem::path const& name);
-
-#ifdef EWE_IMGUI
-        void Imgui();
-#endif
-    };
+    template<>
+    bool ReadMetaFile(Image& meta, std::filesystem::path const& root_directory, std::filesystem::path const& path);
+    template<>
+    bool WriteMetaFile(Image const& img, std::filesystem::path const& root_directory, std::filesystem::path const& path);
 } //namespace Asset
 } //namespace EWE

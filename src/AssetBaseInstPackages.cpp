@@ -3,7 +3,6 @@
 #include "EWEngine/Global.h"
 #include "EightWinds/Backend/Logger.h"
 #include "EightWinds/Command/InstructionPackage.h"
-#include "EightWinds/GlobalPushConstant.h"
 
 #include "EightWinds/Command/ObjectInstructionPackage.h"
 #include "EightWinds/VulkanHeader.h"
@@ -14,81 +13,14 @@
 
 namespace EWE{
 namespace Asset{
-    
-    Manager<Command::InstructionPackage>::Manager(std::filesystem::path const& root_path)
-    : files{root_path, std::vector<std::string>{".eip"}}
-    {
-    }
-
-    void Manager<Command::InstructionPackage>::Destroy(AssetHash hash){
-        Command::InstructionPackage& InstructionPackage = Get(hash);
-        data_arena.DestroyElement(&InstructionPackage);
-        association_container.Remove(hash);
-    }
-    void Manager<Command::InstructionPackage>::Destroy(Command::InstructionPackage& instPackage){
-        //do I hash it first? idk
-        AssetHash hash = GetHash(instPackage);
-        Destroy(hash);
-    }
-
-    Command::InstructionPackage& Manager<Command::InstructionPackage>::Get(AssetHash hash) {
-        auto iter = association_container.find(hash);
-        if(iter != association_container.end()){
-            return *iter->value;
-        }
-        else{
-            auto path_hash_data = files.hashed_path.at(hash);
-            auto const& fs_path = path_hash_data.value;
-            auto full_load_path = files.root_directory / fs_path;
-
-            auto& ret = data_arena.AddElement();
-            if(ReadInstPkgFile(&ret, full_load_path)){
-                association_container.push_back(hash, &ret);
-            }
-            else{
-                data_arena.DestroyElement(&ret);
-                EWE_ASSERT(false, "failed to construct");
-            }
-
-            return ret;
-        }
-    }
-    Command::InstructionPackage& Manager<Command::InstructionPackage>::Get(std::filesystem::path const& name){
-        return Get(CrossPlatformPathHash(name));
-    }
-
-#ifdef EWE_IMGUI
-    void Manager<Command::InstructionPackage>::Imgui(){
-        if(ImGui::Button("refresh files")){
-            files.RefreshFiles();
-        }
-
-        for(auto& kvp : files.hashed_path){
-            auto found = association_container.find(kvp.key);
-            if(found == association_container.end()){
-                if(ImGui::Button(kvp.value.string().c_str())){
-                    Get(kvp.value);
-                }
-            }
-        }
-        for(auto& kvp : association_container){
-            if(ImGui::TreeNode(kvp.value->name.c_str())){
-                DragDropPtr::Source(*kvp.value);
-                ImGui::TreePop();
-            }
-            //Logger::Print("%s\n", kvp.value->name.c_str());
-            DragDropPtr::Source(*kvp.value);
-        }
-    }
-#endif
 
 
     static constexpr std::size_t file_version = 0;
 //
 
-    bool WriteToInstPkgFile(Command::ParamPool const& param_pool, void* payload, Command::InstructionPackage::Type pkg_type, std::filesystem::path const& temp_path){
+    bool WriteToInstPkgFile(Command::ParamPool const& param_pool, void const* payload, Command::InstructionPackage::Type pkg_type, std::filesystem::path const& root_directory, std::filesystem::path const& temp_path){
         
-        std::filesystem::path adjusted_path = Global::assetManager->root_directory / temp_path;
+        const std::filesystem::path adjusted_path = root_directory / temp_path;
         
         std::ofstream outFile{adjusted_path, std::ios::binary};
         if(!outFile.is_open()){
@@ -165,28 +97,30 @@ namespace Asset{
         return true;
     }
 
-    bool WriteToInstPkgFile(Command::InstructionPackage& pkg, std::filesystem::path const& path){
+    template<>
+    bool WriteAssetToFile(Command::InstructionPackage const& pkg, std::filesystem::path const& root_directory, std::filesystem::path const& path){
         switch(pkg.type){
             case Command::InstructionPackage::Base: 
-                return WriteToInstPkgFile(pkg.paramPool, nullptr, pkg.type, path);
+                return WriteToInstPkgFile(pkg.paramPool, nullptr, pkg.type, root_directory, path);
                 break;
             case Command::InstructionPackage::Object:
-                return WriteToInstPkgFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, pkg.type, path);
+                return WriteToInstPkgFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage const&>(pkg).payload, pkg.type, root_directory, path);
                 break;
             default: EWE_UNREACHABLE;
         }
         EWE_UNREACHABLE;
     }
 
-    bool ReadInstPkgFile(Command::InstructionPackage* ret, std::filesystem::path const& path){
-        std::ifstream inFile{path, std::ios::binary};
+    template<>
+    bool LoadAssetFromFile(Command::InstructionPackage* ret, std::filesystem::path const& root_directory, std::filesystem::path const& path){
+        std::ifstream inFile{root_directory / path, std::ios::binary};
 
         if(!inFile.is_open()){
-            if(!std::filesystem::exists(path)){
+            if(!std::filesystem::exists(root_directory / path)){
                 Logger::Print<Logger::Error>("atempting to open instruction pkg but path[%s] doesn't exist", path.string().c_str());
                 return false;
             }
-            inFile.open(path, std::ios::binary);
+            inFile.open(root_directory / path, std::ios::binary);
             if(!inFile.is_open()){
                 return false;
             }
@@ -262,8 +196,8 @@ namespace Asset{
                         for(uint8_t j = 0; j < temp_push->texture_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
-                                auto& temp_dii = Global::assetManager->dii.Get(hash_buffer);
-                                temp_push->GetTextureIndex(j) = temp_dii.index;
+                                auto* temp_dii = Global::assetManager->dii.Get(hash_buffer);
+                                temp_push->GetTextureIndex(j) = temp_dii->index;
                             }
                             else{
                                 temp_push->GetTextureIndex(j) = null_texture;
@@ -286,7 +220,7 @@ namespace Asset{
         }
 
         inFile.close();
-        ret->name = std::filesystem::proximate(path, Global::assetManager->root_directory).string();
+        ret->name = path.string();
         return ret;
     }
 

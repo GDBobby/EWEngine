@@ -541,7 +541,7 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
                 const std::filesystem::path proximate = std::filesystem::proximate(saved_path, Global::assetManager->root_directory);
-                Asset::WriteToInstPkgFile(paramPool, package_payload, packageType, proximate);
+                Asset::WriteToInstPkgFile(paramPool, package_payload, packageType, Global::assetManager->root_directory, proximate);
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }
@@ -668,15 +668,15 @@ namespace Node{
 
                 switch(packageType){
                     case Command::InstructionPackage::Base:{
-                        auto& pkg = EWE::Global::assetManager->instPkg.Get(proximate_path);
-                        InitFromObject(pkg);
-                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg.paramPool.instructions.size(), paramPool.instructions.size());
+                        auto* pkg = EWE::Global::assetManager->instPkg.Get(proximate_path);
+                        InitFromObject(*pkg);
+                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
                         break;
                     }
                     case Command::InstructionPackage::Object:{
-                        auto& pkg = EWE::Global::assetManager->objPkg.Get(proximate_path);
-                        InitFromObject(pkg);
-                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg.paramPool.instructions.size(), paramPool.instructions.size());
+                        auto* pkg = EWE::Global::assetManager->objPkg.Get(proximate_path);
+                        InitFromObject(*pkg);
+                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
                         break;
                     }
                     default: EWE_UNREACHABLE;
