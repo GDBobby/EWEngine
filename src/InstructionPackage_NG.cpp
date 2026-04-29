@@ -7,9 +7,11 @@
 #include "EightWinds/Command/ObjectInstructionPackage.h"
 #include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/ObjectRasterConfig.h"
+#include "EightWinds/Pipeline/Layout.h"
 #include "EightWinds/Preprocessor.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/VulkanHeader.h"
+#include "imgui.h"
 
 namespace EWE{
 namespace Node{
@@ -73,9 +75,22 @@ namespace Node{
         ImNodes::EWE::Editor::RenderEditorTitle();
         if(packageType == Command::InstructionPackage::Object){
             auto& shaders = reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload)->shaders;
+            auto shader_copy = shaders;
             if(ImGui::TreeNode("shaders")){
                 ImguiExtension::Imgui(shaders);
                 ImGui::TreePop();
+            }
+            bool shader_change_ocurred = false;
+            for(std::size_t i = 0; i < shader_copy.size(); i++){
+                if(shaders[i] != shader_copy[i]){
+                    shader_change_ocurred = true;
+                    break;
+                }
+            }
+            if(shader_change_ocurred){
+                //iterate thru the pushes and resize their buffer/texture count
+                object_push = MergePushRanges(std::span{shaders});
+                paramPool.AdjustPushConstants(object_push);
             }
 
             ObjectRasterConfig& rasterConfig = reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload)->config;
@@ -433,14 +448,10 @@ namespace Node{
             auto* end_payload = reinterpret_cast<InstNodePayload*>(link.end.node->payload);
             paramPool.PushBack(end_payload->iType);
             if(end_payload->iType == Inst::Push){
-                for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+                for_each_frame{
                     auto* push = reinterpret_cast<ParamPack<Inst::Push>*>(paramPool.param_data.back().data[frame]);
-                    for(uint8_t i = 0; i < push->buffer_count; i++){
-                        push->GetDeviceAddress(i) = null_buffer;
-                    }
-                    for(uint8_t i = 0; i < push->texture_count; i++){
-                        push->GetTextureIndex(i) = null_texture;
-                    }
+                    push->buffer_count = 0;
+                    push->texture_count = 0;
                 }
             }
             UpdateNodeOffsets();
@@ -504,18 +515,26 @@ namespace Node{
             
         }
         else{
-            ImGui::Text("%s[%d]", Reflect::Enum::ToString(node_payload->iType).data(), node.id);
+            ImGui::Text("%s", Reflect::Enum::ToString(node_payload->iType).data());
         }
         ImNodes::EndNodeTitleBar();
 
         //ImGui::DebugLog("");
-        ImGui::Text("distance from head : %d", node_payload->distanceFromHead); //empty text just to populate this
+        //ImGui::Text("distance from head : %d", node_payload->distanceFromHead); //empty text just to populate this
         const std::size_t param_size = Inst::GetParamSize(node_payload->iType);
-        ImGui::Text("param size : %zu", param_size);
+        //ImGui::Text("param size : %zu", param_size);
         if(node_payload->distanceFromHead >= 0){
             if(param_size > 0){
                 const std::size_t pack_index = paramPool.GetPackIndex(node_payload->distanceFromHead);
-                ImguiExpandInstruction(reinterpret_cast<void*>(paramPool.param_data[pack_index].data[0]), paramPool.instructions[node_payload->distanceFromHead]);
+                auto const& instruction = paramPool.instructions[node_payload->distanceFromHead];
+                if(instruction == Inst::Push){
+                    auto const window_size = ImGui::GetWindowSize();
+                    ImGui::SetWindowSize(ImVec2(1200.f, window_size.y));
+                    ExpandPush(object_push, reinterpret_cast<ParamPack<Inst::Push>*>(paramPool.param_data[pack_index].data[0]));
+                }
+                else{
+                    ImguiExpandInstruction(reinterpret_cast<void*>(paramPool.param_data[pack_index].data[0]), instruction);
+                }
             }
         }
     }
@@ -527,9 +546,9 @@ namespace Node{
             //ImGui::Text("pin");
             
         }
-        if(node.pins[pin_index].payload != nullptr){
-            ImGui::Text("payload id : %d", reinterpret_cast<ImNodes::EWE::Node*>(node.pins[pin_index].payload)->id);
-        }
+        //if(node.pins[pin_index].payload != nullptr){
+            //ImGui::Text("payload id : %d", reinterpret_cast<ImNodes::EWE::Node*>(node.pins[pin_index].payload)->id);
+        //}
         ImNodes::EndPinAttribute();
     }
 
@@ -593,7 +612,7 @@ namespace Node{
         UpdateNodeOffsets();
     }
 
-    void InstructionPackage_NG::InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type){
+    void InstructionPackage_NG::InitFromFile(Command::ParamPool const& pp, Command::InstructionPackage::Type pkg_type){
         nodes.Clear();
         links.clear();
 
@@ -606,7 +625,7 @@ namespace Node{
         }
 
         headNode = CreateHeadNode();
-        if(pp.instructions.size() == 0){
+        if(paramPool.instructions.size() == 0){
             return;
         }
         auto& init_node = CreateRGNode(paramPool.instructions[0]);
@@ -619,8 +638,8 @@ namespace Node{
         //InstNodePayload* last_payload = lastNode->payload;
         init_node.pins[0].payload = headNode;
 
-        for(std::size_t i = 1; i < pp.instructions.size(); i++){
-            auto& node = CreateRGNode(pp.instructions[i]);
+        for(std::size_t i = 1; i < paramPool.instructions.size(); i++){
+            auto& node = CreateRGNode(paramPool.instructions[i]);
             node.pos = lastNode->pos;
             node.pos.x += 100.f;
             node.pos.y += 30.f;
@@ -642,11 +661,14 @@ namespace Node{
         switch(pkg.type){
             case Command::InstructionPackage::Base: 
                 explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
-                InitFromFile(pkg.paramPool, nullptr, pkg.type);
+                InitFromFile(pkg.paramPool, pkg.type);
                 break;
             case Command::InstructionPackage::Object:
                 explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
-                InitFromFile(pkg.paramPool, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, pkg.type);
+                package_payload = new Command::ObjectPackage::Payload();
+                memcpy(package_payload, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, sizeof(Command::ObjectPackage::Payload));
+                InitFromFile(pkg.paramPool, pkg.type);
+                object_push = MergePushRanges(reinterpret_cast<Command::ObjectPackage&>(pkg).payload.shaders);
                 break;
             default: 
                 Logger::Print<Logger::Warning>("attempting to init node graph from invalid pkg type\n"); 
@@ -669,14 +691,24 @@ namespace Node{
                 switch(packageType){
                     case Command::InstructionPackage::Base:{
                         auto* pkg = EWE::Global::assetManager->instPkg.Get(proximate_path);
-                        InitFromObject(*pkg);
-                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
+                        if(pkg != nullptr){
+                            InitFromObject(*pkg);
+                            Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
+                        }
+                        else{
+                            Logger::Print("fialed ot load basic inst pkg\n");
+                        }
                         break;
                     }
                     case Command::InstructionPackage::Object:{
                         auto* pkg = EWE::Global::assetManager->objPkg.Get(proximate_path);
-                        InitFromObject(*pkg);
-                        Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
+                        if(pkg != nullptr){
+                            InitFromObject(*pkg);
+                            Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
+                        }
+                        else{
+                            Logger::Print("failed to load object file\n");
+                        }
                         break;
                     }
                     default: EWE_UNREACHABLE;

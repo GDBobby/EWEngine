@@ -60,6 +60,7 @@ namespace Asset{
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
         ret.queue = &Global::stcManager->GetQueue(queue_type);
 
+        //pkg size
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
 
         ret.packages.reserve(temp_buffer);

@@ -158,7 +158,7 @@ namespace ImNodes{
                     ImNodes::SetNodeScreenSpacePos(current_index, node.pos);
                 }
                 node.id = current_index++;
-                ImGui::SetNextWindowSizeConstraints(ImVec2(50, -1), ImVec2(400, -1));
+                ImGui::SetNextWindowSizeConstraints(ImVec2(50, -1), ImVec2(800, -1));
                 ImNodes::BeginNode(node.id);
 
                 if(node.snapToGrid){

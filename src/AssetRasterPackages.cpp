@@ -18,9 +18,11 @@ namespace Asset{
         //if it has the old record its invalid
         //if it doesnt have an instruction package, its special execution, aka hand coded, cant be written
 
-        std::ofstream outFile{root_directory / path, std::ios::binary};
+        auto const full_save_path = root_directory / path;
+        Logger::Print("writing rt to : %s\n", full_save_path.string().c_str());
+        std::ofstream outFile{full_save_path, std::ios::binary};
         if(!outFile.is_open()){
-            outFile.open(root_directory / path);
+            outFile.open(full_save_path);
             if(!outFile.is_open()){
                 return false;
             }
@@ -32,14 +34,18 @@ namespace Asset{
             return false;
         }
 
+        outFile.write(reinterpret_cast<char*>(&rt.task_config), sizeof(TaskRasterConfig));
+
         temp_buffer = rt.objectPackages.size();
         outFile.write(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
 
         for(auto* pkg : rt.objectPackages){
             AssetHash hash_buffer = GetHash(*pkg);
-            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), root_directory, pkg->name);
+            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), Global::assetManager->objPkg.files.root_directory, pkg->name);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
+
+        outFile.close();
         return true;
     }
 
@@ -55,6 +61,7 @@ namespace Asset{
         EWE_ASSERT(temp_buffer == current_file_version, "needs support otherwise");
         
         TaskRasterConfig tempConfig;
+        inFile.read(reinterpret_cast<char*>(&tempConfig), sizeof(TaskRasterConfig));
         auto& ret = *std::construct_at(ptr_to_raw_mem, name.string(), *Global::logicalDevice, Global::stcManager->renderQueue, tempConfig, nullptr);
 
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));

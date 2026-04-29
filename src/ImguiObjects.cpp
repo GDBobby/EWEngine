@@ -298,7 +298,7 @@ namespace EWE{
             ImGui::TableSetupColumn("frame 1");
             ImGui::TableHeadersRow();
 
-            for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+            for_each_frame{
                 for(auto& img : obj.color_images){
                     if(img[frame] != nullptr){
                         ImGui::Button("generated\n");
@@ -310,7 +310,7 @@ namespace EWE{
                     DragDropPtr::Target(img[frame]);
                 }
             }
-            for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+            for_each_frame{
                 if(obj.depth_image[frame] == nullptr){
                         ImGui::Button("generated\n");
                         //dragdrpo
@@ -320,7 +320,7 @@ namespace EWE{
                     }
                     DragDropPtr::Target(obj.depth_image[frame]);
             }
-            for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+            for_each_frame{
 
             }
         }
@@ -473,11 +473,11 @@ namespace EWE{
                 for(std::size_t i = 0; i < higher_count ; i++){
                     ImGui::TableNextColumn();
                     if(i < obj.meta.buffer_written_to.Size()){
-                        ImGui::Checkbox(obj.pushRange.buffers[i].c_str(), &obj.meta.buffer_written_to[i]);
+                        ImGui::Checkbox(obj.pushRange.buffers[i].name.c_str(), &obj.meta.buffer_written_to[i]);
                     }
                     ImGui::TableNextColumn();
                     if(i < obj.meta.texture_written_to.Size()){
-                        ImGui::Checkbox(obj.pushRange.textures[i].c_str(), &obj.meta.texture_written_to[i]);
+                        ImGui::Checkbox(obj.pushRange.textures[i].name.c_str(), &obj.meta.texture_written_to[i]);
                     }
                 }
                 ImGui::EndTable();

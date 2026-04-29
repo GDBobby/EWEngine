@@ -47,7 +47,7 @@ namespace Asset{
         Logger::Print("current write position, after writing instructions : %zu\n", outFile.tellp());
     
         //actually writign to file now
-        for(uint8_t frame = 0; frame < max_frames_in_flight; frame++) {
+        for_each_frame {
             std::size_t param_index = 0;
             for(std::size_t i = 0; i < param_pool.instructions.size(); i++){
                 const auto current_param_size = Inst::GetParamSize(param_pool.instructions[i]);
@@ -93,6 +93,25 @@ namespace Asset{
             }
         }
 
+        if(pkg_type == Command::InstructionPackage::Type::Object) {
+            auto const* obj_payload = reinterpret_cast<Command::ObjectPackage::Payload const*>(payload);
+            uint8_t shader_count = 0;
+            for(auto const& shader : obj_payload->shaders){
+                if(shader != nullptr){
+                    shader_count++;
+                }
+            }
+            outFile.write(reinterpret_cast<char const*>(&shader_count), sizeof(uint8_t));
+            for(auto const& shader : obj_payload->shaders){
+                if(shader != nullptr){
+                    AssetHash const temp_shader_hash = GetHash(*shader);
+                    outFile.write(reinterpret_cast<char const*>(&temp_shader_hash), sizeof(AssetHash));
+                }
+            }
+
+            outFile.write(reinterpret_cast<char const*>(&obj_payload->config), sizeof(ObjectRasterConfig));
+        }
+
         outFile.close();
         return true;
     }
@@ -113,6 +132,9 @@ namespace Asset{
 
     template<>
     bool LoadAssetFromFile(Command::InstructionPackage* ret, std::filesystem::path const& root_directory, std::filesystem::path const& path){
+        
+        auto const full_dir = root_directory / path;
+        Logger::Print("asset full dir : %s\n", full_dir.string().c_str());
         std::ifstream inFile{root_directory / path, std::ios::binary};
 
         if(!inFile.is_open()){
@@ -132,11 +154,13 @@ namespace Asset{
         inFile.read(reinterpret_cast<char*>(&pkg_type), sizeof(Command::InstructionPackage::Type));
         switch(pkg_type){
             case Command::InstructionPackage::Base: 
-                //ret = new Command::InstructionPackage(); 
+                //ret = &Global::assetManager->instPkg.ConstructInto();
+                ret = std::construct_at(ret);
                 //EWE_ASSERT(dynamic_cast<
                 break;
             case Command::InstructionPackage::Object: 
-                //ret = reinterpret_cast<Command::InstructionPackage*>(new Command::ObjectPackage());
+                //ret = static_cast<Command::InstructionPackage*>(&Global::assetManager->objPkg.ConstructInto());
+                ret = static_cast<Command::InstructionPackage*>(std::construct_at(static_cast<Command::ObjectPackage*>(ret)));
                 //EWE_ASSERT(dynamic_cast<Command::ObjectPackage*>(ret) != nullptr);
                 break;
             default: break;
@@ -150,7 +174,7 @@ namespace Asset{
         inFile.read(reinterpret_cast<char*>(ret->paramPool.instructions.data()), instruction_count * sizeof(Inst::Type));
         Logger::Print("current read position, after writing instructions : %zu\n", inFile.tellg());
         
-        for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+        for_each_frame{
             ret->paramPool.params[frame].Resize(written_param_size);
         }
         PerFlight<std::size_t> starting_addr{reinterpret_cast<std::size_t>(ret->paramPool.params[0].memory), reinterpret_cast<std::size_t>(ret->paramPool.params[1].memory)};
@@ -161,7 +185,7 @@ namespace Asset{
             if(current_param_size > 0){
                 auto& back_param = ret->paramPool.param_data.emplace_back();
 
-                for(uint8_t frame = 0; frame < max_frames_in_flight; frame++){
+                for_each_frame{
                     back_param.data[frame] = starting_addr[frame] + current_param_offset;
                 }
                 current_param_offset += current_param_size;
@@ -169,7 +193,7 @@ namespace Asset{
         }
 
         //std::size_t current_file_param_offset = 0; //theres a disparity between Push Param Size, and the written size
-        for(uint8_t frame = 0; frame < max_frames_in_flight; frame++) {
+        for_each_frame {
             std::size_t param_index = 0;
             for(std::size_t i = 0; i < ret->paramPool.instructions.size(); i++){
                 const auto current_param_size = Inst::GetParamSize(ret->paramPool.instructions[i]);
@@ -214,9 +238,24 @@ namespace Asset{
         }
 
 
+
         if(ret->type == Command::InstructionPackage::Type::Object) {
-            Command::ObjectPackage* objPkg = static_cast<Command::ObjectPackage*>(ret);
-            inFile.read(reinterpret_cast<char*>(&objPkg->payload), sizeof(objPkg->payload));
+            uint8_t shader_count = 0;
+            inFile.read(reinterpret_cast<char*>(&shader_count), sizeof(uint8_t));
+
+            auto& obj_payload = reinterpret_cast<Command::ObjectPackage*>(ret)->payload;
+
+            for(uint8_t i = 0; i < shader_count; i++){
+                AssetHash temp_shader_hash;
+                inFile.read(reinterpret_cast<char*>(&temp_shader_hash), sizeof(AssetHash));
+                auto* shader_get = Global::assetManager->shader.Get(temp_shader_hash);
+                auto& payload_shader = obj_payload.shaders[ShaderStage{shader_get->shaderStageCreateInfo.stage}.value];
+                EWE_ASSERT(payload_shader == nullptr && shader_get != nullptr);
+                payload_shader = shader_get;
+
+            }
+
+            inFile.read(reinterpret_cast<char*>(&obj_payload.config), sizeof(ObjectRasterConfig));
         }
 
         inFile.close();

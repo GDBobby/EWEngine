@@ -44,13 +44,14 @@ namespace Node{
 
         bool changing_package_type_allowed = false;
         void* package_payload;
+        PushConstant object_push;
 
         [[nodiscard]] explicit InstructionPackage_NG();
         //this is just going to call InitFromPkg
         [[nodiscard]] explicit InstructionPackage_NG(Command::InstructionPackage& pkg);
 
         void RecreateLinks();
-        void InitFromFile(Command::ParamPool const& pp, void* payload, Command::InstructionPackage::Type pkg_type);
+        void InitFromFile(Command::ParamPool const& pp, Command::InstructionPackage::Type pkg_type);
         void InitFromObject(Command::InstructionPackage& pkg);
 
         ImNodes::EWE::Node* CreateHeadNode();

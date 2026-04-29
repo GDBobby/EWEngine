@@ -41,6 +41,7 @@ namespace Asset{
         Manager<SubmissionTask> subTask;
         Manager<Shader> shader;
         Manager<RenderGraph> renderGraph;
+        Manager<RenderAttachments> attachment_info; //RenderAttachments can be built from AttachmentSetInfo
 
         void DropCallback(std::filesystem::path const& path);
 

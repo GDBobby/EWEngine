@@ -2,7 +2,9 @@
 
 #include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
+#include "EWEngine/Imgui/ImNodes/imnodes.h"
 #include "EightWinds/Backend/RenderInfo.h"
+#include "EightWinds/Command/Instruction.h"
 #include "EightWinds/RenderGraph/SubmissionTask.h"
 
 #include "EWEngine/Imgui/Objects.h"
@@ -146,8 +148,68 @@ namespace Node{
         }
         ImNodes::EndNodeTitleBar();
 
+        uint16_t current_pin = 0;
+
         if(payload->type == NodeType::Task){
-            ImguiExtension::Imgui(*reinterpret_cast<SubmissionTask*>(payload->payload));
+            auto& subTask = *reinterpret_cast<SubmissionTask*>(payload->payload);
+            ImguiExtension::Imgui(subTask);
+            for(auto& task : subTask.tasks) {
+                for(auto& pkg : task->pkgRecord->packages){
+                    switch(pkg->type){
+                        case Command::InstructionPackage::Type::Raster:{
+                            auto& rasterPkg = *reinterpret_cast<RasterPackage*>(pkg);
+                            for(auto& obj : rasterPkg.objectPackages){
+                                std::size_t instruction_offset = 0;
+                                for(auto const& inst : obj->paramPool.instructions){
+                                    if(inst == Inst::Push){
+                                        for(auto& shader : obj->payload.shaders){
+                                            if(shader != nullptr){
+                                                for(std::size_t buf_index = 0; buf_index < shader->meta.buffer_written_to.Size(); buf_index++){
+
+                                                    uint32_t color = (0xFF << 24) + 0xFF;
+                                                    
+                                                    if(shader->meta.buffer_written_to[buf_index]){
+                                                        ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
+                                                    }
+
+                                                    ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
+                                                    ImGui::Text(shader->pushRange.buffers[buf_index].name.c_str());
+                                                    current_pin++;
+                                                    ImNodes::EndPinAttribute();
+
+                                                    if(shader->meta.buffer_written_to[buf_index]){
+                                                        ImNodes::PopColorStyle();
+                                                    }
+                                                }
+                                                for(std::size_t img_index = 0; img_index < shader->meta.texture_written_to.Size(); img_index++){
+
+                                                    uint32_t color = (0xFF << 24) + 0xFF;
+                                                    
+                                                    if(shader->meta.texture_written_to[img_index]){
+                                                        ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
+                                                    }
+
+                                                    ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
+                                                    ImGui::Text(shader->pushRange.textures[img_index].name.c_str());
+                                                    current_pin++;
+                                                    ImNodes::EndPinAttribute();
+
+                                                    if(shader->meta.texture_written_to[img_index]){
+                                                        ImNodes::PopColorStyle();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    instruction_offset += Inst::GetParamSize(inst);
+                                }
+                            }
+                            break;
+                        }
+                        default: break;
+                    }
+                }
+            }
         }
         else{
             ImguiExtension::Imgui(reinterpret_cast<FullRenderInfo*>(payload->payload)->full);

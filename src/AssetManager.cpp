@@ -64,6 +64,10 @@ namespace Asset{
             instPkg.Imgui();
             ImGui::TreePop();
         }
+        if(ImGui::TreeNode("obj pkgs")){
+            objPkg.Imgui();
+            ImGui::TreePop();
+        }
         if(ImGui::TreeNode("pkg records")){
             pkgRecord.Imgui();
             ImGui::TreePop();

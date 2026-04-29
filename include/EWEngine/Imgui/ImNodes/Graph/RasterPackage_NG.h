@@ -22,6 +22,7 @@ namespace Node{
         ImNodes::EWE::Node* CreateHeadNode();
         ImNodes::EWE::Node& CreateRGNode(Command::ObjectPackage* pkg);
 
+        void RenderEditorTitle() override final;
         //void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
         void OpenAddMenu() override final;
         bool RenderAddMenu() override final;

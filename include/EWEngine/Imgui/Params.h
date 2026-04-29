@@ -39,5 +39,7 @@ namespace EWE{
 	void ImguiReflectParamStruct(ParamPack<Inst::Type::Push>* temp_addr);
 
 	void ImguiExpandInstruction(void* mem_addr, Inst::Type itype);
+
+	void ExpandPush(PushConstant const& constant, ParamPack<Inst::Type::Push>* push);
 } //namespace EWE
 #endif
