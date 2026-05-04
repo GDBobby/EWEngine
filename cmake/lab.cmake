@@ -11,6 +11,7 @@ if(NOT TARGET LinearAlgebra)
 			GIT_REPOSITORY https://github.com/GDBobby/LAB
 			SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/lab"
 			GIT_TAG main
+        	GIT_PROGRESS   TRUE
 		)
 		FetchContent_MakeAvailable(lab)
 	endif()

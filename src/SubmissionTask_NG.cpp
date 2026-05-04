@@ -1,8 +1,11 @@
 #include "EWEngine/Imgui/ImNodes/Graph/SubmissionTask_NG.h"
 
+#include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Global.h"
 //#include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
+#include "EightWinds/Backend/RenderInfo.h"
+#include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/PackageRecord.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -29,22 +32,59 @@ namespace Node{
     
     void SubmissionTask_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        Command::PackageRecord* pkg;
-        if(DragDropPtr::Target(pkg)) {
-            Logger::Print("dropping in sub task\n");
-            GPUTask* task = new GPUTask(pkg->name, *Global::logicalDevice, *pkg, false);
-            auto& added_node = CreateRGNode(task);
-            auto temp_mouse_pos =ImGui::GetIO().MousePos;
-            added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+        {
+            Command::PackageRecord* pkg;
+            if(DragDropPtr::Target(pkg)) {
+                Logger::Print("dropping in sub task\n");
+                GPUTask* task = new GPUTask(pkg->name, *Global::logicalDevice, *pkg, false);
+                auto& added_node = CreateRGNode(task);
+                auto temp_mouse_pos =ImGui::GetIO().MousePos;
+                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+            }
         }
+        {
+            FullRenderInfo* renderInfo;
+            if(DragDropPtr::Target(renderInfo)){
+                Logger::Print("dropping in sub task\n");
+                auto& added_node = CreateRGNode(renderInfo);
+                auto temp_mouse_pos =ImGui::GetIO().MousePos;
+                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+            }
+        }
+
+    }   
+
+    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(FullRenderInfo* renderInfo) {
+        auto& added_node = AddNode();
+        added_node.payload = new NodePayload{
+            .type = NodePayload::Type::RenderInfo,
+            .payload = renderInfo
+        };
+        added_node.pos = menu_pos;
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.8f}, .payload{nullptr}});
+
+        return added_node;
     }
 
     ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(GPUTask* task) {
         auto& added_node = AddNode();
-        added_node.payload = task;
+        added_node.payload = new NodePayload{
+            .type = NodePayload::Type::Task,
+            .payload = task
+        };
         added_node.pos = menu_pos;
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.9f, 0.1f}, .payload{nullptr}});
+        /*
+        for(auto* pkg : task->pkgRecord->packages){
+            if(pkg->type == Command::InstructionPackage::Raster){
+                added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+                break;
+            }
+        }
+        */
 
         return added_node;
     }
@@ -106,21 +146,64 @@ namespace Node{
             }
             return;
         }
-        auto* node_payload = reinterpret_cast<GPUTask*>(node.payload);
-        ImGui::Text(node_payload->name.c_str());
+        auto* node_payload = reinterpret_cast<NodePayload*>(node.payload);
+        if(node_payload->type == NodePayload::Type::Task){
+            auto* task_payload = reinterpret_cast<GPUTask*>(node_payload->payload);
+            ImGui::Text(task_payload->name.c_str());
 
-        ImNodes::EndNodeTitleBar();
-        if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
-            //open the graph for the package
-            OpenGraph(Type::PackageRecord, node_payload->pkgRecord);
+            ImNodes::EndNodeTitleBar();
+            if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
+                //open the graph for the package
+                OpenGraph(Type::PackageRecord, task_payload->pkgRecord);
+            }
+
+            if(task_payload->pkgRecord->packages.size() == 0){
+                ImGui::Text("no packages");
+            }
+
+            for(auto& pkg : task_payload->pkgRecord->packages){
+                if(pkg->type == Command::InstructionPackage::Raster){
+                    const bool tree_open = ImGui::TreeNode(pkg->name.c_str());
+                    if(tree_open != node_payload->current_open_status){
+
+                    }
+                    if(tree_open){
+                        auto* raster_pkg = reinterpret_cast<RasterPackage*>(pkg);
+
+                        for(auto& obj_pkg : raster_pkg->objectPackages){
+                            if(ImGui::TreeNode(obj_pkg->name.string().c_str())){
+                                for(auto& inst : obj_pkg->paramPool.instructions){
+                                    ImGui::BulletText(Reflect::Enum::ToString(inst).data());
+                                }
+                                ImGui::TreePop();
+                            }
+                        }
+                        ImGui::TreePop();
+                    }
+                    /*
+                    for(auto& obj_pkg : pkg->packages){
+                        for(std::size_t inst_index = 0; inst_index < obj_pkg->paramPool.instructions.size(); inst_index++){
+                            if(obj_pkg->paramPool.instructions[inst_index] == Inst::Push){
+                                auto const param_index = obj_pkg->paramPool.GetParamOffset(inst_index);
+                                auto* push_data = obj_pkg->paramPool.param_data[param_index].CastTo<Inst::Push>();
+                            }
+                        }
+                    }
+                    */
+                }
+                else{
+                    ImGui::BulletText("%s : %s", Reflect::Enum::ToString(pkg->type).data(), pkg->name.c_str());
+                }
+            }
         }
+        else{
+            auto* ri_payload = reinterpret_cast<FullRenderInfo*>(node_payload->payload);
+            ImGui::Text(ri_payload->name.string().c_str());
 
-        if(node_payload->pkgRecord->packages.size() == 0){
-            ImGui::Text("no packages");
-        }
+            ImNodes::EndNodeTitleBar();
 
-        for(auto& pkg : node_payload->pkgRecord->packages){
-            ImGui::BulletText(pkg->name.c_str());
+            ImguiExtension::Imgui(*ri_payload);
+            ImGui::Text("filler");
         }
     }
 
@@ -200,6 +283,40 @@ namespace Node{
         if(subTask.tasks.size() == 0){
             return;
         }
+
+        std::vector<AssetHash> render_info_hashes{};
+        auto handle_ri = [this, &render_info_hashes](FullRenderInfo& ri, ImNodes::EWE::Node& node){
+            AssetHash const hash = Asset::GetHash(ri);
+            ImNodes::EWE::Node* ri_node = nullptr;
+
+            auto found = std::find(render_info_hashes.begin(), render_info_hashes.end(), hash);
+            if(found == render_info_hashes.end()){
+                render_info_hashes.push_back(hash);
+                ri_node = &CreateRGNode(&ri);
+            }
+            else{
+                //ri_node = find the ri node
+                auto found_ri = std::find_if(nodes.begin(), nodes.end(), [&](auto const& _node) {
+                    return reinterpret_cast<NodePayload*>(_node.payload)->payload == &ri; 
+                });
+                EWE_ASSERT(found_ri != nodes.end());
+                ri_node = &(*found_ri);
+            }
+            links.push_back(
+                ImNodes::EWE::NodePair{
+                    .start{
+                        .node = ri_node,
+                        .offset = 0,
+                    },
+                    .end{
+                        .node = &node,
+                        .offset = 2
+                    }
+                }
+            );
+            
+        };
+
         {
             auto& node = CreateRGNode(subTask.tasks.front());
             headNode->pins[0].payload = &node;
@@ -216,6 +333,12 @@ namespace Node{
                 }
             );
             node.pins[0].payload = headNode;
+            for(auto* pkg : subTask.tasks.front()->pkgRecord->packages){
+                if(pkg->type == Command::InstructionPackage::Type::Raster){
+                    auto* raster_pkg = reinterpret_cast<RasterPackage*>(pkg);
+                    handle_ri(raster_pkg->renderInfo, node);
+                }
+            }
         }
 
         for(std::size_t i = 1; i < subTask.tasks.size(); i++){

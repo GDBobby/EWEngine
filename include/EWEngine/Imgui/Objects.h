@@ -2,6 +2,7 @@
 
 #include "EWEngine/Preprocessor.h"
 #include "EightWinds/VulkanHeader.h"
+#include "EightWinds/Backend/ShaderStage.h"
 
 #include "imgui.h"
 #include "EightWinds/Command/Instruction.h"
@@ -31,8 +32,6 @@ namespace EWE{
 	FWD_DEC_IMGUI(GPUTask);
 	FWD_DEC_IMGUI(TaskResourceUsage);
 	//FWD_DEC_IMGUI(TaskAffix); //no valuable info i think, rebuilt every frame
-	FWD_DEC_IMGUI(AttachmentInfo);
-	FWD_DEC_IMGUI(AttachmentSetInfo);
 	template<> void ImguiExtension::Imgui(VkPipelineDepthStencilStateCreateInfo&);
 	template<> void ImguiExtension::Imgui(VkPipelineRenderingCreateInfo&);
 	FWD_DEC_IMGUI(DepthBias);
@@ -43,6 +42,10 @@ namespace EWE{
 	FWD_DEC_IMGUI(AttachmentInfo);
 	FWD_DEC_IMGUI(RenderAttachments);
 	FWD_DEC_IMGUI(SubmissionTask);
+
+	FWD_DEC_IMGUI(AttachmentInfo);
+	FWD_DEC_IMGUI(AttachmentSetInfo);
+	FWD_DEC_IMGUI(FullRenderInfo);
 
     //putting these in the macro leads to weird compiler behavior (as of gcc 16.0.1 20260217 (experimental))
 	template<> void ImguiExtension::Imgui(VkAttachmentLoadOp&);

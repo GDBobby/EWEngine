@@ -20,6 +20,8 @@ namespace Node{
         headNode{CreateHeadNode()}
     {
         explorer.acceptable_extensions = Global::assetManager->rasterTask.files.acceptable_extensions;
+        task_config.SetDefaults();
+        task_config.renderInfo = &Global::assetManager->default_render_info;
     }
 
     ImNodes::EWE::Node* RasterPackage_NG::CreateHeadNode(){
@@ -125,7 +127,7 @@ namespace Node{
         ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
             //open the graph for the package
-            OpenGraph(Type::InstructionPackage, node_payload);
+            OpenGraph(Type::ObjectPackage, node_payload);
         }
 
         for(auto& inst : node_payload->paramPool.instructions){
@@ -160,9 +162,8 @@ namespace Node{
                     }
                 }
 
-                RasterPackage& rt = Global::assetManager->rasterTask.ConstructInto(saved_path.string(), *Global::logicalDevice, Global::stcManager->renderQueue, task_config, nullptr);
+                RasterPackage& rt = Global::assetManager->rasterTask.ConstructInto(saved_path.string(), *Global::logicalDevice, Global::stcManager->renderQueue, task_config);
                 
-
                 ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
                 while(current_node != nullptr){
                     rt.objectPackages.push_back(reinterpret_cast<Command::ObjectPackage*>(current_node->payload));

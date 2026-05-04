@@ -166,7 +166,15 @@ namespace EWE{
             ImGui::Text("dyn state - %s", Reflect::Enum::ToString(dynS).data());
         }
 
-        ImguiExtension::Imgui(obj.attachment_set_info);
+        const std::string tree_ri_name = "render info [" + obj.renderInfo->name.string() + ']';
+        bool renderInfo_open = ImGui::TreeNode(tree_ri_name.c_str());
+        DragDropPtr::Target(obj.renderInfo);
+        if(renderInfo_open){
+            ImguiExtension::Imgui(*obj.renderInfo);
+            ImGui::TreePop();
+        }
+
+
 
         ImGui::PopID();
     }
@@ -188,13 +196,35 @@ namespace EWE{
         //imgui_enum("front face", obj.frontFace, 0, 2);
         Reflect::Enum::Imgui_Combo_Selectable("front face", obj.frontFace);
 
-        ImguiExtension::Imgui(obj.depthBias);
+        if(obj.depthBias.enable){
+            ImGui::SetNextItemOpen(obj.depthBias.enable);
+            if(ImGui::TreeNode("depth bias")){
+                ImguiExtension::Imgui(obj.depthBias);
+                ImGui::TreePop();        
+            }
+        }
+        else{
+            bool temp_enable = obj.depthBias.enable;
+            ImGui::Checkbox("depth bias enabled", &temp_enable);
+            obj.depthBias.enable = temp_enable;
+        }
 
         //imgui_enum("topology", obj.topology, 0, 12);
         Reflect::Enum::Imgui_Combo_Selectable("topology", obj.topology);
         ImGui::Checkbox("primitive restart", &obj.primitiveRestart);
 
-        ImguiExtension::Imgui(obj.blendAttachment);
+        if(obj.blendAttachment.blendEnable){
+            ImGui::SetNextItemOpen(obj.blendAttachment.blendEnable);
+            if(ImGui::TreeNode("blend attachment")){
+                ImguiExtension::Imgui(obj.blendAttachment);
+                ImGui::TreePop();
+            }
+        }
+        else{
+            bool temp_enable = obj.blendAttachment.blendEnable;
+            ImGui::Checkbox("blend enabled", &temp_enable);
+            obj.blendAttachment.blendEnable = temp_enable;
+        }
             
         ImGui::PopID();
     }
@@ -261,69 +291,6 @@ namespace EWE{
         }
 
         ImGui::PopID();
-    }
-    FUNC_ENTRY(AttachmentInfo){
-        Reflect::Enum::Imgui_Combo_Selectable("format", obj.format);
-        Reflect::Enum::Imgui_Combo_Selectable("load op", obj.loadOp);
-        Reflect::Enum::Imgui_Combo_Selectable("store op", obj.storeOp);
-
-        ImGui::ColorEdit4("clear value", obj.clearValue.color.float32);
-    }
-    //FUNC_ENTRY(TaskAffix); //no valuable info i think, rebuilt every frame
-    FUNC_ENTRY(AttachmentSetInfo) {
-        int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
-        ImGui::PushID(temp_id);
-
-        ImGui::DragInt("width", reinterpret_cast<int*>(&obj.width), 0, 16536);
-        ImGui::DragInt("height", reinterpret_cast<int*>(&obj.height), 0, 16536);
-        //come back to this
-        //Reflect::Enum::Imgui_Combo_Selectable("rendering flags", obj.renderingFlags);
-
-        int col_count = obj.colors.Size();
-        if (ImGui::DragInt("color count", &col_count, 0, 16)) {
-            Logger::Print<Logger::Warning>("need to support this\n");
-            //obj.colors.ClearAndResize(col_count);
-        }
-        for (auto& col : obj.colors) {
-            //imgui_enum("format", col.format, 0, 256);
-            ImguiExtension::Imgui(col);
-        }
-        ImguiExtension::Imgui(obj.depth);
-
-        ImGui::PopID();
-    }
-	FUNC_ENTRY(RenderAttachments){
-        if(ImGui::BeginTable("per frame", max_frames_in_flight, ImGuiTableFlags_Borders)){
-            ImGui::TableSetupColumn("frame 0");
-            ImGui::TableSetupColumn("frame 1");
-            ImGui::TableHeadersRow();
-
-            for_each_frame{
-                for(auto& img : obj.color_images){
-                    if(img[frame] != nullptr){
-                        ImGui::Button("generated\n");
-                        //dragdrpo
-                    }
-                    else{
-                        ImGui::Button(img[frame]->name.c_str());
-                    }
-                    DragDropPtr::Target(img[frame]);
-                }
-            }
-            for_each_frame{
-                if(obj.depth_image[frame] == nullptr){
-                        ImGui::Button("generated\n");
-                        //dragdrpo
-                    }
-                    else{
-                        ImGui::Button(obj.depth_image[frame]->name.c_str());
-                    }
-                    DragDropPtr::Target(obj.depth_image[frame]);
-            }
-            for_each_frame{
-
-            }
-        }
     }
 
     FUNC_ENTRY(VkPipelineDepthStencilStateCreateInfo) {
@@ -678,21 +645,72 @@ namespace EWE{
         }
     }
 
+    FUNC_ENTRY(AttachmentInfo){
+        Reflect::Enum::Imgui_Combo_Selectable("format", obj.format);
+        Reflect::Enum::Imgui_Combo_Selectable("load op", obj.loadOp);
+        Reflect::Enum::Imgui_Combo_Selectable("store op", obj.storeOp);
 
-    void ImguiExpandInstruction(void* mem_addr, Inst::Type itype){
-            static constexpr auto type_mems = std::define_static_array(std::meta::enumerators_of(^^Inst::Type));
+        ImGui::ColorEdit4("clear value", obj.clearValue.color.float32);
+    }
+    //FUNC_ENTRY(TaskAffix); //no valuable info i think, rebuilt every frame
+    FUNC_ENTRY(AttachmentSetInfo) {
+        int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
+        ImGui::PushID(temp_id);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-            template for(constexpr auto type_mem : type_mems){
-                if ([:type_mem:] == itype){
-                    if constexpr(std::meta::is_complete_type(^^ParamPack<([:type_mem:])>)){
-                        ImguiReflectParamStruct(reinterpret_cast<ParamPack<([:type_mem:])>*>(mem_addr));
+        ImGui::DragInt("width", reinterpret_cast<int*>(&obj.width), 0, 16536);
+        ImGui::DragInt("height", reinterpret_cast<int*>(&obj.height), 0, 16536);
+        //come back to this
+        //Reflect::Enum::Imgui_Combo_Selectable("rendering flags", obj.renderingFlags);
+
+        int col_count = obj.colors.Size();
+        if (ImGui::DragInt("color count", &col_count, 0, 16)) {
+            Logger::Print<Logger::Warning>("need to support this\n");
+            //obj.colors.ClearAndResize(col_count);
+        }
+        for (auto& col : obj.colors) {
+            //imgui_enum("format", col.format, 0, 256);
+            ImguiExtension::Imgui(col);
+        }
+        ImguiExtension::Imgui(obj.depth);
+
+        ImGui::PopID();
+    }
+	FUNC_ENTRY(RenderAttachments){
+        if(ImGui::BeginTable("per frame", max_frames_in_flight, ImGuiTableFlags_Borders)){
+            ImGui::TableSetupColumn("frame 0");
+            ImGui::TableSetupColumn("frame 1");
+            ImGui::TableHeadersRow();
+
+            for_each_frame{
+                uint8_t color_index = 0;
+                for(auto& img : obj.color_images){
+                    ImGui::TableNextColumn();
+                    if(img[frame] != nullptr){
+                        ImGui::Button(img[frame]->name.c_str());
                     }
+                    else{
+                        ImGui::Button("null color");
+                    }
+                    DragDropPtr::Target(img[frame]);
+                    color_index++;
                 }
             }
-#pragma GCC diagnostic pop
-        
+            for_each_frame{
+                    ImGui::TableNextColumn();
+                if(obj.depth_image[frame] != nullptr){
+                    ImGui::Button(obj.depth_image[frame]->name.string().c_str());
+                }
+                else{
+                    ImGui::Button("null depth");
+                }
+                DragDropPtr::Target(obj.depth_image[frame]);
+            }
+
+            ImGui::EndTable();
+        }
+    }
+    FUNC_ENTRY(FullRenderInfo){
+        ImguiExtension::Imgui(obj.full);
     }
 
 #undef FUNC_ENTRY

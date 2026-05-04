@@ -4,6 +4,7 @@ FetchContent_Declare(
 	xxhash
 	GIT_REPOSITORY https://github.com/GDBobby/xxHash-constexpr.git
 	GIT_TAG        dev
+	GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(xxhash)
 
@@ -20,6 +21,7 @@ FetchContent_MakeAvailable(xxhash)
 	#	xxhash
 	#	GIT_REPOSITORY https://github.com/GDBobby/xxHash-constexpr.git
 	#	GIT_TAG        dev
+    #   GIT_PROGRESS   TRUE
 	#)
 
 	#FetchContent_MakeAvailable(xxhash)

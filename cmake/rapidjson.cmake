@@ -4,6 +4,7 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/Tencent/rapidjson
 	GIT_TAG 24b5e7a
 	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/rapidjson"
+	GIT_PROGRESS   TRUE
 )
 set(RAPIDJSON_BUILD_DOC OFF CACHE BOOL "")
 set(RAPIDJSON_BUILD_EXAMPLES OFF CACHE BOOL "")

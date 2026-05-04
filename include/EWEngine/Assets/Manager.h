@@ -17,6 +17,7 @@
 #include "EWEngine/Assets/SubmissionTasks.h"
 #include "EWEngine/Assets/Shaders.h"
 #include "EWEngine/Assets/RenderGraphs.h"
+#include "EWEngine/Assets/RenderAttachments.h"
 
 namespace EWE{
 
@@ -24,7 +25,10 @@ namespace Asset{
 
     template<>
     struct Manager<AssetHash>{
-        [[nodiscard]] explicit Manager(std::filesystem::path const& asset_directory);
+        [[nodiscard]] explicit Manager(
+            std::filesystem::path const& asset_directory,
+            LogicalDevice& _logicalDevice, Queue& renderQueue
+        );
 
         std::filesystem::path root_directory;
 
@@ -41,7 +45,8 @@ namespace Asset{
         Manager<SubmissionTask> subTask;
         Manager<Shader> shader;
         Manager<RenderGraph> renderGraph;
-        Manager<RenderAttachments> attachment_info; //RenderAttachments can be built from AttachmentSetInfo
+        Manager<FullRenderInfo> attachment_info; //RenderAttachments can be built from AttachmentSetInfo
+        FullRenderInfo& default_render_info;
 
         void DropCallback(std::filesystem::path const& path);
 

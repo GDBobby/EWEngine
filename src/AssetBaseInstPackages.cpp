@@ -64,12 +64,13 @@ namespace Asset{
                         
                         for(uint8_t j = 0; j < temp_push->buffer_count; j++){
                             //EWE_ASSERT(bda_array[j] != null_buffer);
-                            if(temp_push->GetDeviceAddress(j) == null_buffer){
+                            auto const device_addr = temp_push->GetDeviceAddress(j);
+                            if(device_addr == null_buffer){
                                 Logger::Print<Logger::Warning>("invalid push buffer being writen to file\n");
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
-                                hash_buffer = Global::assetManager->buffer.ConvertBDAToHash(temp_push->GetDeviceAddress(j));
+                                hash_buffer = Global::assetManager->buffer.ConvertBDAToHash(device_addr);
                             }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }

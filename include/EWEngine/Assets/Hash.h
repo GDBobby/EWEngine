@@ -33,6 +33,7 @@ namespace Command{
     FWD_DEC_HASH(SubmissionTask);
     FWD_DEC_HASH(Shader);
     FWD_DEC_HASH(RenderGraph);
+    FWD_DEC_HASH(FullRenderInfo);
 
     #undef FWD_DEC_HASH
 } //namespace EWE

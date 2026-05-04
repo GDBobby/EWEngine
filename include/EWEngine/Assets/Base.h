@@ -8,6 +8,8 @@
 #include "EWEngine/Assets/FileSystem.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
+#include "EWEngine/Imgui/Objects.h"
+#include <type_traits>
 
 namespace EWE{
 namespace Asset{
@@ -84,10 +86,9 @@ namespace Asset{
         }
 
         template<typename... Args>
-        requires requires(Args&&... args) {
-            { data_arena.AddElement(std::forward<Args>(args)...) };
-        }
-        Resource& ConstructInto(Args&&... args){
+        requires std::constructible_from<Resource, Args...>
+        Resource& ConstructInto(Args&&... args)
+        {
             auto& ele = data_arena.AddElement(std::forward<Args>(args)...);
             AssetHash hash = GetHash(ele);
             association_container.push_back(hash, &ele);
@@ -113,11 +114,35 @@ namespace Asset{
                         if constexpr (std::meta::is_complete_type(^^WriteAssetToFile<decltype(*found->value)>)){
                             WriteAssetToFile(*found->value);
                         }
-                        //ImGuiExtension::Imgui(*kvp.value);
+                        if constexpr(std::meta::is_complete_type(^^ImguiExtension::Imgui<decltype(*found->value)>)){
+                            ImguiExtension::Imgui(*found->value);
+                        }
                         ImGui::TreePop();
                     }
                     else{
                         DragDropPtr::Source(*found->value);
+                    }
+                }
+            }
+
+            bool has_non_file = false;
+            for(auto& kvp : association_container){
+                auto found = files.hashed_path.find(kvp.key);
+                if(found == files.hashed_path.end()){
+                    if(!has_non_file){
+                        has_non_file = true;
+                        ImGui::SeparatorText("doesnt have file");
+                    }
+                    bool tree_open = ImGui::TreeNode(kvp.value->name.string().c_str());
+                    DragDropPtr::Source(*kvp.value);
+                    if(tree_open){
+                        if constexpr (std::meta::is_complete_type(^^WriteAssetToFile<decltype(*kvp.value)>)){
+                            WriteAssetToFile(*kvp.value);
+                        }
+                        if constexpr(std::meta::is_complete_type(^^ImguiExtension::Imgui<decltype(*kvp.value)>)){
+                            ImguiExtension::Imgui(*kvp.value);
+                        }
+                        ImGui::TreePop();
                     }
                 }
             }

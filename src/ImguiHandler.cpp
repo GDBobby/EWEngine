@@ -62,7 +62,7 @@ namespace EWE{
 			"imgui render info",
 			*Global::logicalDevice, queue,
 			AttachmentSetInfo{
-				Global::window->screenDimensions.width,  Global::window->screenDimensions.height,
+				1,  1,
 				VkRenderingFlags{0},
 				std::span<const AttachmentInfo>{
 					AttachmentInfo{
@@ -84,7 +84,7 @@ namespace EWE{
 		image_count{imageCount},
 		sample_count{sampleCount}
     {
-		renderInfo.Init();
+		renderInfo.Init(Global::window->screenDimensions.width, Global::window->screenDimensions.height);
 
 		IMGUI_CHECKVERSION();
 		

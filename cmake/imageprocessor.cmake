@@ -14,6 +14,7 @@ else()
 		GIT_REPOSITORY https://github.com/GDBobby/i-spent-a-lot-of-time-coming-up-with-a-good-project-name-so-people-would-know-what-this-project-does
 		SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imageprocessor"
 		GIT_TAG master
+        GIT_PROGRESS   TRUE
 	)
 	FetchContent_MakeAvailable(ImageProcessor)
 

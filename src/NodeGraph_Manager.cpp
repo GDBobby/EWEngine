@@ -202,6 +202,11 @@ namespace EWE{
                         temp->InitFromObject(*reinterpret_cast<RenderGraph*>(payload));
                         break;
                     }
+                    case ImNodes::EWE::Editor::Type::RasterPackage:{
+                        Node::RasterPackage_NG* temp = static_cast<Node::RasterPackage_NG*>(created);
+                        temp->InitFromObject(*reinterpret_cast<RasterPackage*>(payload));
+                        break;
+                    }
                     default: EWE_UNREACHABLE;
                 }
                 break;

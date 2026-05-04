@@ -13,12 +13,23 @@ namespace Node{
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
 
+        struct NodePayload{
+            enum Type{
+                Task,
+                RenderInfo
+            };
+            Type type;
+            void* payload;
+            bool current_open_status = false;
+        };
+
         [[nodiscard]] explicit SubmissionTask_NG();
 
         void RenderNodes() override final;
 
         ImNodes::EWE::Node* CreateHeadNode();
         ImNodes::EWE::Node& CreateRGNode(GPUTask* task);
+        ImNodes::EWE::Node& CreateRGNode(FullRenderInfo* renderInfo);
 
         //void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
         void OpenAddMenu() override final;

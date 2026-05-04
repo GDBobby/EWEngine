@@ -15,5 +15,6 @@ FetchContent_Declare(
   harfbuzz
   GIT_REPOSITORY https://github.com/harfbuzz/harfbuzz.git
   GIT_TAG main
+  GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(harfbuzz)

@@ -1,6 +1,23 @@
 #include "EWEngine/Imgui/Params.h"
 
 namespace EWE{
+
+    void ImguiExpandInstruction(void* mem_addr, Inst::Type itype){
+            static constexpr auto type_mems = std::define_static_array(std::meta::enumerators_of(^^Inst::Type));
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+            template for(constexpr auto type_mem : type_mems){
+                if ([:type_mem:] == itype){
+                    if constexpr(std::meta::is_complete_type(^^ParamPack<([:type_mem:])>)){
+                        ImguiReflectParamStruct(reinterpret_cast<ParamPack<([:type_mem:])>*>(mem_addr));
+                    }
+                }
+            }
+#pragma GCC diagnostic pop
+        
+    }
+
     template<>
 	void ImguiReflectParamStruct<Inst::Type::Push>(ParamPack<Inst::Type::Push>* push){
 		if(ImGui::BeginTable("push", 2, ImGuiTableFlags_Borders| ImGuiTableFlags_SizingFixedFit, ImVec2(300.0f, 0.0f))) {
@@ -128,5 +145,17 @@ namespace EWE{
 			}
 			ImGui::EndTable();
 		}
+	}
+
+
+	template<>
+	inline void ImguiReflectParamStruct(ParamPack<Inst::Draw>* mem_addr){
+		auto const addr_id = static_cast<int>(reinterpret_cast<std::size_t>(mem_addr));
+		ImGui::PushID(addr_id);
+		ImGui::DragInt("vertex count", reinterpret_cast<int*>(&mem_addr->vertexCount), 1.f, 0, INT32_MAX);
+		ImGui::DragInt("instance count", reinterpret_cast<int*>(&mem_addr->instanceCount), 1.f, 0, INT32_MAX);
+		ImGui::DragInt("first vertex", reinterpret_cast<int*>(&mem_addr->firstVertex), 1.f, 0, mem_addr->vertexCount);
+		ImGui::DragInt("first instance", reinterpret_cast<int*>(&mem_addr->firstInstance), 1.f, 0, mem_addr->instanceCount);
+		ImGui::PopID();
 	}
 }

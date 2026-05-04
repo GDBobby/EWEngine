@@ -19,7 +19,7 @@ namespace EWE{
             window{_window},
             scheduler{marl::Scheduler::Config::allCores()},
             stcManager{_stcManager},
-            assetManager{root_path}
+            assetManager{root_path, _logicalDevice, stcManager.renderQueue}
         {
             glfwSetDropCallback(window.window, GLFW_Drop_Callback);
         }
@@ -54,6 +54,9 @@ namespace EWE{
             ::EWE::Global::scheduler = &globalData->scheduler;
             ::EWE::Global::stcManager = &globalData->stcManager;
             ::EWE::Global::assetManager = &globalData->assetManager;
+
+            globalData->assetManager.default_render_info.Init(Global::window->screenDimensions.width, Global::window->screenDimensions.height);
+
 
             return true;
         }

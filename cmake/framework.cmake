@@ -14,6 +14,7 @@ else()
 		EWFramework
 		GIT_REPOSITORY https://github.com/GDBobby/VulkanFramework
 		SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ewf"
+        GIT_PROGRESS   TRUE
 		GIT_TAG main
 	)
 	FetchContent_MakeAvailable(EWFramework)

@@ -4,6 +4,7 @@
 
 #include "EightWinds/Reflect/Reflect.h"
 #include "imgui.h"
+#include <vulkan/vulkan_core.h>
 
 namespace EWE{
 namespace Asset{
@@ -19,7 +20,29 @@ namespace Asset{
         Manager<DescriptorImageInfo> dii;
         Manager<SubmissionTask> subTask;
     */
-    Manager<AssetHash>::Manager(std::filesystem::path const& asset_directory)
+
+    AttachmentSetInfo GetDefaultSetInfo(){
+
+        AttachmentInfo colorInfo[1] = {
+            AttachmentInfo{
+                .format = VK_FORMAT_R8G8B8A8_UNORM,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp =  VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue = {0.f, 0.f, 0.f, 0.f}
+            }
+        };
+
+        return AttachmentSetInfo{
+            1, 1,
+            VkRenderingFlags{0},
+            colorInfo
+        };
+    }
+
+    Manager<AssetHash>::Manager(
+        std::filesystem::path const& asset_directory,
+        LogicalDevice& _logicalDevice, Queue& renderQueue
+    )
     : root_directory{asset_directory},
         buffer{asset_directory},
         //gpuTask{asset_directory},
@@ -33,8 +56,9 @@ namespace Asset{
         dii{asset_directory},
         subTask{asset_directory},
         shader{asset_directory / "shaders/"},
-        renderGraph{asset_directory}
-
+        renderGraph{asset_directory},
+        attachment_info{asset_directory},
+        default_render_info{attachment_info.ConstructInto("default", _logicalDevice, renderQueue, GetDefaultSetInfo())}
     {
     }
 
@@ -78,6 +102,10 @@ namespace Asset{
         }
         if(ImGui::TreeNode("submission tasks")){
             subTask.Imgui();
+            ImGui::TreePop();
+        }
+        if(ImGui::TreeNode("attachment infos")){
+            attachment_info.Imgui();
             ImGui::TreePop();
         }
     }

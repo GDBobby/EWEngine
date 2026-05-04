@@ -61,7 +61,6 @@ endif()
 
 include(cmake/framework.cmake)
 include(cmake/harfbuzz.cmake)
-include(cmake/imguizmo.cmake)
 include(cmake/lab.cmake)
 include(cmake/marl.cmake)
 include(cmake/rapidjson.cmake)
@@ -85,6 +84,7 @@ if(EWE_IMGUI)
 else()
 	set(IMGUI_SOURCES)
 endif()
+#include(cmake/imguizmo.cmake)
 
 
 message(STATUS "found EWFramework [${EWFramework_SOURCE_DIR}]")

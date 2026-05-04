@@ -2,6 +2,7 @@
 #include "EWEngine/Global.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
+#include "EightWinds/Command/InstructionPackage.h"
 #include <fstream>
 
 namespace EWE{
@@ -33,6 +34,7 @@ namespace Asset{
         outFile.write(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
 
         for(auto* pkg : rec.packages){
+            outFile.write(reinterpret_cast<char const*>(&pkg->type), sizeof(Command::InstructionPackage::Type));
             AssetHash hash_buffer = GetHash(*pkg);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
@@ -65,9 +67,22 @@ namespace Asset{
 
         ret.packages.reserve(temp_buffer);
         for(std::size_t i = 0; i < temp_buffer; i++){
+            Command::InstructionPackage::Type type = Command::InstructionPackage::Type::Compute;
+            inFile.read(reinterpret_cast<char*>(&type), sizeof(Command::InstructionPackage::Type));
             AssetHash hash_buffer;
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
-            ret.packages.push_back(Global::assetManager->objPkg.Get(hash_buffer));
+            switch(type){
+                case Command::InstructionPackage::Type::Base:
+                    ret.packages.push_back(Global::assetManager->instPkg.Get(hash_buffer));
+                    break;
+                case Command::InstructionPackage::Type::Object:
+                    ret.packages.push_back(Global::assetManager->objPkg.Get(hash_buffer));
+                    break;
+                case Command::InstructionPackage::Type::Raster:
+                    ret.packages.push_back(Global::assetManager->rasterTask.Get(hash_buffer));
+                    break;
+                default: EWE_UNREACHABLE;
+            }
         }
 
         inFile.close();

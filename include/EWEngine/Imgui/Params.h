@@ -29,6 +29,8 @@ namespace EWE{
 	inline void ImguiReflectParamStruct(ParamPack<IType>* mem_addr){
 		ImguiDefaultParamReflect(mem_addr);
 	}
+	template<>
+	inline void ImguiReflectParamStruct(ParamPack<Inst::Draw>* mem_addr);
 
 	template<>
 	inline void ImguiReflectParamStruct(ParamPack<Inst::Type::BeginRender>* temp_addr){

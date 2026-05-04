@@ -527,14 +527,25 @@ namespace Node{
             if(param_size > 0){
                 const std::size_t pack_index = paramPool.GetPackIndex(node_payload->distanceFromHead);
                 auto const& instruction = paramPool.instructions[node_payload->distanceFromHead];
-                if(instruction == Inst::Push){
-                    auto const window_size = ImGui::GetWindowSize();
-                    ImGui::SetWindowSize(ImVec2(1200.f, window_size.y));
-                    ExpandPush(object_push, reinterpret_cast<ParamPack<Inst::Push>*>(paramPool.param_data[pack_index].data[0]));
+                if(ImGui::BeginTable("per frame", 2, ImGuiTableFlags_Borders)){
+                    ImGui::TableSetupColumn("frame 0");
+                    ImGui::TableSetupColumn("frame 1");
+                    ImGui::TableHeadersRow();
+
+                    for_each_frame{
+                        ImGui::TableNextColumn();
+                        if(instruction == Inst::Push){
+                            auto const window_size = ImGui::GetWindowSize();
+                            ImGui::SetWindowSize(ImVec2(1200.f, window_size.y));
+                            ExpandPush(object_push, reinterpret_cast<ParamPack<Inst::Push>*>(paramPool.param_data[pack_index].data[frame]));
+                        }
+                        else{
+                            ImguiExpandInstruction(reinterpret_cast<void*>(paramPool.param_data[pack_index].data[frame]), instruction);
+                        }
+                    }
+                    ImGui::EndTable();
                 }
-                else{
-                    ImguiExpandInstruction(reinterpret_cast<void*>(paramPool.param_data[pack_index].data[0]), instruction);
-                }
+                ImGui::Text("filler");
             }
         }
     }

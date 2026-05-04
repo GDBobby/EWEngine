@@ -1,4 +1,5 @@
 //example
+#include "EightWinds/Backend/RenderInfo.h"
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/InstructionPointer.h"
 #include "EightWinds/GlobalPushConstant.h"
@@ -39,6 +40,7 @@
 #include <chrono>
 #include <array>
 #include <thread>
+#include <vulkan/vulkan_core.h>
 
 #if EWE_DEBUG_BOOL
 void PrintAllExtensions(VkPhysicalDevice physicalDevice) {
@@ -159,37 +161,47 @@ int main(int argc, char* argv[]) {
     EWE::Shader* triangle_vert = EWE::Global::assetManager->shader.Get("basic.vert.spv");
     EWE::Shader* triangle_frag = EWE::Global::assetManager->shader.Get("basic.frag.spv");
 
+    EWE::AttachmentSetInfo mainSetInfo{};
+    {
+        mainSetInfo.relative_size = true;
+        mainSetInfo.width = 1.f;
+        mainSetInfo.height = 1.f;
+        mainSetInfo.renderingFlags = 0;
+        mainSetInfo.colors.ClearAndResize(1);
+        
+        auto& color_back = mainSetInfo.colors[0];
+        color_back.format = VK_FORMAT_R8G8B8A8_UNORM;
+        color_back.clearValue.color.float32[0] = 0.f;
+        color_back.clearValue.color.float32[1] = 0.f;
+        color_back.clearValue.color.float32[2] = 0.f;
+        color_back.clearValue.color.float32[3] = 0.f;
+        color_back.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color_back.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        auto& depth_temp = mainSetInfo.depth;
+        depth_temp.format = VK_FORMAT_D16_UNORM;
+        depth_temp.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depth_temp.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_temp.clearValue.depthStencil.depth = 0.f;
+        depth_temp.clearValue.depthStencil.stencil = 0; //idk what to set this to tbh
+    }
+
+
     EWE::Shader* triangle_shaders[] = { triangle_vert, triangle_frag };
     EWE::PipeLayout triangle_layout(logicalDevice, triangle_shaders);
     //passconfig should be using a full rendergraph setup
     EWE::TaskRasterConfig passConfig;
-    passConfig.SetDefaults();
-    passConfig.pipelineRenderingCreateInfo.depthAttachmentFormat = VK_FORMAT_D16_UNORM;
-    passConfig.depthStencilInfo.depthTestEnable = VK_TRUE;
-    passConfig.depthStencilInfo.depthWriteEnable = VK_TRUE;
-    passConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-    passConfig.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
-    passConfig.depthStencilInfo.stencilTestEnable = VK_FALSE;
-
-    passConfig.attachment_set_info.colors.ClearAndResize(1);
-    passConfig.attachment_set_info.width = EWE::Global::window->screenDimensions.width;
-    passConfig.attachment_set_info.height = EWE::Global::window->screenDimensions.height;
-    passConfig.attachment_set_info.renderingFlags = 0;
-
-    auto& color_back = passConfig.attachment_set_info.colors[0];
-    color_back.format = VK_FORMAT_R8G8B8A8_UNORM;
-    color_back.clearValue.color.float32[0] = 0.f;
-    color_back.clearValue.color.float32[1] = 0.f;
-    color_back.clearValue.color.float32[2] = 0.f;
-    color_back.clearValue.color.float32[3] = 0.f;
-    color_back.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_back.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    auto& depth_temp = passConfig.attachment_set_info.depth;
-    depth_temp.format = VK_FORMAT_D16_UNORM;
-    depth_temp.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depth_temp.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depth_temp.clearValue.depthStencil.depth = 0.f;
-    depth_temp.clearValue.depthStencil.stencil = 0; //idk what to set this to tbh
+    EWE::FullRenderInfo& renderInfo = EWE::Global::assetManager->attachment_info.ConstructInto("main ri", logicalDevice, *renderQueue, mainSetInfo);
+    renderInfo.Init(EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
+    {
+        passConfig.SetDefaults();
+        passConfig.renderInfo = &renderInfo;
+        passConfig.depthStencilInfo.depthTestEnable = VK_TRUE;
+        passConfig.depthStencilInfo.depthWriteEnable = VK_TRUE;
+        passConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        passConfig.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
+        passConfig.depthStencilInfo.stencilTestEnable = VK_FALSE;
+    }
 
     EWE::ObjectRasterData triangle_rasterObj;
     triangle_rasterObj.layout = &triangle_layout;
@@ -255,27 +267,37 @@ int main(int argc, char* argv[]) {
         vertex_buffer.Unmap();
     }
 
-    passConfig.pipelineRenderingCreateInfo.pColorAttachmentFormats = &engine.swapchain.swapCreateInfo.imageFormat;
+    EWE::AttachmentSetInfo swapSetInfo{};
+    swapSetInfo.relative_size = true;
+    swapSetInfo.width = 1.f;
+    swapSetInfo.height = 1.f;
+    swapSetInfo.renderingFlags = 0;
+    swapSetInfo.colors.ClearAndResize(1);
+    EWE::TaskRasterConfig merge_task_config{passConfig};
+    {
+        auto& color_back = swapSetInfo.colors[0];
+        color_back.format = engine.swapchain.swapCreateInfo.imageFormat;
+        color_back.clearValue.color.float32[0] = 0.f;
+        color_back.clearValue.color.float32[1] = 0.f;
+        color_back.clearValue.color.float32[2] = 0.f;
+        color_back.clearValue.color.float32[3] = 0.f;
+        color_back.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color_back.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        merge_task_config.depthStencilInfo.depthTestEnable = VK_FALSE;
+        merge_task_config.depthStencilInfo.depthWriteEnable = VK_FALSE;
+        merge_task_config.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    }
+    auto& merge_render_info = EWE::Global::assetManager->attachment_info.ConstructInto("swap info", logicalDevice, *renderQueue, swapSetInfo);
+    merge_render_info.Init(EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
+    merge_task_config.renderInfo = &merge_render_info;
+
     EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
     EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
     EWE::Shader* merge_shaders[] = {merge_vert, merge_frag};
     EWE::PipeLayout merge_layout(logicalDevice, merge_shaders);
 
-    EWE::Command::Record mergeRecord{};
-
-    auto color_temp = passConfig.attachment_set_info.colors[0];
-    passConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-    
-    EWE::FullRenderInfo merge_render_info{
-        "merge",
-        logicalDevice, *renderQueue,
-        passConfig.attachment_set_info
-    };
-    merge_render_info.Init();
-
-    EWE::RasterPackage mergeRaster{ "merge raster", logicalDevice, *renderQueue, passConfig, &merge_render_info };
-    color_temp.format = engine.swapchain.swapCreateInfo.imageFormat;
-    mergeRaster.task_config.attachment_set_info.colors[0] = color_temp;
+    EWE::RasterPackage mergeRaster{ "merge raster", logicalDevice, *renderQueue, merge_task_config };
 
     mergeRaster.scissor = EWE::Global::window->screenDimensions;
     mergeRaster.viewport.x = 0.f;

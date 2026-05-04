@@ -40,6 +40,7 @@ namespace Asset{
     HASH_IMPL(SubmissionTask)
     HASH_IMPL(Shader)
     HASH_IMPL(RenderGraph)
+    template<> AssetHash Asset::GetHash(FullRenderInfo const& type) { return Asset::CrossPlatformPathHash(type.full.name); }
 
 #undef HASH_IMPL
 } //namespace EWE

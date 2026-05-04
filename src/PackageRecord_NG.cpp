@@ -3,6 +3,7 @@
 #include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/InstructionPackage.h"
+#include "EightWinds/Command/ObjectInstructionPackage.h"
 #include "EightWinds/Command/PackageRecord.h"
 #include "EightWinds/Reflect/Enum.h"
 #include "imgui.h"
@@ -29,11 +30,29 @@ namespace Node{
     
     void PackageRecord_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
-        Command::InstructionPackage* pkg;
-        if(DragDropPtr::Target(pkg)) {
-            auto& added_node = CreateRGNode(pkg);
-            auto temp_mouse_pos =ImGui::GetIO().MousePos;
-            added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+        {
+            Command::InstructionPackage* pkg;
+            if(DragDropPtr::Target(pkg)) {
+                auto& added_node = CreateRGNode(pkg);
+                auto temp_mouse_pos =ImGui::GetIO().MousePos;
+                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+            }
+        }
+        {
+            RasterPackage* pkg;
+            if(DragDropPtr::Target(pkg)) {
+                auto& added_node = CreateRGNode(reinterpret_cast<Command::InstructionPackage*>(pkg));
+                auto temp_mouse_pos =ImGui::GetIO().MousePos;
+                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+            }
+        }
+        {
+            Command::ObjectPackage* pkg;
+            if(DragDropPtr::Target(pkg)) {
+                auto& added_node = CreateRGNode(reinterpret_cast<Command::InstructionPackage*>(pkg));
+                auto temp_mouse_pos =ImGui::GetIO().MousePos;
+                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+            }
         }
     }
 
@@ -109,11 +128,40 @@ namespace Node{
         ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
             //open the graph for the package
-            OpenGraph(Type::InstructionPackage, node_payload);
+            switch(node_payload->type){
+                case Command::InstructionPackage::Type::Base:
+                    OpenGraph(Type::InstructionPackage, node_payload);
+                    break;
+                case Command::InstructionPackage::Type::Object:
+                    OpenGraph(Type::ObjectPackage, node_payload);
+                    break;
+                case Command::InstructionPackage::Type::Raster:
+                    OpenGraph(Type::RasterPackage, node_payload);
+                    break;
+                default: EWE_UNREACHABLE;
+            }
         }
-
-        for(auto& inst : node_payload->paramPool.instructions){
-            ImGui::BulletText(Reflect::Enum::ToString(inst).data());
+        ImGui::Text("node type : %s\n", Reflect::Enum::ToString(node_payload->type).data());
+        switch(node_payload->type){
+            case Command::InstructionPackage::Type::Base:
+            case Command::InstructionPackage::Type::Object:{
+                for(auto& inst : node_payload->paramPool.instructions){
+                    ImGui::BulletText(Reflect::Enum::ToString(inst).data());
+                }
+                break;
+            }
+            case Command::InstructionPackage::Type::Raster:{
+                for(auto& obj_pkg : reinterpret_cast<RasterPackage*>(node_payload)->objectPackages){
+                    if(ImGui::TreeNode(obj_pkg->name.string().c_str())){
+                        for(auto& inst : obj_pkg->paramPool.instructions){
+                            ImGui::BulletText(Reflect::Enum::ToString(inst).data());
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+                break;
+            }
+            default: EWE_UNREACHABLE;
         }
     }
 
@@ -142,13 +190,18 @@ namespace Node{
                     record.packages.push_back(reinterpret_cast<Command::InstructionPackage*>(current_node->payload));
                     current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                 }
+                const auto proximate_path = std::filesystem::proximate(
+                    saved_path,
+                    EWE::Global::assetManager->pkgRecord.files.root_directory
+                );
+                Logger::Print("writing package record to file : %s / %s\n",
+                    EWE::Global::assetManager->pkgRecord.files.root_directory.string().c_str(), 
+                    proximate_path.string().c_str()
+                );
                 Asset::WriteAssetToFile(
                     record, 
                     EWE::Global::assetManager->pkgRecord.files.root_directory, 
-                    std::filesystem::proximate(
-                        EWE::Global::assetManager->pkgRecord.files.root_directory,
-                        saved_path
-                    )
+                    proximate_path
                 );
 
                 explorer.enabled = false;
@@ -173,7 +226,12 @@ namespace Node{
                 
                 const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->pkgRecord.files.root_directory);
                 auto* record = Global::assetManager->pkgRecord.Get(localized_path);
-                InitFromObject(*record);
+                if(record == nullptr){
+                    Logger::Print<Logger::Warning>("failed to read record from file : %s\n", localized_path.string().c_str());
+                }
+                else{
+                    InitFromObject(*record);
+                }
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
