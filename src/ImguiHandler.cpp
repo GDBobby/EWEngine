@@ -17,6 +17,8 @@
 #include "backends/imgui_impl_vulkan.h"
 #include "imgui_internal.h"
 
+#include <array>
+
 namespace EWE{
 
 	std::array<VkFormat, 1> colorFormats{ VK_FORMAT_R8G8B8A8_UNORM };
@@ -64,12 +66,12 @@ namespace EWE{
 			AttachmentSetInfo{
 				1,  1,
 				VkRenderingFlags{0},
-				std::span<const AttachmentInfo>{
+				std::array<const AttachmentInfo, 1>{
 					AttachmentInfo{
 						.format = VK_FORMAT_R8G8B8A8_UNORM,
 						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-						.clearValue{0.f, 0.f, 0.f, 0.f}
+						.clearValue{.color{0.f, 0.f, 0.f, 0.f}}
 
 					}
 				},
@@ -77,7 +79,7 @@ namespace EWE{
 					.format = VK_FORMAT_D16_UNORM,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.clearValue{0.f, 0.f, 0.f, 0.f}
+					.clearValue{.color{0.f, 0.f, 0.f, 0.f}}
 				}
 			}
 		},
