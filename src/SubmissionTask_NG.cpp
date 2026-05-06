@@ -1,5 +1,6 @@
 #include "EWEngine/Imgui/ImNodes/Graph/SubmissionTask_NG.h"
 
+#include "EWEngine/Assets/GPUTasks.h"
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Global.h"
@@ -216,6 +217,36 @@ namespace Node{
         ImNodes::EndPinAttribute();
     }
 
+    std::vector<GPUTask*> SubmissionTask_NG::CollectTasks(){
+        std::vector<GPUTask*> ret{};
+        
+        auto GetTaskFromNode = [](ImNodes::EWE::Node* node) -> GPUTask*{
+            NodePayload* node_payload = reinterpret_cast<NodePayload*>(node->payload);
+            EWE_ASSERT(node_payload->type == NodePayload::Type::Task);
+            GPUTask* task = reinterpret_cast<GPUTask*>(node_payload->payload);
+            return task;
+        };
+
+        ImNodes::EWE::Node* current_node = nullptr;
+        //the pin payload is going to be a pointer to the node, unless nullptr
+        if(headNode->pins[0].payload != nullptr){
+            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+
+            ret.push_back(GetTaskFromNode(current_node));
+            if(current_node == nullptr){
+                return ret;
+            }
+
+            while(current_node->pins[1].payload != nullptr){
+
+                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+                auto current_task = GetTaskFromNode(current_node);
+                ret.push_back(current_task);
+            }
+        }
+        return ret;
+    }
+
     bool SubmissionTask_NG::SaveFunc() {
         explorer.enabled = save_open;
         explorer.state = ExplorerContext::State::Save;
@@ -226,6 +257,16 @@ namespace Node{
 
                 const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
                 name = temp_path;
+
+                SubmissionTask& written = Global::assetManager->subTask.ConstructInto(name, *Global::logicalDevice, Global::stcManager->renderQueue);
+                
+                auto collected_tasks = CollectTasks();
+                
+                for(auto& task : collected_tasks){
+                    written.tasks.push_back(task);
+                }
+
+                Asset::WriteAssetToFile(written, Global::assetManager->subTask.files.root_directory, temp_path);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();

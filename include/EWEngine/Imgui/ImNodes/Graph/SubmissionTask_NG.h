@@ -43,9 +43,9 @@ namespace Node{
         bool LoadFunc() override final;
 
         void PopulateFromGraph(SubmissionTask& subTask);
-
-
         void InitFromObject(SubmissionTask& subTask);
+
+        std::vector<GPUTask*> CollectTasks();
     };
 } //namespace Node 
 } //namespace EWE

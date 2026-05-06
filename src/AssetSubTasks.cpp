@@ -1,3 +1,4 @@
+#include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/PackageRecords.h"
 #include "EWEngine/Global.h"
 
@@ -18,13 +19,24 @@ namespace Asset{
             return false;
         }
 
-        std::ofstream outFile{root_directory / path, std::ios::binary};
+        auto const combined_path = root_directory / path;
+        std::ofstream outFile{combined_path, std::ios::binary};
+        if(!outFile.is_open()){
+            if(std::filesystem::exists(combined_path)){
+                Logger::Print<Logger::Warning>("failed ot open existing file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
+            }
+            else{
+                Logger::Print<Logger::Warning>("attempting to open non-existing file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
+            }
+            return false;
+        }
 
         std::size_t temp_buffer = current_file_version;
         outFile.write(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
         
         if(task.queue == nullptr){
             outFile.close();
+            Logger::Print<Logger::Warning>("queue was nullptr in written subtask\n");
             return false;
         }
         auto queue_type = Global::stcManager->GetQueueType(*task.queue);
@@ -35,6 +47,7 @@ namespace Asset{
 
         for(auto* gpu_task : task.tasks){
             AssetHash hash_buffer = GetHash(*gpu_task->pkgRecord);
+            EWE_ASSERT(hash_buffer != INVALID_HASH);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
 
