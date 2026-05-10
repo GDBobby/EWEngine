@@ -4,26 +4,31 @@
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/ImNodes/imnodes.h"
 #include "EightWinds/Backend/RenderInfo.h"
-#include "EightWinds/Command/Instruction.h"
 #include "EightWinds/RenderGraph/SubmissionTask.h"
 
 #include "EWEngine/Imgui/Objects.h"
+#include "imgui.h"
+
+#include "EWEngine/Imgui/ImNodes/imnodes_internal.h"
 
 namespace EWE{
 namespace Node{
     RenderGraph_NG::RenderGraph_NG()
         : ImNodes::EWE::Editor{},
-        renderGraph{nullptr}
-    {
-        name = "render graph ng";
-    }
-    RenderGraph_NG::RenderGraph_NG(RenderGraph& _renderGraph)
-        : ImNodes::EWE::Editor{},
-        renderGraph{&_renderGraph}
+        explorer{std::filesystem::current_path()},
+        headNode{CreateHeadNode()}
     {
         name = "render graph ng";
     }
 
+    ImNodes::EWE::Node* RenderGraph_NG::CreateHeadNode(){
+        auto& head = AddNode();
+        head.snapToGrid = true;
+
+        head.pos = node_editor_window_pos;
+        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        return &head;
+    } 
 
     void RenderGraph_NG::RenderNodes() {
         ImNodes::EWE::Editor::RenderNodes();
@@ -33,6 +38,7 @@ namespace Node{
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }
+
     }
 
     ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(FullRenderInfo* renderInfo){
@@ -50,8 +56,8 @@ namespace Node{
     ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(SubmissionTask* subTask) {
         auto& added_node = AddNode();
         added_node.payload = new NodePayload{
-            .type = NodeType::RenderInfo,
-            .payload = subTask
+            .type = NodeType::TaskGroup,
+            .payload = new std::vector<SubmissionTask*>{subTask}
         };
         added_node.pos = menu_pos;
         added_node.pos = menu_pos;
@@ -65,6 +71,7 @@ namespace Node{
 
         ImNodes::EWE::Editor::RenderEditorTitle();
 
+        /*
         if(ImGui::Button("set from current")){
             for(auto iter = nodes.begin(); iter != nodes.end(); ++iter){
                 nodes.DestroyElement(iter);
@@ -98,6 +105,7 @@ namespace Node{
                 horizontalPos += 200.f;
             }
         }
+        */
         
     }
 
@@ -108,10 +116,10 @@ namespace Node{
         ImGui::SetNextWindowPos(menu_pos);
         if(ImGui::Begin("add menu")){
             
-            if(ImGui::Button("add render info")){
-                CreateRGNode(new FullRenderInfo("unnamed", *Global::logicalDevice, Global::stcManager->renderQueue, AttachmentSetInfo{}));
-                    wantsClose = true;
-            }
+            //if(ImGui::Button("add render info")){
+                //CreateRGNode(new FullRenderInfo("unnamed", *Global::logicalDevice, Global::stcManager->renderQueue, AttachmentSetInfo{}));
+                //wantsClose = true;
+            //}
 
             //ImGui::Text("%d", ImGui::IsWindowHovered());
             /*
@@ -137,11 +145,27 @@ namespace Node{
     }
 
     void RenderGraph_NG::RenderNode(ImNodes::EWE::Node& node) {
+
+        ImNodes::ImNodeData& imnodes_node = context->Nodes.Pool[ImNodes::GetCurrentContext()->CurrentNodeIdx];
+        if(&node == headNode){
+
+            ImNodes::BeginNodeTitleBar();
+            ImGui::Text("head node - {%.2f:%.2f} : {%.2f:%.2f}", imnodes_node.Rect.Min.x, imnodes_node.Rect.Min.y, imnodes_node.Rect.Max.x, imnodes_node.Rect.Max.y);
+            ImGui::Text("head");
+            ImNodes::EndNodeTitleBar();
+            ImGui::Text("filler");
+
+            return;
+        }
+
+
         auto* payload = reinterpret_cast<NodePayload*>(node.payload);
 
         ImNodes::BeginNodeTitleBar();
-        if(payload->type == NodeType::Task){
-            ImGui::TextUnformatted(reinterpret_cast<SubmissionTask*>(payload->payload)->name.c_str());
+
+        if(payload->type == NodeType::TaskGroup){
+
+            ImGui::Text("task group");// - {%.2f:%.2f} : {%.2f:%.2f}", imnodes_node.Rect.Min.x, imnodes_node.Rect.Min.y, imnodes_node.Rect.Max.x, imnodes_node.Rect.Max.y);
         }
         else{
             ImGui::Text("render info");
@@ -150,66 +174,83 @@ namespace Node{
 
         uint16_t current_pin = 0;
 
-        if(payload->type == NodeType::Task){
-            auto& subTask = *reinterpret_cast<SubmissionTask*>(payload->payload);
-            ImguiExtension::Imgui(subTask);
-            for(auto& task : subTask.tasks) {
-                for(auto& pkg : task->pkgRecord->packages){
-                    switch(pkg->type){
-                        case Command::InstructionPackage::Type::Raster:{
-                            auto& rasterPkg = *reinterpret_cast<RasterPackage*>(pkg);
-                            for(auto& obj : rasterPkg.objectPackages){
-                                std::size_t instruction_offset = 0;
-                                for(auto const& inst : obj->paramPool.instructions){
-                                    if(inst == Inst::Push){
-                                        for(auto& shader : obj->payload.shaders){
-                                            if(shader != nullptr){
-                                                for(std::size_t buf_index = 0; buf_index < shader->meta.buffer_written_to.Size(); buf_index++){
+        if(payload->type == NodeType::TaskGroup){
+            auto* sub_group = reinterpret_cast<std::vector<SubmissionTask*>*>(payload->payload);
+            if(ImGui::BeginTable("sub group", 2, ImGuiTableFlags_Borders)){
+                ImGui::TableSetupColumn("name");
+                ImGui::TableSetupColumn("render info");
 
-                                                    uint32_t color = (0xFF << 24) + 0xFF;
-                                                    
-                                                    if(shader->meta.buffer_written_to[buf_index]){
-                                                        ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
-                                                    }
+                ImGui::TableHeadersRow();
 
-                                                    ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
-                                                    ImGui::Text(shader->pushRange.buffers[buf_index].name.c_str());
-                                                    current_pin++;
-                                                    ImNodes::EndPinAttribute();
+                for(auto* subTask : *sub_group){
+                    ImGui::TableNextColumn();
+                    if(ImGui::TreeNode(subTask->name.string().c_str())){
+                        ImguiExtension::Imgui(*subTask);
+                        for(auto& task : subTask->tasks) {
+                            for(auto& pkg : task->pkgRecord->packages){
+                                switch(pkg->type){
+                                    case Command::InstructionPackage::Type::Raster:{
+                                        auto& rasterPkg = *reinterpret_cast<RasterPackage*>(pkg);
+                                        for(auto& obj : rasterPkg.objectPackages){
+                                            std::size_t instruction_offset = 0;
+                                            for(auto const& inst : obj->paramPool.instructions){
+                                                if(inst == Inst::Push){
+                                                    for(auto& shader : obj->payload.shaders){
+                                                        if(shader != nullptr){
+                                                            for(std::size_t buf_index = 0; buf_index < shader->meta.buffer_written_to.Size(); buf_index++){
 
-                                                    if(shader->meta.buffer_written_to[buf_index]){
-                                                        ImNodes::PopColorStyle();
+                                                                uint32_t color = (0xFF << 24) + 0xFF;
+                                                                
+                                                                if(shader->meta.buffer_written_to[buf_index]){
+                                                                    ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
+                                                                }
+
+                                                                //ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
+                                                                //ImGui::Text(shader->pushRange.buffers[buf_index].name.c_str());
+                                                                //current_pin++;
+                                                                //ImNodes::EndPinAttribute();
+
+                                                                if(shader->meta.buffer_written_to[buf_index]){
+                                                                    ImNodes::PopColorStyle();
+                                                                }
+                                                            }
+                                                            for(std::size_t img_index = 0; img_index < shader->meta.texture_written_to.Size(); img_index++){
+
+                                                                uint32_t color = (0xFF << 24) + 0xFF;
+                                                                
+                                                                if(shader->meta.texture_written_to[img_index]){
+                                                                    ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
+                                                                }
+
+                                                                //ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
+                                                                //ImGui::Text(shader->pushRange.textures[img_index].name.c_str());
+                                                                //current_pin++;
+                                                                //ImNodes::EndPinAttribute();
+
+                                                                if(shader->meta.texture_written_to[img_index]){
+                                                                    ImNodes::PopColorStyle();
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
-                                                for(std::size_t img_index = 0; img_index < shader->meta.texture_written_to.Size(); img_index++){
-
-                                                    uint32_t color = (0xFF << 24) + 0xFF;
-                                                    
-                                                    if(shader->meta.texture_written_to[img_index]){
-                                                        ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
-                                                    }
-
-                                                    ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
-                                                    ImGui::Text(shader->pushRange.textures[img_index].name.c_str());
-                                                    current_pin++;
-                                                    ImNodes::EndPinAttribute();
-
-                                                    if(shader->meta.texture_written_to[img_index]){
-                                                        ImNodes::PopColorStyle();
-                                                    }
-                                                }
+                                                instruction_offset += Inst::GetParamSize(inst);
                                             }
                                         }
+                                        break;
                                     }
-                                    instruction_offset += Inst::GetParamSize(inst);
+                                    default: break;
                                 }
                             }
-                            break;
                         }
-                        default: break;
+                        ImGui::TreePop();
                     }
+                    ImGui::TableNextColumn();
+                    ImGui::Text("sub task's render info");
                 }
+                ImGui::EndTable();
             }
+            //ImGui::Text("filler");   
         }
         else{
             ImguiExtension::Imgui(reinterpret_cast<FullRenderInfo*>(payload->payload)->full);
@@ -218,13 +259,12 @@ namespace Node{
 
     void RenderGraph_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
-        auto* payload = reinterpret_cast<VkSemaphoreSubmitInfo*>(pin.payload);
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index, pin.local_pos)) {
-            ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "%zu", payload->stageMask);
+        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
+            //ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "%zu", payload->stageMask);
         }
         else {
-            ImGui::Text("%zu", static_cast<uint64_t>(payload->stageMask));
+            //ImGui::Text("%zu", static_cast<uint64_t>(payload->stageMask));
         }
         ImNodes::EndPinAttribute();
     }

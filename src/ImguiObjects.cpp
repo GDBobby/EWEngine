@@ -166,13 +166,7 @@ namespace EWE{
             ImGui::Text("dyn state - %s", Reflect::Enum::ToString(dynS).data());
         }
 
-        const std::string tree_ri_name = "render info [" + obj.renderInfo->name.string() + ']';
-        bool renderInfo_open = ImGui::TreeNode(tree_ri_name.c_str());
-        DragDropPtr::Target(obj.renderInfo);
-        if(renderInfo_open){
-            ImguiExtension::Imgui(*obj.renderInfo);
-            ImGui::TreePop();
-        }
+        ImguiExtension::Imgui(obj.attachment_info);
 
 
 
@@ -657,21 +651,32 @@ namespace EWE{
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
 
+        ImGui::Checkbox("relative size", &obj.relative_size);
         ImGui::DragInt("width", reinterpret_cast<int*>(&obj.width), 0, 16536);
         ImGui::DragInt("height", reinterpret_cast<int*>(&obj.height), 0, 16536);
         //come back to this
         //Reflect::Enum::Imgui_Combo_Selectable("rendering flags", obj.renderingFlags);
 
-        int col_count = obj.colors.Size();
-        if (ImGui::DragInt("color count", &col_count, 0, 16)) {
-            Logger::Print<Logger::Warning>("need to support this\n");
-            //obj.colors.ClearAndResize(col_count);
-        }
-        for (auto& col : obj.colors) {
+        ImGui::Text("color attachmnent count : %zu", obj.colors.Size());
+        for (std::size_t i = 0; i < obj.colors.Size(); i++) {
             //imgui_enum("format", col.format, 0, 256);
-            ImguiExtension::Imgui(col);
+            const std::string tree_color_name = "color[" + std::to_string(i) + ']';
+            if(ImGui::TreeNode(tree_color_name.c_str())){
+                ImguiExtension::Imgui(obj.colors[i]);
+                ImGui::TreePop();
+            }
         }
-        ImguiExtension::Imgui(obj.depth);
+
+        if(obj.using_depth){
+            if(ImGui::TreeNode("depth")){
+                ImGui::Checkbox("using depth", &obj.using_depth);
+                ImguiExtension::Imgui(obj.depth);
+                ImGui::TreePop();
+            }
+        }
+        else{   
+            ImGui::Checkbox("using depth", &obj.using_depth);
+        }
 
         ImGui::PopID();
     }
@@ -683,27 +688,28 @@ namespace EWE{
 
             for_each_frame{
                 uint8_t color_index = 0;
-                for(auto& img : obj.color_images){
+                for(auto& view : obj.color_views){
                     ImGui::TableNextColumn();
-                    if(img[frame] != nullptr){
-                        ImGui::Button(img[frame]->name.c_str());
+                    if(view[frame] != nullptr){
+                        auto& img = view[frame]->image;
+                        ImGui::Button(img.name.c_str());
                     }
                     else{
                         ImGui::Button("null color");
                     }
-                    DragDropPtr::Target(img[frame]);
+                    DragDropPtr::Target(view[frame]);
                     color_index++;
                 }
             }
             for_each_frame{
-                    ImGui::TableNextColumn();
-                if(obj.depth_image[frame] != nullptr){
-                    ImGui::Button(obj.depth_image[frame]->name.string().c_str());
+                ImGui::TableNextColumn();
+                if(obj.depth_views[frame] != nullptr){
+                    ImGui::Button(obj.depth_views[frame]->image.name.string().c_str());
                 }
                 else{
                     ImGui::Button("null depth");
                 }
-                DragDropPtr::Target(obj.depth_image[frame]);
+                DragDropPtr::Target(obj.depth_views[frame]);
             }
 
             ImGui::EndTable();

@@ -1,3 +1,4 @@
+#include "EWEngine/Assets/Base.h"
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/PackageRecords.h"
 #include "EWEngine/Global.h"
@@ -5,11 +6,21 @@
 
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/PackageRecord.h"
+
+#include "EWEngine/Assets/RenderAttachments.h"
+
 #include <fstream>
+
+#include "EightWinds/Data/StreamHelper.h"
 
 namespace EWE{
 namespace Asset{
     static constexpr uint64_t current_file_version = 0;
+
+    template<typename S>
+    void WriteRenderInfo(FullRenderInfo& ri, std::ofstream& outFile){
+        WriteAttachmentInfoToFile(outFile, ri.full.setInfo);
+    }
 
     template<>
     bool WriteAssetToFile(SubmissionTask const& task, std::filesystem::path const& root_directory, std::filesystem::path const& path){
@@ -42,6 +53,13 @@ namespace Asset{
         auto queue_type = Global::stcManager->GetQueueType(*task.queue);
         outFile.write(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
 
+        const AssetHash ri_hash = GetHash(*task.renderInfo);
+        outFile.write(reinterpret_cast<char const*>(&ri_hash), sizeof(AssetHash));
+
+        auto ri_path = path;
+        ri_path.replace_extension(".eri");
+        WriteAssetToFile(*task.renderInfo, root_directory, ri_path);
+
         temp_buffer = task.tasks.size();
         outFile.write(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
 
@@ -70,6 +88,10 @@ namespace Asset{
         Queue::Type queue_type;
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
         ret.queue = &Global::stcManager->GetQueue(queue_type);
+
+        AssetHash ri_hash;
+        inFile.read(reinterpret_cast<char*>(&ri_hash), sizeof(AssetHash));
+        ret.renderInfo = Global::assetManager->attachment_info.Get(ri_hash);
 
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
         ret.tasks.reserve(temp_buffer);

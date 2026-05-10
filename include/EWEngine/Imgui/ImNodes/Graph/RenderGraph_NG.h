@@ -1,15 +1,19 @@
 #pragma once
 
 #include "EightWinds/RenderGraph/RenderGraph.h"
+#include "EWEngine/Tools/ImguiFileExplorer.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
-#include "imgui.h"
 
 namespace EWE{
     namespace Node{
         struct RenderGraph_NG : public ImNodes::EWE::Editor {
+
+            ExplorerContext explorer;
+            ImNodes::EWE::Node* headNode;
+
             enum NodeType{
-                Task,
+                TaskGroup,
                 RenderInfo,
             };
             struct NodePayload{
@@ -17,12 +21,11 @@ namespace EWE{
                 void* payload;
             };
 
-            RenderGraph* renderGraph;
-
             [[nodiscard]] explicit RenderGraph_NG();
-            [[nodiscard]] explicit RenderGraph_NG(RenderGraph& _renderGraph);
-
+            
             void RenderEditorTitle() override final;
+            
+            ImNodes::EWE::Node* CreateHeadNode();
             ImNodes::EWE::Node& CreateRGNode(SubmissionTask* subTask);
             ImNodes::EWE::Node& CreateRGNode(FullRenderInfo* renderInfo);
 

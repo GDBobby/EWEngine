@@ -1521,42 +1521,25 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
     {
         // node base
         GImNodes->CanvasDrawList->AddRectFilled(
-            node.Rect.Min, node.Rect.Max, node_background, node.LayoutStyle.CornerRounding);
+            node.Rect.Min, node.Rect.Max, 
+            node_background, 
+            node.LayoutStyle.CornerRounding
+        );
 
         // title bar:
         if (node.TitleBarContentRect.GetHeight() > 0.f)
         {
             ImRect title_bar_rect = GetNodeTitleRect(node);
 
-#if IMGUI_VERSION_NUM < 18200
             GImNodes->CanvasDrawList->AddRectFilled(
-                title_bar_rect.Min,
-                title_bar_rect.Max,
-                titlebar_background,
-                node.LayoutStyle.CornerRounding,
-                ImDrawCornerFlags_Top);
-#else
-            GImNodes->CanvasDrawList->AddRectFilled(
-                title_bar_rect.Min,
-                title_bar_rect.Max,
+                title_bar_rect.Min, title_bar_rect.Max,
                 titlebar_background,
                 node.LayoutStyle.CornerRounding,
                 ImDrawFlags_RoundCornersTop);
-
-#endif
         }
 
         if ((GImNodes->Style.Flags & ImNodesStyleFlags_NodeOutline) != 0)
         {
-#if IMGUI_VERSION_NUM < 18200
-            GImNodes->CanvasDrawList->AddRect(
-                node.Rect.Min,
-                node.Rect.Max,
-                node.ColorStyle.Outline,
-                node.LayoutStyle.CornerRounding,
-                ImDrawCornerFlags_All,
-                node.LayoutStyle.BorderThickness);
-#else
             GImNodes->CanvasDrawList->AddRect(
                 node.Rect.Min,
                 node.Rect.Max,
@@ -1564,7 +1547,6 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
                 node.LayoutStyle.CornerRounding,
                 ImDrawFlags_RoundCornersAll,
                 node.LayoutStyle.BorderThickness);
-#endif
         }
     }
 
@@ -1617,11 +1599,7 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
         link_color = link.ColorStyle.Hovered;
     }
 
-#if IMGUI_VERSION_NUM < 18000
-    GImNodes->CanvasDrawList->AddBezierCurve(
-#else
     GImNodes->CanvasDrawList->AddBezierCubic(
-#endif
         cubic_bezier.P0,
         cubic_bezier.P1,
         cubic_bezier.P2,
@@ -2232,7 +2210,8 @@ void BeginNodeEditor()
             ImVec2(0.f, 0.f),
             true,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoScrollWithMouse);
+                ImGuiWindowFlags_NoScrollWithMouse
+        );
         GImNodes->CanvasOriginScreenSpace = ImGui::GetCursorScreenPos();
 
         // NOTE: we have to fetch the canvas draw list *after* we call
@@ -2471,7 +2450,9 @@ void BeginNode(const int node_id)
     DrawListActivateCurrentNodeForeground();
 
     ImGui::PushID(node.Id);
+    ImGui::PushClipRect(node.Rect.Min, node.Rect.Max, true);
     ImGui::BeginGroup();
+
 }
 
 void EndNode()
@@ -2481,12 +2462,13 @@ void EndNode()
 
     ImNodesEditorContext& editor = EditorContextGet();
 
-    // The node's rectangle depends on the ImGui UI group size.
+    // The node's rectangle depends on the ImGui UI group size
     ImGui::EndGroup();
+    ImGui::PopClipRect();
     ImGui::PopID();
-
     ImNodeData& node = editor.Nodes.Pool[GImNodes->CurrentNodeIdx];
     node.Rect = GetItemRect();
+
     node.Rect.Expand(node.LayoutStyle.Padding);
 
     editor.GridContentBounds.Add(node.Origin);

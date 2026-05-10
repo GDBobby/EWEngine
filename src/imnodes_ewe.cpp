@@ -6,7 +6,9 @@
 #include "EightWinds/Window.h"
 
 #include "LAB/Support/Generic.h"
+#include "imgui_internal.h"
 
+#include "EWEngine/Imgui/ImNodes/imnodes_internal.h"
 
 namespace ImNodes{
     namespace EWE{
@@ -152,14 +154,33 @@ namespace ImNodes{
                 }
             }
 
+
             int current_index = INT32_MIN + 1;
             for (auto& node : nodes) {
                 if(node.id != current_index){
                     ImNodes::SetNodeScreenSpacePos(current_index, node.pos);
                 }
                 node.id = current_index++;
-                ImGui::SetNextWindowSizeConstraints(ImVec2(50, -1), ImVec2(800, -1));
+
+                auto* parent_window = ImGui::GetCurrentWindow();
+                auto const parent_max_storage = parent_window->WorkRect.Max;
+
                 ImNodes::BeginNode(node.id);
+                ImNodes::ImNodeData& imnodes_node = context->Nodes.Pool[ImNodes::GetCurrentContext()->CurrentNodeIdx];
+
+                switch(context->ClickInteraction.Type){
+                    case ImNodesClickInteractionType_Panning:{
+                        imnodes_node.Rect.Max.x += ImGui::GetIO().MouseDelta.x;
+                        break;
+                    }
+                    case ImNodesClickInteractionType_Node:{
+                        imnodes_node.Rect.Max.x += ImGui::GetIO().MouseDelta.x;
+                        break;
+                    }
+                }
+        
+                parent_window->WorkRect.Max = imnodes_node.Rect.Max - imnodes_node.LayoutStyle.Padding;
+                parent_window->ContentRegionRect.Max = imnodes_node.Rect.Max - imnodes_node.LayoutStyle.Padding;
 
                 if(node.snapToGrid){
                     ImNodes::SnapNodeToGrid(node.id);
@@ -172,7 +193,8 @@ namespace ImNodes{
                     RenderPin(node, i);
                 }
                 
-                
+                parent_window->ContentRegionRect.Max = parent_max_storage;
+                parent_window->WorkRect.Max = parent_max_storage;
                 ImNodes::EndNode();
             }
 

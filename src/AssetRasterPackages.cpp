@@ -13,6 +13,34 @@ namespace Asset{
 
     static constexpr uint64_t current_file_version = 0;
 
+    void WriteAttachmentSetInfo(AttachmentSetInfo const& info, std::ofstream& outFile){
+#define cast_write(data) outFile.write(reinterpret_cast<char const*>(&data), sizeof(data))
+        cast_write(info.relative_size);
+        cast_write(info.width);
+        cast_write(info.height);
+        cast_write(info.renderingFlags);
+        uint8_t color_size = info.colors.Size();
+        cast_write(color_size);
+        outFile.write(reinterpret_cast<char const*>(info.colors.Data()), sizeof(AttachmentInfo) * color_size);
+        cast_write(info.using_depth);
+        cast_write(info.depth);
+#undef cast_write
+    }
+
+    void ReadAttachmentSetInfo(AttachmentSetInfo& info, std::ifstream& inFile){
+#define cast_read(data) inFile.read(reinterpret_cast<char*>(&data), sizeof(data))
+        cast_read(info.relative_size);
+        cast_read(info.width);
+        cast_read(info.height);
+        cast_read(info.renderingFlags);
+        uint8_t color_size;
+        cast_read(color_size);
+        info.colors.ClearAndResize(color_size);
+        inFile.read(reinterpret_cast<char*>(info.colors.Data()), sizeof(AttachmentInfo) * color_size);
+        cast_read(info.using_depth);
+        cast_read(info.depth);
+#undef cast_read
+    }
 
 	void WriteConfig(TaskRasterConfig const& config, std::ofstream& outFile){
 #define cast_write(data) reinterpret_cast<char const*>(&data), sizeof(data)
@@ -25,8 +53,7 @@ namespace Asset{
 		outFile.write(cast_write(config.alphaToOneEnable));
 		outFile.write(cast_write(config.depthStencilInfo));
 
-        AssetHash fri_hash = GetHash(*config.renderInfo);
-        outFile.write(cast_write(fri_hash));
+        WriteAttachmentSetInfo(config.attachment_info, outFile);
 
 		uint8_t size_buffer = config.dynamicState.size();
 		outFile.write(cast_write(size_buffer));
@@ -48,9 +75,7 @@ namespace Asset{
 		cast_read(config.alphaToOneEnable);
 		cast_read(config.depthStencilInfo);
 
-        AssetHash fri_hash;
-        cast_read(fri_hash);
-        config.renderInfo = Global::assetManager->attachment_info.Get(fri_hash);
+        ReadAttachmentSetInfo(config.attachment_info, inFile);
 		
 		uint8_t size_buffer = static_cast<uint8_t>(config.dynamicState.size());
 		cast_read(size_buffer);

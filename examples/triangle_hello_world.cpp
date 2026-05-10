@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
     renderInfo.Init(EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
     {
         passConfig.SetDefaults();
-        passConfig.renderInfo = &renderInfo;
+        passConfig.attachment_info = renderInfo.full.setInfo;
         passConfig.depthStencilInfo.depthTestEnable = VK_TRUE;
         passConfig.depthStencilInfo.depthWriteEnable = VK_TRUE;
         passConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -273,6 +273,7 @@ int main(int argc, char* argv[]) {
     swapSetInfo.height = 1.f;
     swapSetInfo.renderingFlags = 0;
     swapSetInfo.colors.ClearAndResize(1);
+    swapSetInfo.using_depth = false;
     EWE::TaskRasterConfig merge_task_config{passConfig};
     {
         auto& color_back = swapSetInfo.colors[0];
@@ -289,8 +290,9 @@ int main(int argc, char* argv[]) {
         merge_task_config.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     }
     auto& merge_render_info = EWE::Global::assetManager->attachment_info.ConstructInto("swap info", logicalDevice, *renderQueue, swapSetInfo);
+    
     merge_render_info.Init(EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
-    merge_task_config.renderInfo = &merge_render_info;
+    merge_task_config.attachment_info = merge_render_info.full.setInfo;
 
     EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
     EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
@@ -337,6 +339,7 @@ int main(int argc, char* argv[]) {
     mergeRaster.objectPackages.push_back(&merge_object_pkg);
 
     mergeRaster.Compile();
+    mergeRaster.Undefer(merge_render_info);
 
     EWE::Command::PackageRecord merge_pkgRecord{};
     merge_pkgRecord.queue = renderQueue;
@@ -359,7 +362,10 @@ int main(int argc, char* argv[]) {
 
     EWE::GPUTask* imguiTask = new EWE::GPUTask("imgui", logicalDevice, *renderQueue);
 
-    uint32_t imgui_att_index = imguiTask->resources.AddResource(imguiHandler.renderInfo.full.color_images[0], initial_acquire_usage);
+    EWE::PerFlight<EWE::Image*> temp_att_res{};
+    temp_att_res[0] = &imguiHandler.renderInfo.full.color_views[0][0]->image;
+    temp_att_res[1] = &imguiHandler.renderInfo.full.color_views[0][1]->image;
+    uint32_t imgui_att_index = imguiTask->resources.AddResource(temp_att_res, initial_acquire_usage);
     renderGraph.syncManager.AddAcquisition_Image(*imguiTask, imgui_att_index);
 
     EWE::UsageData<EWE::Image> merge_acquire_usage{
@@ -367,8 +373,7 @@ int main(int argc, char* argv[]) {
         .accessMask = VK_ACCESS_2_SHADER_READ_BIT,
         .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     };
-
-    uint32_t acquire_imgui_output_index = mergeTask->resources.AddResource(imguiHandler.renderInfo.full.color_images[0], merge_acquire_usage);
+    uint32_t acquire_imgui_output_index = mergeTask->resources.AddResource(temp_att_res, merge_acquire_usage);
     renderGraph.syncManager.AddTransition_Image(*imguiTask, imgui_att_index, *mergeTask, acquire_imgui_output_index);
 
     renderGraph.presentBridge.SetSubresource(

@@ -13,6 +13,10 @@ namespace Node{
         ExplorerContext explorer;
         ImNodes::EWE::Node* headNode;
 
+        Queue::Type current_queue_type = Queue::Type::COUNT;
+
+        AttachmentInfo generate_attachment_info{};
+
         struct NodePayload{
             enum Type{
                 Task,
@@ -23,13 +27,14 @@ namespace Node{
             bool current_open_status = false;
         };
 
+        FullRenderInfo* renderInfo;
+
         [[nodiscard]] explicit SubmissionTask_NG();
 
         void RenderNodes() override final;
 
         ImNodes::EWE::Node* CreateHeadNode();
         ImNodes::EWE::Node& CreateRGNode(GPUTask* task);
-        ImNodes::EWE::Node& CreateRGNode(FullRenderInfo* renderInfo);
 
         //void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
         void OpenAddMenu() override final;

@@ -20,6 +20,7 @@ namespace Node{
         headNode{CreateHeadNode()}
     {
         explorer.acceptable_extensions = Global::assetManager->subTask.files.acceptable_extensions;
+        renderInfo = nullptr;
     }
 
     ImNodes::EWE::Node* SubmissionTask_NG::CreateHeadNode(){
@@ -37,35 +38,42 @@ namespace Node{
             Command::PackageRecord* pkg;
             if(DragDropPtr::Target(pkg)) {
                 Logger::Print("dropping in sub task\n");
-                GPUTask* task = new GPUTask(pkg->name, *Global::logicalDevice, *pkg, false);
-                auto& added_node = CreateRGNode(task);
-                auto temp_mouse_pos =ImGui::GetIO().MousePos;
-                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
-            }
-        }
-        {
-            FullRenderInfo* renderInfo;
-            if(DragDropPtr::Target(renderInfo)){
-                Logger::Print("dropping in sub task\n");
-                auto& added_node = CreateRGNode(renderInfo);
-                auto temp_mouse_pos =ImGui::GetIO().MousePos;
-                added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
-            }
-        }
 
+
+                auto const task_queue_type = Global::stcManager->GetQueueType(*pkg->queue);
+                bool adding_allowed = false;
+                if(current_queue_type != task_queue_type){
+                    if(headNode->pins[0].payload == nullptr){
+                        current_queue_type = task_queue_type;
+                        adding_allowed = true;
+                        if(current_queue_type == Queue::Type::Graphics){
+
+                            AttachmentSetInfo defaultInfo{};
+
+                            renderInfo = new FullRenderInfo(
+                                "default render info", 
+                                *Global::logicalDevice, *pkg->queue,
+                                defaultInfo
+                            );
+                        }
+                        else if (renderInfo != nullptr){
+                            delete renderInfo;
+                        }
+                    }
+                }
+                else{
+                    adding_allowed = true;
+                }
+
+                if(adding_allowed){
+                    GPUTask* task = new GPUTask(pkg->name, *Global::logicalDevice, *pkg, false);
+                    auto& added_node = CreateRGNode(task);
+                    auto temp_mouse_pos =ImGui::GetIO().MousePos;
+                    added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
+                }
+            }
+        }
     }   
-
-    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(FullRenderInfo* renderInfo) {
-        auto& added_node = AddNode();
-        added_node.payload = new NodePayload{
-            .type = NodePayload::Type::RenderInfo,
-            .payload = renderInfo
-        };
-        added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.8f}, .payload{nullptr}});
-
-        return added_node;
-    }
 
     ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(GPUTask* task) {
         auto& added_node = AddNode();
@@ -86,6 +94,7 @@ namespace Node{
             }
         }
         */
+        
 
         return added_node;
     }
@@ -144,6 +153,117 @@ namespace Node{
             ImGui::SetNextItemWidth(150.f);
             if(ImGui::InputText("name", explorer.file_save_buf, explorer.path_length, ImGuiInputTextFlags_CallbackCharFilter, ImguiInputFilters::File)){
                 //name = name_buffer;
+            }
+            
+            if(current_queue_type == Queue::Type::Graphics){
+                EWE_ASSERT(renderInfo != nullptr);
+                ImguiExtension::Imgui(renderInfo->full.setInfo);
+                ImGui::Separator();
+
+                if(ImGui::BeginTable("images", 2, ImGuiTableFlags_Borders)){
+                    ImGui::TableSetupColumn("frame[0]");
+                    ImGui::TableSetupColumn("frame[1]");
+                    ImGui::TableHeadersRow();
+                    
+                    auto image_color_cell = [&](ImageView*& view, uint8_t index){
+                        ImGui::TableNextColumn();
+                        if(view == nullptr){
+                            const std::string color_name = "color[" + std::to_string(index) + " : null";
+                            ImGui::Button(color_name.c_str());
+                        }
+                        else{
+                            const std::string color_name = "color["+ std::to_string(index) + "] : " + view->image.name.string();
+                            ImGui::Button(color_name.c_str());
+                        }
+                        ImageView* dd_ptr = nullptr;
+                        if(DragDropPtr::Target(dd_ptr)){
+                            view = dd_ptr;
+                        }
+                    };
+                    auto img_depth_cell = [&](ImageView*& view, uint8_t frame){
+                        ImGui::TableNextColumn();
+                        if(view == nullptr){
+                            const std::string img_name = "depth : null##" + std::to_string(frame);
+                            ImGui::Button(img_name.c_str());
+                        }
+                        else{
+                            const std::string img_name = "depth : " + view->image.name.string();
+                            ImGui::Button(img_name.c_str());
+                        }
+                        ImageView* dd_ptr = nullptr;
+                        if(DragDropPtr::Target(dd_ptr)){
+                            view = dd_ptr;
+                        }
+                    };
+
+                    for(std::size_t i = 0; i < renderInfo->full.color_views.Size(); i++){
+                        image_color_cell(renderInfo->full.color_views[i][0], i);
+                        image_color_cell(renderInfo->full.color_views[i][1], i);
+                    }
+                    if(renderInfo->full.setInfo.using_depth){
+                        img_depth_cell(renderInfo->full.depth_views[0], 0);
+                        img_depth_cell(renderInfo->full.depth_views[1], 1);
+                    }
+                    ImGui::EndTable();
+                }
+                if(ImGui::TreeNode("attachment set info for generation")){
+                    
+                    ImguiExtension::Imgui(generate_attachment_info);
+
+                    if(ImGui::Button("generate color")){
+
+                        std::vector<AttachmentInfo> old_info{renderInfo->full.setInfo.colors.Size()};
+                        memcpy(old_info.data(), renderInfo->full.setInfo.colors.Data(), old_info.size() * sizeof(AttachmentInfo));
+                        renderInfo->full.setInfo.colors.ClearAndResize(old_info.size() + 1);
+                        memcpy(renderInfo->full.setInfo.colors.Data(), old_info.data(), old_info.size() * sizeof(AttachmentInfo));
+                        renderInfo->full.setInfo.colors[old_info.size()] = generate_attachment_info;
+
+                        PerFlight<Image*> img_con_ptr{};
+                        img_con_ptr[0] = Global::assetManager->image.data_arena.GetCell();
+                        img_con_ptr[1] = Global::assetManager->image.data_arena.GetCell();
+                        PerFlight<ImageView*> view_con_ptr{};
+                        view_con_ptr[0] = Global::assetManager->imageView.data_arena.GetCell();
+                        view_con_ptr[1] = Global::assetManager->imageView.data_arena.GetCell();
+
+                        std::vector<PerFlight<ImageView*>> old_views{renderInfo->full.color_views.Size()};
+                        for(std::size_t i = 0; i < old_views.size(); i++){
+                            for_each_frame{
+                                old_views[i][frame] = renderInfo->full.color_views[i][frame];
+                            }
+                        }
+                        renderInfo->full.color_views.ClearAndResize(old_views.size() + 1);
+                        renderInfo->full.GenerateImage(
+                            img_con_ptr, view_con_ptr,
+                            Global::window->screenDimensions.width, Global::window->screenDimensions.height, 
+                            old_views.size()
+                        );
+                        for(std::size_t i = 0; i < old_views.size(); i++){
+                            for_each_frame{
+                                renderInfo->full.color_views[i][frame] = old_views[i][frame];
+                            }
+                        }
+                    }
+                    if(ImGui::Button("generate depth")){
+
+                        renderInfo->full.setInfo.using_depth = true;
+                        renderInfo->full.setInfo.depth = generate_attachment_info;
+                        PerFlight<Image*> img_con_ptr{};
+                        img_con_ptr[0] = Global::assetManager->image.data_arena.GetCell();
+                        img_con_ptr[1] = Global::assetManager->image.data_arena.GetCell();
+                        PerFlight<ImageView*> view_con_ptr{};
+                        view_con_ptr[0] = Global::assetManager->imageView.data_arena.GetCell();
+                        view_con_ptr[1] = Global::assetManager->imageView.data_arena.GetCell();
+                        renderInfo->full.GenerateImage(
+                            img_con_ptr, view_con_ptr,
+                            Global::window->screenDimensions.width, Global::window->screenDimensions.height, 
+                            -1
+                        );
+                    }
+
+                    ImGui::TreePop();
+                }
+
+
             }
             return;
         }
@@ -265,6 +385,7 @@ namespace Node{
                 for(auto& task : collected_tasks){
                     written.tasks.push_back(task);
                 }
+                written.renderInfo = renderInfo;
 
                 Asset::WriteAssetToFile(written, Global::assetManager->subTask.files.root_directory, temp_path);
 
@@ -325,38 +446,12 @@ namespace Node{
             return;
         }
 
-        std::vector<AssetHash> render_info_hashes{};
-        auto handle_ri = [this, &render_info_hashes](FullRenderInfo& ri, ImNodes::EWE::Node& node){
-            AssetHash const hash = Asset::GetHash(ri);
-            ImNodes::EWE::Node* ri_node = nullptr;
-
-            auto found = std::find(render_info_hashes.begin(), render_info_hashes.end(), hash);
-            if(found == render_info_hashes.end()){
-                render_info_hashes.push_back(hash);
-                ri_node = &CreateRGNode(&ri);
+        if(subTask.queue != nullptr){
+            current_queue_type = Global::stcManager->GetQueueType(*subTask.queue);
+            if(current_queue_type == Queue::Type::Graphics){
+                renderInfo = subTask.renderInfo;
             }
-            else{
-                //ri_node = find the ri node
-                auto found_ri = std::find_if(nodes.begin(), nodes.end(), [&](auto const& _node) {
-                    return reinterpret_cast<NodePayload*>(_node.payload)->payload == &ri; 
-                });
-                EWE_ASSERT(found_ri != nodes.end());
-                ri_node = &(*found_ri);
-            }
-            links.push_back(
-                ImNodes::EWE::NodePair{
-                    .start{
-                        .node = ri_node,
-                        .offset = 0,
-                    },
-                    .end{
-                        .node = &node,
-                        .offset = 2
-                    }
-                }
-            );
-            
-        };
+        }
 
         {
             auto& node = CreateRGNode(subTask.tasks.front());
@@ -377,7 +472,7 @@ namespace Node{
             for(auto* pkg : subTask.tasks.front()->pkgRecord->packages){
                 if(pkg->type == Command::InstructionPackage::Type::Raster){
                     auto* raster_pkg = reinterpret_cast<RasterPackage*>(pkg);
-                    handle_ri(raster_pkg->renderInfo, node);
+                    //handle images
                 }
             }
         }
