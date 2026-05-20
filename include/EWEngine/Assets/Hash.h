@@ -34,6 +34,7 @@ namespace Command{
     FWD_DEC_HASH(Shader);
     FWD_DEC_HASH(RenderGraph);
     FWD_DEC_HASH(FullRenderInfo);
+    FWD_DEC_HASH(GPUTask);
 
     #undef FWD_DEC_HASH
 } //namespace EWE

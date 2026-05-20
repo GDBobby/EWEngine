@@ -81,12 +81,12 @@ namespace EWE{
 					.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 					.clearValue{.color{0.f, 0.f, 0.f, 0.f}}
 				}
-			}
+			},
+			Global::window->screenDimensions.width, Global::window->screenDimensions.height
 		},
 		image_count{imageCount},
 		sample_count{sampleCount}
     {
-		renderInfo.Init(Global::window->screenDimensions.width, Global::window->screenDimensions.height);
 
 		IMGUI_CHECKVERSION();
 		

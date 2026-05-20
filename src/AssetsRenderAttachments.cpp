@@ -5,6 +5,7 @@
 namespace EWE{
 namespace Asset{
 
+	static constexpr std::size_t file_version = 0;
 
     void GenerateViewPair(FullRenderInfo& fri, int8_t index){
 		PerFlight<Image*> image_con;
@@ -59,80 +60,37 @@ namespace Asset{
 			Logger::Print("failed to open file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
 			return false;
 		}
+		
+		outFile.write(reinterpret_cast<const char*>(&file_version), sizeof(std::size_t));
 
 		WriteAttachmentInfoToFile(outFile, fri.full.setInfo);
 
-		uint8_t grt_size = fri.full.generated_reference_tracker.size();
+		uint8_t grt_size = fri.full.meta.Size();
 		outFile.write(reinterpret_cast<const char*>(&grt_size), sizeof(uint8_t));
-		for(auto& gr : fri.full.generated_reference_tracker){
+		for(auto& gr : fri.full.meta){
 			AssetHash owner_hash = INVALID_HASH;
-			if(gr.source_owner != nullptr){
-				owner_hash = GetHash(*gr.source_owner);
+			if(gr.src_owner != nullptr){
+				owner_hash = GetHash(*gr.src_owner);
 			}
 			outFile.write(reinterpret_cast<const char*>(&owner_hash), sizeof(AssetHash));
 			outFile.write(reinterpret_cast<const char*>(&gr.src_index), sizeof(int8_t));
-			outFile.write(reinterpret_cast<const char*>(&gr.dst_index), sizeof(int8_t));
 		}
 
+		/*
 		PerFlight<AssetHash> view_hash;
 		for(auto& view : fri.full.color_views){
 			for_each_frame{
 				view_hash[frame] = GetHash(*view[frame]);
 			}
 			outFile.write(reinterpret_cast<const char*>(view_hash.buffer), sizeof(AssetHash) * 2);
-			/*
-			for_each_frame{
-				bool generated = view_mgr.association_container.find(view_hash) == view_mgr.association_container.end();
-				outFile.write(reinterpret_cast<const char*>(&generated), sizeof(bool)); //1 byte???
-				if(generated){
-					static std::size_t att_offset = offsetof(FullRenderInfo, full);
-					std::size_t original_addr = reinterpret_cast<std::size_t>(view[frame]->image.name.string().data()) - att_offset;
-					FullRenderInfo* original_owner = reinterpret_cast<FullRenderInfo*>(original_addr);
-					const AssetHash owner_hash = Global::assetManager->attachment_info.Get(*original_owner);
-					outFile.write(reinterpret_cast<const char*>(&owner_hash), sizeof(AssetHash));
-
-					int8_t index = reintepret_cast<int8_t>(view[frame]->image.name[sizeof(std::size_t)]);
-					outFile.write(reinterpret_cast<const char*>(&index), sizeof(int8_t));
-					//can I guarantee its always on the same frame? probably
-					uint8_t image_frame = reintepret_cast<uint8_t>(view[frame]->image.name[sizeof(std::size_t) + 1]);
-					outFile.write(reinterpret_cast<const char*>(&image_frame), sizeof(uint8_t));
-				}
-				else{
-					outFile.write(reinterpret_cast<const char*>(&view_hash), sizeof(AssetHash));
-				}
-			}
-			*/
 		}
 		if(fri.full.setInfo.using_depth){
 			for_each_frame{
 				view_hash[frame] = GetHash(*fri.full.depth_views[frame]);
 			}
 			outFile.write(reinterpret_cast<const char*>(view_hash.buffer), sizeof(AssetHash) * 2);
-			/*
-			for_each_frame{ 
-				bool generated = view_mgr.association_container.find(view_hash) == view_mgr.association_container.end();
-				outFile.write(reinterpret_cast<const char*>(&generated), sizeof(bool)); //1 byte???
-				if(generated){
-					auto& view = fri.full.depth_views;
-					static std::size_t att_offset = offsetof(FullRenderInfo, full);
-					std::size_t original_addr = reintepret_cast<std::size_t>(view[frame]->image.name.data()) - att_offset;
-					FullRenderInfo* original_owner = reinterpret_cast<FullRenderInfo*>(original_addr);
-					const AssetHash owner_hash = Global::assetManager->attachment_info.Get(*original_owner);
-					outFile.write(reinterpret_cast<const char*>(&owner_hash), sizeof(AssetHash));
-
-					int8_t index = reintepret_cast<int8_t>(view[frame]->image.name[sizeof(std::size_t)]);
-					outFile.write(reinterpret_cast<const char*>(&index), sizeof(int8_t));
-					//can I guarantee its always on the same frame? probably
-					uint8_t image_frame = reintepret_cast<uint8_t>(view[frame]->image.name[sizeof(std::size_t) + 1]);
-					outFile.write(reinterpret_cast<const char*>(&image_frame), sizeof(uint8_t));
-				}
-				else{
-					outFile.write(reinterpret_cast<const char*>(&view_hash), sizeof(AssetHash));
-				}
-			}
-			*/
-			
 		}
+		*/
 
 		outFile.close();
 		return true;
@@ -155,40 +113,38 @@ namespace Asset{
 			}
 		}
 
+		std::size_t version_buffer;
+		inFile.read(reinterpret_cast<char*>(&version_buffer), sizeof(std::size_t));
+		if(version_buffer != file_version){
+			Logger::Print<Logger::Warning>("invalid verison, not handled yet\n");
+			return false;
+		}
+
 		AttachmentSetInfo setInfo;
 		ReadAttachmentInfoFromFile(inFile, setInfo);
 
-		auto& fri = *std::construct_at(ptr_to_raw_mem, path.string(), *Global::logicalDevice, Global::stcManager->renderQueue, setInfo);
-
 		uint8_t grt_size;
 		inFile.read(reinterpret_cast<char*>(&grt_size), sizeof(uint8_t));
-		fri.full.generated_reference_tracker.resize(grt_size);
-		for(auto& gr : fri.full.generated_reference_tracker){
+
+		std::vector<AttachmentMeta> attachmentMeta{};
+
+		attachmentMeta.resize(grt_size);
+		for(auto& gr : attachmentMeta){
 			AssetHash owner_hash;
 			inFile.read(reinterpret_cast<char*>(&owner_hash), sizeof(AssetHash));
 			inFile.read(reinterpret_cast<char*>(&gr.src_index), sizeof(int8_t));
-			inFile.read(reinterpret_cast<char*>(&gr.dst_index), sizeof(int8_t));
-		
-			auto GetDst = [&]() -> PerFlight<ImageView*>&{
-				if(gr.dst_index >= 0){ return fri.full.color_views[gr.dst_index]; }
-				else { return fri.full.depth_views; }
-			};
-			if(owner_hash != INVALID_HASH) {
-				auto GetSrc = [&]() -> PerFlight<ImageView*>{
-					if(gr.src_index >= 0){ return gr.source_owner->full.color_views[gr.src_index]; }
-					else { return gr.source_owner->full.depth_views;}
-				};
-				gr.source_owner = Global::assetManager->attachment_info.Get(owner_hash);
-				EWE_ASSERT(gr.source_owner != nullptr);
-
-				GetDst() = GetSrc();
-			}
-			else{
-				//generate the image now? or let it stay nullptr?
-				GenerateViewPair(fri, gr.dst_index);
-			}
 		}
 
+		auto& fri = *std::construct_at(ptr_to_raw_mem, 
+			path.string(), 
+			*Global::logicalDevice, 
+			Global::stcManager->renderQueue, 
+			setInfo, 
+			attachmentMeta,
+			Global::window->screenDimensions.width, Global::window->screenDimensions.height
+		);
+
+		/*
 		PerFlight<AssetHash> view_hash;
 		for(std::size_t i = 0; i < setInfo.colors.Size(); i++) {
 			inFile.read(reinterpret_cast<char*>(view_hash.buffer), sizeof(AssetHash) * 2);
@@ -206,32 +162,6 @@ namespace Asset{
 				}
 				//get the hash
 			}
-			/*
-			for_each_frame{
-				bool generated;
-				inFile.read(reinterpret_cast<char*>(&generated), sizeof(bool));
-				if(generated){
-					AssetHash owner_hash;
-					inFile.read(reinterpret_cast<char*>(&owner_hash), sizeof(AssetHash));
-					int8_t index;
-					uint8_t image_frame;
-					inFile.read(reinterpret_cast<char*>(index), sizeof(int8_t));
-					inFile.read(reinterpret_cast<char8>(image_frame), sizeof(uint8_t));
-
-					auto* owner_fri = Global::assetManager->attachment_info.Get(owner_hash);
-					if(index >= 0){
-						fri.full.color_views[i][frame] = owner_fri->full.color_views[index][image_frame];
-					}
-					else{
-						fri.full.color_views[i][frame] = owner_fri->full.depth_views[image_frame];
-					}
-				}
-				else{
-					inFile.read(reinterpret_cast<char*>(&view_hash), sizeof(AssetHash));
-					fri.full.color_views[i][frame] = Global::assetManager->imageView.Get(view_hash);
-				}
-			}
-			*/
 		}
 		if(fri.full.setInfo.using_depth){
 			inFile.read(reinterpret_cast<char*>(view_hash.buffer), sizeof(AssetHash) * 2);
@@ -247,6 +177,7 @@ namespace Asset{
 				}
 			}
 		}
+		*/
 
 		inFile.close();
 		return true;

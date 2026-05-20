@@ -38,7 +38,6 @@ namespace Node{
             auto temp_mouse_pos =ImGui::GetIO().MousePos;
             added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
         }
-
     }
 
     ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(FullRenderInfo* renderInfo){
@@ -158,13 +157,10 @@ namespace Node{
             return;
         }
 
-
         auto* payload = reinterpret_cast<NodePayload*>(node.payload);
 
         ImNodes::BeginNodeTitleBar();
-
         if(payload->type == NodeType::TaskGroup){
-
             ImGui::Text("task group");// - {%.2f:%.2f} : {%.2f:%.2f}", imnodes_node.Rect.Min.x, imnodes_node.Rect.Min.y, imnodes_node.Rect.Max.x, imnodes_node.Rect.Max.y);
         }
         else{
@@ -176,7 +172,7 @@ namespace Node{
 
         if(payload->type == NodeType::TaskGroup){
             auto* sub_group = reinterpret_cast<std::vector<SubmissionTask*>*>(payload->payload);
-            if(ImGui::BeginTable("sub group", 2, ImGuiTableFlags_Borders)){
+            if(ImGui::BeginTable("sub group", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)){
                 ImGui::TableSetupColumn("name");
                 ImGui::TableSetupColumn("render info");
 
@@ -195,6 +191,7 @@ namespace Node{
                                             std::size_t instruction_offset = 0;
                                             for(auto const& inst : obj->paramPool.instructions){
                                                 if(inst == Inst::Push){
+                                                
                                                     for(auto& shader : obj->payload.shaders){
                                                         if(shader != nullptr){
                                                             for(std::size_t buf_index = 0; buf_index < shader->meta.buffer_written_to.Size(); buf_index++){
@@ -248,6 +245,13 @@ namespace Node{
                     ImGui::TableNextColumn();
                     ImGui::Text("sub task's render info");
                 }
+                ImGui::TableNextColumn();
+                ImGui::Button("task drag point");
+                SubmissionTask* dragTask;
+                if(DragDropPtr::Target(dragTask)){
+                    sub_group->push_back(dragTask);
+                }
+                ImGui::TableNextColumn();
                 ImGui::EndTable();
             }
             //ImGui::Text("filler");   

@@ -21,7 +21,6 @@ namespace Node{
     {
         explorer.acceptable_extensions = Global::assetManager->rasterTask.files.acceptable_extensions;
         task_config.SetDefaults();
-        task_config.attachment_info = Global::assetManager->default_render_info.full.setInfo;
     }
 
     ImNodes::EWE::Node* RasterPackage_NG::CreateHeadNode(){

@@ -6,21 +6,95 @@
 #include "EWEngine/Global.h"
 //#include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
 #include "EightWinds/Backend/RenderInfo.h"
+
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/PackageRecord.h"
+#include "EightWinds/Command/Record.h"
+
+#include "LAB/Support/Generic.h"
+
 #include "imgui.h"
 #include "imgui_internal.h"
 #include <filesystem>
 
 namespace EWE{
 namespace Node{
+
+    GPUTask* GetTask(Command::PackageRecord* record){ 
+        EWE_ASSERT(record != nullptr);
+        std::filesystem::path task_path = record->name;
+        task_path.replace_extension("egt");
+        GPUTask* ret = Global::assetManager->gpuTask.Get(task_path);
+        if(ret == nullptr) {
+            return &Global::assetManager->gpuTask.ConstructInto(record->name, *Global::logicalDevice, *record, false);
+        }
+        return ret;
+    }
+
+    void SubmissionTask_NG::ReadjustAttachmentPins(ImNodes::EWE::Node& node, std::size_t raster_index, bool value){
+        TaskMetaPayload& taskPayload = *reinterpret_cast<TaskMetaPayload*>(node.payload);
+        GPUTask& task = *taskPayload.task;
+        RasterPackage* raster_pkg = nullptr;
+        {
+            std::size_t current_raster_index = 0;
+            for(auto* pkg : task.pkgRecord->packages){
+                if(pkg->type == Command::InstructionPackage::Type::Raster){
+                    if(current_raster_index == raster_index){
+                        raster_pkg = static_cast<RasterPackage*>(pkg);
+                        break;
+                    }
+                    current_raster_index++;
+                }
+            }
+            EWE_ASSERT(raster_pkg != nullptr);
+        }
+        if(value){ //the pins are being added
+            AttachmentSetInfo const& att_set_info = raster_pkg->task_config.attachment_info;
+            float current_y = 0.2f;
+            for(std::size_t i = 0; i < att_set_info.colors.Size(); i++) {
+                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.1f, current_y}, .payload{nullptr}});
+                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.9f, current_y}, .payload{nullptr}});
+                current_y += 0.1f;
+            }
+            if(att_set_info.using_depth){
+                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.1f, current_y}, .payload{nullptr}});
+                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.9f, current_y}, .payload{nullptr}});
+            }
+        }
+        else{
+            node.pins.resize(2); //erases everything past 2?
+        }
+    }
+
+    SubmissionTask_NG::TaskMetaPayload::TaskMetaPayload(Command::PackageRecord* record)
+    : task{GetTask(record)},
+        meta_helper{*task}   
+    {
+        for(auto* pkg : task->pkgRecord->packages){
+            if(pkg->type == Command::InstructionPackage::Type::Raster){
+                raster_open.push_back(false);
+            }
+        }
+    }
+
+    SubmissionTask_NG::TaskMetaPayload::TaskMetaPayload(GPUTask* _task)
+    : task{_task},
+        meta_helper{*task}   
+    {
+        for(auto* pkg : task->pkgRecord->packages){
+            if(pkg->type == Command::InstructionPackage::Type::Raster){
+                raster_open.push_back(false);
+            }
+        }
+    }
+
+
     SubmissionTask_NG::SubmissionTask_NG()
     : ImNodes::EWE::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
         explorer.acceptable_extensions = Global::assetManager->subTask.files.acceptable_extensions;
-        renderInfo = nullptr;
     }
 
     ImNodes::EWE::Node* SubmissionTask_NG::CreateHeadNode(){
@@ -46,19 +120,6 @@ namespace Node{
                     if(headNode->pins[0].payload == nullptr){
                         current_queue_type = task_queue_type;
                         adding_allowed = true;
-                        if(current_queue_type == Queue::Type::Graphics){
-
-                            AttachmentSetInfo defaultInfo{};
-
-                            renderInfo = new FullRenderInfo(
-                                "default render info", 
-                                *Global::logicalDevice, *pkg->queue,
-                                defaultInfo
-                            );
-                        }
-                        else if (renderInfo != nullptr){
-                            delete renderInfo;
-                        }
                     }
                 }
                 else{
@@ -66,8 +127,7 @@ namespace Node{
                 }
 
                 if(adding_allowed){
-                    GPUTask* task = new GPUTask(pkg->name, *Global::logicalDevice, *pkg, false);
-                    auto& added_node = CreateRGNode(task);
+                    auto& added_node = CreateRGNode(pkg);
                     auto temp_mouse_pos =ImGui::GetIO().MousePos;
                     added_node.pos = temp_mouse_pos;// - ImNodes::EditorContextGetPanning();// - (temp_min - window_pos);
                 }
@@ -75,26 +135,21 @@ namespace Node{
         }
     }   
 
-    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(GPUTask* task) {
+    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(Command::PackageRecord* record) {
         auto& added_node = AddNode();
-        added_node.payload = new NodePayload{
-            .type = NodePayload::Type::Task,
-            .payload = task
-        };
+        added_node.payload = new TaskMetaPayload{record};
         added_node.pos = menu_pos;
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.9f, 0.1f}, .payload{nullptr}});
-        /*
-        for(auto* pkg : task->pkgRecord->packages){
-            if(pkg->type == Command::InstructionPackage::Raster){
-                added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
-                break;
-            }
-        }
-        */
-        
+        return added_node;
+    }
+    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(GPUTask* task) {
+        auto& added_node = AddNode();
+        added_node.payload = new TaskMetaPayload{task};
+        added_node.pos = menu_pos;
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
@@ -145,6 +200,8 @@ namespace Node{
 
     void SubmissionTask_NG::RenderNode(ImNodes::EWE::Node& node){
         ImNodes::BeginNodeTitleBar();
+
+        //if node == &headNode
         if(node.payload == nullptr){
             EWE_ASSERT(headNode == &node);
             //ImGui::InputText("name of package record");
@@ -155,24 +212,24 @@ namespace Node{
                 //name = name_buffer;
             }
             
+            /*
             if(current_queue_type == Queue::Type::Graphics){
-                EWE_ASSERT(renderInfo != nullptr);
-                ImguiExtension::Imgui(renderInfo->full.setInfo);
-                ImGui::Separator();
+
+                this is going t be useful for editing renderinfo
 
                 if(ImGui::BeginTable("images", 2, ImGuiTableFlags_Borders)){
                     ImGui::TableSetupColumn("frame[0]");
                     ImGui::TableSetupColumn("frame[1]");
                     ImGui::TableHeadersRow();
                     
-                    auto image_color_cell = [&](ImageView*& view, uint8_t index){
+                    auto image_color_cell = [&](ImageView*& view, uint8_t index, uint8_t frame){
                         ImGui::TableNextColumn();
                         if(view == nullptr){
-                            const std::string color_name = "color[" + std::to_string(index) + " : null";
+                            const std::string color_name = "color[" + std::to_string(index) + "][" + std::to_string(frame) + "] : null";
                             ImGui::Button(color_name.c_str());
                         }
                         else{
-                            const std::string color_name = "color["+ std::to_string(index) + "] : " + view->image.name.string();
+                            const std::string color_name = "color["+ std::to_string(index) + "][" + std::to_string(frame) + "] : " + view->image.name.string();
                             ImGui::Button(color_name.c_str());
                         }
                         ImageView* dd_ptr = nullptr;
@@ -197,8 +254,8 @@ namespace Node{
                     };
 
                     for(std::size_t i = 0; i < renderInfo->full.color_views.Size(); i++){
-                        image_color_cell(renderInfo->full.color_views[i][0], i);
-                        image_color_cell(renderInfo->full.color_views[i][1], i);
+                        image_color_cell(renderInfo->full.color_views[i][0], i, 0);
+                        image_color_cell(renderInfo->full.color_views[i][1], i, 1);
                     }
                     if(renderInfo->full.setInfo.using_depth){
                         img_depth_cell(renderInfo->full.depth_views[0], 0);
@@ -242,22 +299,39 @@ namespace Node{
                                 renderInfo->full.color_views[i][frame] = old_views[i][frame];
                             }
                         }
-                    }
-                    if(ImGui::Button("generate depth")){
 
-                        renderInfo->full.setInfo.using_depth = true;
-                        renderInfo->full.setInfo.depth = generate_attachment_info;
-                        PerFlight<Image*> img_con_ptr{};
-                        img_con_ptr[0] = Global::assetManager->image.data_arena.GetCell();
-                        img_con_ptr[1] = Global::assetManager->image.data_arena.GetCell();
-                        PerFlight<ImageView*> view_con_ptr{};
-                        view_con_ptr[0] = Global::assetManager->imageView.data_arena.GetCell();
-                        view_con_ptr[1] = Global::assetManager->imageView.data_arena.GetCell();
-                        renderInfo->full.GenerateImage(
-                            img_con_ptr, view_con_ptr,
-                            Global::window->screenDimensions.width, Global::window->screenDimensions.height, 
-                            -1
+                        renderInfo->full.generated_reference_tracker.push_back(
+                            RenderAttachments::ViewTracker{
+                                .source_owner = nullptr,
+                                .dst_index = static_cast<int8_t>(old_views.size())
+                            }
                         );
+                    }
+                    if(renderInfo->full.depth_views[0] == nullptr){
+                        if(ImGui::Button("generate depth")){
+
+                            renderInfo->full.setInfo.using_depth = true;
+                            renderInfo->full.setInfo.depth = generate_attachment_info;
+                            PerFlight<Image*> img_con_ptr{};
+                            img_con_ptr[0] = Global::assetManager->image.data_arena.GetCell();
+                            img_con_ptr[1] = Global::assetManager->image.data_arena.GetCell();
+                            PerFlight<ImageView*> view_con_ptr{};
+                            view_con_ptr[0] = Global::assetManager->imageView.data_arena.GetCell();
+                            view_con_ptr[1] = Global::assetManager->imageView.data_arena.GetCell();
+                            renderInfo->full.GenerateImage(
+                                img_con_ptr, view_con_ptr,
+                                Global::window->screenDimensions.width, Global::window->screenDimensions.height, 
+                                -1
+                            );
+
+                            //ensure its not double generated? potentially an issue
+                            renderInfo->full.generated_reference_tracker.push_back(
+                                RenderAttachments::ViewTracker{
+                                    .source_owner = nullptr,
+                                    .dst_index = -1
+                                }
+                            );
+                        }
                     }
 
                     ImGui::TreePop();
@@ -265,66 +339,113 @@ namespace Node{
 
 
             }
+            */
             return;
         }
-        auto* node_payload = reinterpret_cast<NodePayload*>(node.payload);
-        if(node_payload->type == NodePayload::Type::Task){
-            auto* task_payload = reinterpret_cast<GPUTask*>(node_payload->payload);
-            ImGui::Text(task_payload->name.c_str());
+        auto* task_payload = reinterpret_cast<TaskMetaPayload*>(node.payload);
+        auto* task = task_payload->task;
+        ImGui::Text(task->name.c_str());
 
-            ImNodes::EndNodeTitleBar();
-            if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
-                //open the graph for the package
-                OpenGraph(Type::PackageRecord, task_payload->pkgRecord);
-            }
+        ImNodes::EndNodeTitleBar();
+        if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
+            //open the graph for the package
+            OpenGraph(Type::PackageRecord, task->pkgRecord);
+        }
 
-            if(task_payload->pkgRecord->packages.size() == 0){
-                ImGui::Text("no packages");
-            }
-
-            for(auto& pkg : task_payload->pkgRecord->packages){
-                if(pkg->type == Command::InstructionPackage::Raster){
-                    const bool tree_open = ImGui::TreeNode(pkg->name.c_str());
-                    if(tree_open != node_payload->current_open_status){
-
-                    }
-                    if(tree_open){
-                        auto* raster_pkg = reinterpret_cast<RasterPackage*>(pkg);
-
-                        for(auto& obj_pkg : raster_pkg->objectPackages){
-                            if(ImGui::TreeNode(obj_pkg->name.string().c_str())){
-                                for(auto& inst : obj_pkg->paramPool.instructions){
-                                    ImGui::BulletText(Reflect::Enum::ToString(inst).data());
-                                }
-                                ImGui::TreePop();
-                            }
-                        }
-                        ImGui::TreePop();
-                    }
-                    /*
-                    for(auto& obj_pkg : pkg->packages){
-                        for(std::size_t inst_index = 0; inst_index < obj_pkg->paramPool.instructions.size(); inst_index++){
-                            if(obj_pkg->paramPool.instructions[inst_index] == Inst::Push){
-                                auto const param_index = obj_pkg->paramPool.GetParamOffset(inst_index);
-                                auto* push_data = obj_pkg->paramPool.param_data[param_index].CastTo<Inst::Push>();
-                            }
-                        }
-                    }
-                    */
+        if(task->pkgRecord->packages.size() == 0){
+            ImGui::Text("no packages");
+            return;
+        }
+        std::size_t raster_index = 0;
+        for(auto* pkg : task->pkgRecord->packages){
+            if(pkg->type == Command::InstructionPackage::Type::Raster){
+                auto& raster_pkg = *reinterpret_cast<RasterPackage*>(pkg);
+                const std::string raster_tree_name = std::string("raster pkg attachments : ") + raster_pkg.name.string();
+                const bool raster_tree_open = ImGui::TreeNode(raster_tree_name.c_str());
+                if(task_payload->raster_open[raster_index] != raster_tree_open){
+                    ReadjustAttachmentPins(node, raster_index, raster_tree_open);
+                    task_payload->raster_open[raster_index] = raster_tree_open;
                 }
-                else{
-                    ImGui::BulletText("%s : %s", Reflect::Enum::ToString(pkg->type).data(), pkg->name.c_str());
+                if(raster_tree_open){
+                    for(std::size_t a_i = 0; a_i < raster_pkg.attachmentMeta.Size(); a_i++){
+                        if(a_i < raster_pkg.task_config.attachment_info.colors.Size()){
+                            ImGui::Text("color[%zu]", a_i);
+                        }
+                        else{
+                            ImGui::Text("depth");
+                        }
+                        
+                    }
+
+                    ImGui::TreePop();
                 }
+                raster_index++;
             }
         }
-        else{
-            auto* ri_payload = reinterpret_cast<FullRenderInfo*>(node_payload->payload);
-            ImGui::Text(ri_payload->name.string().c_str());
 
-            ImNodes::EndNodeTitleBar();
+        GPUTaskMeta_Helper& meta_helper = task_payload->meta_helper;
+        for(auto& push : meta_helper.pushes){
+            auto& record = *push.pointer_chain.base;
+            EWE_ASSERT(push.pointer_chain.base == task_payload->task->pkgRecord);
+            auto& raster_pkg = *reinterpret_cast<RasterPackage*>(record.packages[push.pointer_chain.package_iter]);
+            auto& obj_pkg = *raster_pkg.objectPackages[push.pointer_chain.pointer_into[0]];
+            /* 
+            does this even matter? what am i going to use it for here?
+            
+            then the last pointer is the instruciton index? or param offset?
+            PerFlight<ParamPack<Inst::Push>*> push_packs;
 
-            ImguiExtension::Imgui(*ri_payload);
-            ImGui::Text("filler");
+            //memory is std::byte*
+            push_packs[0] = reinterpret_cast<ParamPack<Inst::Push>*>(obj_pkg.paramPool.params[0].memory + push.pointer_chain.pointer_into[1]);
+            push_packs[1] = reinterpret_cast<ParamPack<Inst::Push>*>(obj_pkg.paramPool.params[1].memory + push.pointer_chain.pointer_into[1]);
+            */
+            ImGui::Text("toggle to expose for barrier");
+            const std::string tree_obj_name = "object : " + obj_pkg.name.string();
+            if(ImGui::TreeNode(tree_obj_name.c_str())){
+                if(ImGui::Button("open object")){
+                    OpenGraph(Type::ObjectPackage, &obj_pkg);
+                }
+                const std::string raster_button_name = std::string("raster pkg") + raster_pkg.name.string();
+                if(ImGui::Button(raster_button_name.c_str())){
+                    OpenGraph(Type::RasterPackage, &raster_pkg);
+                }
+                const std::string record_button_name = std::string("record") + record.name.string();
+                if(ImGui::Button(record_button_name.c_str())){
+                    OpenGraph(Type::PackageRecord, &record);
+                }
+
+                if(ImGui::BeginTable("push expose", 2, ImGuiTableFlags_Borders)){
+                    ImGui::TableSetupColumn("buffer");
+                    ImGui::TableSetupColumn("texture");
+                    ImGui::TableHeadersRow();
+
+                    const std::size_t max_iter = lab::Max(push.buffer_active.size(), push.texture_active.size());
+
+                    bool buffer_bool;
+                    for(std::size_t resource_iter = 0; resource_iter < max_iter; resource_iter++){
+                        ImGui::TableNextColumn();
+                        if(resource_iter < push.buffer_active.size()){
+                            buffer_bool = push.buffer_active[resource_iter];
+                            if(ImGui::Checkbox(push.push.buffers[resource_iter].name.c_str(), &buffer_bool)){
+                                push.buffer_active[resource_iter] = buffer_bool;
+                                meta_helper.ToggleResource(push.buffer_active[resource_iter], push.pointer_chain, resource_iter);
+                            }
+                        }
+                        
+                        ImGui::TableNextColumn();
+                        if(resource_iter < push.texture_active.size()){
+                            buffer_bool = push.texture_active[resource_iter];
+                            if(ImGui::Checkbox(push.push.textures[resource_iter].name.c_str(), &buffer_bool)){
+                                push.texture_active[resource_iter] = buffer_bool;
+                                meta_helper.ToggleResource(push.texture_active[resource_iter], push.pointer_chain, resource_iter + push.buffer_active.size());
+                            }
+                        }
+                    }
+
+                    ImGui::EndTable();
+                }
+                ImGui::TreePop();
+            }
         }
     }
 
@@ -341,10 +462,7 @@ namespace Node{
         std::vector<GPUTask*> ret{};
         
         auto GetTaskFromNode = [](ImNodes::EWE::Node* node) -> GPUTask*{
-            NodePayload* node_payload = reinterpret_cast<NodePayload*>(node->payload);
-            EWE_ASSERT(node_payload->type == NodePayload::Type::Task);
-            GPUTask* task = reinterpret_cast<GPUTask*>(node_payload->payload);
-            return task;
+            return reinterpret_cast<TaskMetaPayload*>(node->payload)->task;
         };
 
         ImNodes::EWE::Node* current_node = nullptr;
@@ -385,7 +503,6 @@ namespace Node{
                 for(auto& task : collected_tasks){
                     written.tasks.push_back(task);
                 }
-                written.renderInfo = renderInfo;
 
                 Asset::WriteAssetToFile(written, Global::assetManager->subTask.files.root_directory, temp_path);
 
@@ -440,6 +557,14 @@ namespace Node{
         nodes.Clear();
         CreateHeadNode();
         links.clear();
+        name = subTask.name;
+        const std::string string_name = subTask.name.string();
+        if(string_name.size() > ExplorerContext::path_length) {
+            memcpy(explorer.file_save_buf, string_name.substr(0, ExplorerContext::path_length - 1).c_str(), ExplorerContext::path_length);
+        }
+        else{
+            memcpy(explorer.file_save_buf, string_name.c_str(), string_name.size() + 1);
+        }
         ImNodes::EWE::Node* last_node = headNode;
 
         if(subTask.tasks.size() == 0){
@@ -448,9 +573,6 @@ namespace Node{
 
         if(subTask.queue != nullptr){
             current_queue_type = Global::stcManager->GetQueueType(*subTask.queue);
-            if(current_queue_type == Queue::Type::Graphics){
-                renderInfo = subTask.renderInfo;
-            }
         }
 
         {

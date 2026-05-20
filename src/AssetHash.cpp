@@ -41,6 +41,7 @@ namespace Asset{
     HASH_IMPL(Shader)
     HASH_IMPL(RenderGraph)
     template<> AssetHash Asset::GetHash(FullRenderInfo const& type) { return Asset::CrossPlatformPathHash(type.full.name); }
+    HASH_IMPL(GPUTask);
 
 #undef HASH_IMPL
 } //namespace EWE

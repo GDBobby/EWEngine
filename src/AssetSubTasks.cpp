@@ -15,7 +15,7 @@
 
 namespace EWE{
 namespace Asset{
-    static constexpr uint64_t current_file_version = 0;
+    static constexpr uint64_t current_file_version = 1;
 
     template<typename S>
     void WriteRenderInfo(FullRenderInfo& ri, std::ofstream& outFile){
@@ -31,13 +31,12 @@ namespace Asset{
         }
 
         auto const combined_path = root_directory / path;
+        Logger::Print("writing sub task : %s\n", combined_path.string().c_str());
         std::ofstream outFile{combined_path, std::ios::binary};
         if(!outFile.is_open()){
-            if(std::filesystem::exists(combined_path)){
-                Logger::Print<Logger::Warning>("failed ot open existing file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
-            }
-            else{
-                Logger::Print<Logger::Warning>("attempting to open non-existing file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
+            outFile.open(combined_path, std::ios::binary);
+            if(!outFile.is_open()){
+                Logger::Print<Logger::Warning>("failed to open sub task asset file twice : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
             }
             return false;
         }
@@ -53,13 +52,6 @@ namespace Asset{
         auto queue_type = Global::stcManager->GetQueueType(*task.queue);
         outFile.write(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
 
-        const AssetHash ri_hash = GetHash(*task.renderInfo);
-        outFile.write(reinterpret_cast<char const*>(&ri_hash), sizeof(AssetHash));
-
-        auto ri_path = path;
-        ri_path.replace_extension(".eri");
-        WriteAssetToFile(*task.renderInfo, root_directory, ri_path);
-
         temp_buffer = task.tasks.size();
         outFile.write(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
 
@@ -70,15 +62,21 @@ namespace Asset{
         }
 
         outFile.close();
+        Logger::Print("written size : %zu\n", std::filesystem::file_size(combined_path));
         return true;
     }
 
     template<>
     bool LoadAssetFromFile(SubmissionTask* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& name){
-        std::ifstream inFile{root_directory / name, std::ios::binary};
+        const std::filesystem::path combined_path = root_directory / name;
+        std::ifstream inFile{combined_path, std::ios::binary};
         if(!inFile.is_open()){
+            if(!std::filesystem::exists(combined_path)){
+                Logger::Print("attempting to open a file that doesnt' exist : %s\n", combined_path.string().c_str());
+            }
             return false;
         }
+        Logger::Print("file size : %zu\n", std::filesystem::file_size(combined_path));
 
         std::size_t temp_buffer;
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
@@ -88,10 +86,6 @@ namespace Asset{
         Queue::Type queue_type;
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
         ret.queue = &Global::stcManager->GetQueue(queue_type);
-
-        AssetHash ri_hash;
-        inFile.read(reinterpret_cast<char*>(&ri_hash), sizeof(AssetHash));
-        ret.renderInfo = Global::assetManager->attachment_info.Get(ri_hash);
 
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
         ret.tasks.reserve(temp_buffer);

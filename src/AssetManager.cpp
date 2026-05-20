@@ -44,7 +44,7 @@ namespace Asset{
     )
     : root_directory{asset_directory},
         buffer{asset_directory},
-        //gpuTask{asset_directory},
+        gpuTask{asset_directory},
         image{asset_directory},
         imageView{asset_directory, image},
         instPkg{asset_directory},
@@ -56,8 +56,7 @@ namespace Asset{
         subTask{asset_directory},
         shader{asset_directory / "shaders/"},
         renderGraph{asset_directory},
-        attachment_info{asset_directory},
-        default_render_info{attachment_info.ConstructInto("default", _logicalDevice, renderQueue, GetDefaultSetInfo())}
+        attachment_info{asset_directory}
     {
     }
 

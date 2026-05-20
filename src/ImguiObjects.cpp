@@ -142,8 +142,6 @@ namespace EWE{
             ImguiExtension::Imgui(obj.task_config);
             ImGui::TreePop();
         }
-        ImGui::Checkbox("owns attachment lifetime", &obj.ownsAttachmentLifetime);
-        
         ImGui::PopID();
     }
     

@@ -1,14 +1,13 @@
 //example
-#include "EightWinds/Backend/RenderInfo.h"
-#include "EightWinds/Command/InstructionPackage.h"
-#include "EightWinds/Command/InstructionPointer.h"
+#include "EWEngine/Assets/Hash.h"
 #include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/Preprocessor.h"
-#include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/VulkanHeader.h"
 
 #include "EWEngine/EWEngine.h"
 #include "EWEngine/Global.h"
+#include "EightWinds/Image.h"
+#include "EightWinds/ImageView.h"
 
 #include "EightWinds/Pipeline/Layout.h"
 #include "EightWinds/Shader.h"
@@ -17,22 +16,22 @@
 #include "EightWinds/Command/Record.h"
 #include "EightWinds/Command/Execute.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
-
-#include "EightWinds/Image.h"
-#include "EightWinds/ImageView.h"
-
-#include "EWEngine/Tools/ImguiHandler.h"
-
 #include "EightWinds/RenderGraph/RasterPackage.h"
+#include "EightWinds/Backend/RenderInfo.h"
+#include "EightWinds/Command/InstructionPackage.h"
+#include "EightWinds/Command/InstructionPointer.h"
 
+#include "EWEngine/Default/Models.h"
+
+#include "EightWinds/Reflect/Enum.h"
+#include "EWEngine/Tools/ImguiHandler.h"
 #include "EWEngine/Reflect/ImguiReflection.h"
-
 #include "EWEngine/Imgui/ImNodes/NodeGraph_Manager.h"
-
-#include "EWEngine/InputData.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "imgui.h"
 #include "imgui_internal.h"
+
+#include "EWEngine/InputData.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -191,8 +190,7 @@ int main(int argc, char* argv[]) {
     EWE::PipeLayout triangle_layout(logicalDevice, triangle_shaders);
     //passconfig should be using a full rendergraph setup
     EWE::TaskRasterConfig passConfig;
-    EWE::FullRenderInfo& renderInfo = EWE::Global::assetManager->attachment_info.ConstructInto("main ri", logicalDevice, *renderQueue, mainSetInfo);
-    renderInfo.Init(EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
+    EWE::FullRenderInfo& renderInfo = EWE::Global::assetManager->attachment_info.ConstructInto("main ri", logicalDevice, *renderQueue, mainSetInfo, EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
     {
         passConfig.SetDefaults();
         passConfig.attachment_info = renderInfo.full.setInfo;
@@ -213,6 +211,9 @@ int main(int argc, char* argv[]) {
 
     EWE::RenderGraph& renderGraph = engine.renderGraph;
     EWE::GPUTask* renderTask = new EWE::GPUTask("main render", logicalDevice, *renderQueue);
+
+    //just generates the buffer so I can pull from it later
+    EWE::Basic::Quad(false);
 
     VmaAllocationCreateInfo vmaAllocInfo{
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -238,8 +239,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto& vertex_buffer = EWE::Global::assetManager->buffer.Get("triangle vertex buffer", sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    auto& vertex_buffer = EWE::Global::assetManager->buffer.ConstructInto(EWE::Asset::CrossPlatformPathHash("triangle vertex buffer"), sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
     {
+        vertex_buffer.name = "triangle vertex buffer";
         TriangleVertex* mappedData = reinterpret_cast<TriangleVertex*>(vertex_buffer.Map());
 
         mappedData[0].pos[0] = -0.5f;
@@ -289,15 +291,11 @@ int main(int argc, char* argv[]) {
         merge_task_config.depthStencilInfo.depthWriteEnable = VK_FALSE;
         merge_task_config.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     }
-    auto& merge_render_info = EWE::Global::assetManager->attachment_info.ConstructInto("swap info", logicalDevice, *renderQueue, swapSetInfo);
-    
-    merge_render_info.Init(EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
+    auto& merge_render_info = EWE::Global::assetManager->attachment_info.ConstructInto("swap info", logicalDevice, *renderQueue, swapSetInfo, EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
     merge_task_config.attachment_info = merge_render_info.full.setInfo;
 
     EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
     EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
-    EWE::Shader* merge_shaders[] = {merge_vert, merge_frag};
-    EWE::PipeLayout merge_layout(logicalDevice, merge_shaders);
 
     EWE::RasterPackage mergeRaster{ "merge raster", logicalDevice, *renderQueue, merge_task_config };
 
@@ -309,10 +307,6 @@ int main(int argc, char* argv[]) {
     mergeRaster.viewport.minDepth = 0.0f;
     mergeRaster.viewport.maxDepth = 1.f;
 
-    EWE::ObjectRasterData merge_rasterObj{
-        .layout = &merge_layout,
-        .config = triangle_rasterObj.config
-    };
     EWE::Command::ObjectPackage merge_object_pkg{};
     merge_object_pkg.payload.config = triangle_rasterObj.config;
     merge_object_pkg.payload.shaders[EWE::ShaderStage::Vertex] = merge_vert;

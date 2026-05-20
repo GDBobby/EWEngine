@@ -1,6 +1,7 @@
 #include "EWEngine/Assets/Buffers.h"
 
 #include "EWEngine/Assets/Hash.h"
+#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/Objects.h"
 
@@ -11,8 +12,8 @@ namespace Asset{
     }
 
     void Manager<Buffer>::Destroy(AssetHash hash){
-        Buffer& buf = Get(hash);
-        data_arena.DestroyElement(&buf);
+        Buffer* buf = Get(hash);
+        data_arena.DestroyElement(buf);
         association_container.Remove(hash);
     }
     void Manager<Buffer>::Destroy(Buffer& buf){
@@ -20,42 +21,29 @@ namespace Asset{
         AssetHash hash = GetHash(buf);
         Destroy(hash);
     }
-    Buffer& Manager<Buffer>::Get(AssetHash hash){
+    Buffer* Manager<Buffer>::Get(AssetHash hash){
         auto iter = association_container.find(hash);
         if(iter != association_container.end()){
-            return *iter->value;
+            return iter->value;
         }
         else{
-            Buffer& buf = data_arena.AddElement(*Global::logicalDevice);
-            association_container.push_back(hash, &buf);
-            //set name??
-            return buf;
+            return nullptr;
         }
     }
-    Buffer& Manager<Buffer>::Get(std::filesystem::path const& name){
-        auto& ret = Get(CrossPlatformPathHash(name));
-        return ret;
-    }
-    Buffer& Manager<Buffer>::Get(std::filesystem::path const& name,
-            VkDeviceSize instanceSize, uint32_t instanceCount, 
-            VmaAllocationCreateInfo const& vmaAllocCreateInfo, 
-            VkBufferUsageFlags usageFlags
-    )
-    {
-        const auto hash = CrossPlatformPathHash(name);
-        auto iter = association_container.find(hash);
-        if(iter != association_container.end()){
-            Logger::Print<Logger::Error>("attempting to re-create an existing buffer\n");
-            return *iter->value;
-        }
-        else{
-            Buffer& buf = data_arena.AddElement(*Global::logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
-            association_container.push_back(hash, &buf);
-            buf.SetName(name.string());
-            return buf;
-        }
+    Buffer* Manager<Buffer>::Get(std::filesystem::path const& name){
+        return Get(CrossPlatformPathHash(name));
     }
 
+
+    Buffer& Manager<Buffer>::ConstructInto(AssetHash hash,
+        VkDeviceSize instanceSize, uint32_t instanceCount, 
+        VmaAllocationCreateInfo const& vmaAllocCreateInfo, 
+        VkBufferUsageFlags usageFlags
+    ){
+        auto& ele = data_arena.AddElement(*Global::logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
+        association_container.push_back(hash, &ele);
+        return ele;
+    }
 
     AssetHash Manager<Buffer>::ConvertBDAToHash(VkDeviceAddress addr){
         for(auto& kvp : association_container){

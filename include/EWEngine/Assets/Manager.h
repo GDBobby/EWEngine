@@ -33,7 +33,7 @@ namespace Asset{
         std::filesystem::path root_directory;
 
         Manager<Buffer> buffer;
-        //Manager<GPUTask> gpuTask;
+        Manager<GPUTask> gpuTask;
         Manager<Image> image;
         Manager<ImageView> imageView;
         Manager<Command::InstructionPackage> instPkg;
@@ -46,7 +46,6 @@ namespace Asset{
         Manager<Shader> shader;
         Manager<RenderGraph> renderGraph;
         Manager<FullRenderInfo> attachment_info; //RenderAttachments can be built from AttachmentSetInfo
-        FullRenderInfo& default_render_info;
 
         void DropCallback(std::filesystem::path const& path);
 

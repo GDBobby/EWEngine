@@ -211,7 +211,7 @@ namespace Asset{
                         for(uint8_t j = 0; j < temp_push->buffer_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
-                                temp_push->GetDeviceAddress(j) = Global::assetManager->buffer.Get(hash_buffer).deviceAddress;
+                                temp_push->GetDeviceAddress(j) = Global::assetManager->buffer.Get(hash_buffer)->deviceAddress;
                                 
                             }
                             else{

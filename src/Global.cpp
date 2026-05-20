@@ -55,9 +55,6 @@ namespace EWE{
             ::EWE::Global::stcManager = &globalData->stcManager;
             ::EWE::Global::assetManager = &globalData->assetManager;
 
-            globalData->assetManager.default_render_info.Init(Global::window->screenDimensions.width, Global::window->screenDimensions.height);
-
-
             return true;
         }
     } //namespace Global

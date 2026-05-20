@@ -29,7 +29,8 @@ namespace Command{
 
     struct Shader;
     struct RenderGraph;
-
+    struct FullRenderInfo;
+    struct GPUTask;
 
 namespace Helper{
     static constexpr std::string_view instpkg_exts[] = {".eip"};
@@ -41,6 +42,8 @@ namespace Helper{
 
     static constexpr std::string_view shader_exts[] = { ".spv" };
     static constexpr std::string_view rg_exts[] = {".erg"};
+    static constexpr std::string_view ri_exts[] = {".eri"};
+    static constexpr std::string_view g_tasks_exts[] = {".egt"};
 
 } //namespace Helper
 
@@ -63,6 +66,12 @@ namespace Asset{
     acceptable_extensions<Shader> = Helper::shader_exts;
     template<> inline constexpr std::span<const std::string_view> 
     acceptable_extensions<RenderGraph> = Helper::rg_exts;
+    
+    template<> inline constexpr std::span<const std::string_view>
+    acceptable_extensions<FullRenderInfo> = Helper::ri_exts;
+
+    template<> inline constexpr std::span<const std::string_view>
+    acceptable_extensions<GPUTask> = Helper::g_tasks_exts;
 
 
 } //namesace Asset
