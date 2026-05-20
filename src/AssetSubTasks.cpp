@@ -31,12 +31,12 @@ namespace Asset{
         }
 
         auto const combined_path = root_directory / path;
-        Logger::Print("writing sub task : %s\n", combined_path.string().c_str());
+        Log::Debug("writing sub task : %s\n", combined_path.string().c_str());
         std::ofstream outFile{combined_path, std::ios::binary};
         if(!outFile.is_open()){
             outFile.open(combined_path, std::ios::binary);
             if(!outFile.is_open()){
-                Logger::Print<Logger::Warning>("failed to open sub task asset file twice : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
+                Log::Warning("failed to open sub task asset file twice : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
             }
             return false;
         }
@@ -46,7 +46,7 @@ namespace Asset{
         
         if(task.queue == nullptr){
             outFile.close();
-            Logger::Print<Logger::Warning>("queue was nullptr in written subtask\n");
+            Log::Warning("queue was nullptr in written subtask\n");
             return false;
         }
         auto queue_type = Global::stcManager->GetQueueType(*task.queue);
@@ -62,7 +62,7 @@ namespace Asset{
         }
 
         outFile.close();
-        Logger::Print("written size : %zu\n", std::filesystem::file_size(combined_path));
+        Log::Debug("written size : %zu\n", std::filesystem::file_size(combined_path));
         return true;
     }
 
@@ -72,11 +72,11 @@ namespace Asset{
         std::ifstream inFile{combined_path, std::ios::binary};
         if(!inFile.is_open()){
             if(!std::filesystem::exists(combined_path)){
-                Logger::Print("attempting to open a file that doesnt' exist : %s\n", combined_path.string().c_str());
+                Log::Debug("attempting to open a file that doesnt' exist : %s\n", combined_path.string().c_str());
             }
             return false;
         }
-        Logger::Print("file size : %zu\n", std::filesystem::file_size(combined_path));
+        Log::Debug("file size : %zu\n", std::filesystem::file_size(combined_path));
 
         std::size_t temp_buffer;
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));

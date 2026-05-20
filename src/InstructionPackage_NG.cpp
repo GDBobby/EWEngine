@@ -62,7 +62,7 @@ namespace Node{
     }
 
     void InstructionPackage_NG::PrintNode(ImNodes::EWE::Node& node) const{
-        Logger::Print<Logger::Debug>("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
+        Log::Debug("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
             node.id, 
             Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
             node.pins[0].payload, 
@@ -176,7 +176,7 @@ namespace Node{
             PrintNode(*current_node);
             ret.push_back(GetInstructionFromNode(*current_node));
             if(current_node == limit_node){
-                //Logger::Print<Logger::Debug>("early early return - %s\n", __FUNCTION__);
+                //Log::Debug("early early return - %s\n", __FUNCTION__);
                 return ret;
             }
 
@@ -234,7 +234,7 @@ namespace Node{
         if(headNode->pins[0].payload != nullptr){
             current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
             if(current_node == nullptr){
-                //Logger::Print<Logger::Debug>("early early return - %s\n", __FUNCTION__);
+                //Log::Debug("early early return - %s\n", __FUNCTION__);
                 return;
             }
             current_payload = reinterpret_cast<InstNodePayload*>(current_node->payload);
@@ -440,11 +440,11 @@ namespace Node{
             }
         }
 
-        Logger::Print<Logger::Debug>("ipng::link created\n");
+        Log::Debug("ipng::link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
         if(reinterpret_cast<InstNodePayload*>(link.start.node->payload)->distanceFromHead >= 0 || link.start.node == headNode){
-            Logger::Print<Logger::Debug>("ipng : push back necessary\n");
+            Log::Debug("ipng : push back necessary\n");
             auto* end_payload = reinterpret_cast<InstNodePayload*>(link.end.node->payload);
             paramPool.PushBack(end_payload->iType);
             if(end_payload->iType == Inst::Push){
@@ -458,14 +458,14 @@ namespace Node{
         }
     }
     void InstructionPackage_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
-        Logger::Print<Logger::Debug>("ipng::link destroyed\n");
+        Log::Debug("ipng::link destroyed\n");
         
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;
         auto* end_payload = reinterpret_cast<InstNodePayload*>(link.end.node->payload);
         //auto* start_payload = reinterpret_cast<InstNodePayload*>(link.start.node->payload); 
         if(end_payload->distanceFromHead >= 0){
-            Logger::Print<Logger::Debug>("ipng : erase necessary\n");
+            Log::Debug("ipng : erase necessary\n");
             paramPool.ShrinkToSize(end_payload->distanceFromHead);
             UpdateNodeOffsets();
         }
@@ -632,7 +632,7 @@ namespace Node{
             paramPool = pp;
         }
         catch(std::exception& e){
-            Logger::Print<Logger::Error>("failed to copy operator param pool : %s\n", e.what());
+            Log::Error("failed to copy operator param pool : %s\n", e.what());
         }
 
         headNode = CreateHeadNode();
@@ -682,7 +682,7 @@ namespace Node{
                 object_push = MergePushRanges(reinterpret_cast<Command::ObjectPackage&>(pkg).payload.shaders);
                 break;
             default: 
-                Logger::Print<Logger::Warning>("attempting to init node graph from invalid pkg type\n"); 
+                Log::Warning("attempting to init node graph from invalid pkg type\n"); 
                 break;
         }
         return;
@@ -704,10 +704,10 @@ namespace Node{
                         auto* pkg = EWE::Global::assetManager->instPkg.Get(proximate_path);
                         if(pkg != nullptr){
                             InitFromObject(*pkg);
-                            Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
+                            Log::Debug("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
                         }
                         else{
-                            Logger::Print("fialed ot load basic inst pkg\n");
+                            Log::Debug("fialed ot load basic inst pkg\n");
                         }
                         break;
                     }
@@ -715,10 +715,10 @@ namespace Node{
                         auto* pkg = EWE::Global::assetManager->objPkg.Get(proximate_path);
                         if(pkg != nullptr){
                             InitFromObject(*pkg);
-                            Logger::Print<Logger::Debug>("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
+                            Log::Debug("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
                         }
                         else{
-                            Logger::Print("failed to load object file\n");
+                            Log::Debug("failed to load object file\n");
                         }
                         break;
                     }

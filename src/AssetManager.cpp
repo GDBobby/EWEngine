@@ -125,7 +125,7 @@ namespace Asset{
                             if constexpr(std::meta::has_template_arguments(^^T)){
                                 static constexpr auto template_args = Reflect::GetMetaSpan<^^T, std::meta::template_arguments_of, false, std::meta::has_template_arguments(^^T)>();
 
-                                Logger::Print("template arg : %s", Reflect::GetName(template_args.at(0)).data());
+                                Log::Debug("template arg : %s", Reflect::GetName(template_args.at(0)).data());
                             }
                         */
 
@@ -174,11 +174,11 @@ namespace Asset{
     }
 
     void Manager<AssetHash>::DropCallback(std::filesystem::path const& path){
-        Logger::Print("droppe a file : %s\n", path.string().c_str());
+        Log::Debug("droppe a file : %s\n", path.string().c_str());
 
         const auto proximate = std::filesystem::proximate(path, root_directory);
         if(!CheckWithinRootDir(proximate)){
-            Logger::Print<Logger::Warning>("attempted to drop a file from outside the asset directory\n");
+            Log::Warning("attempted to drop a file from outside the asset directory\n");
             return;
         }
 
@@ -186,7 +186,7 @@ namespace Asset{
             glfw_drops.push_back(proximate);
         }
 
-        Logger::Print("failed to find a match\n");
+        Log::Debug("failed to find a match\n");
     }
 
 }//namespace Asset

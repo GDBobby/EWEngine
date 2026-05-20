@@ -43,7 +43,7 @@ namespace Asset{
         if(!outFile.is_open()){
             outFile.open(combined_path, std::ios::binary);
             if(!outFile.is_open()){
-                Logger::Print("failed to write to file - %s / %s\n", root_directory.string().c_str(), path.string().c_str());
+                Log::Debug("failed to write to file - %s / %s\n", root_directory.string().c_str(), path.string().c_str());
                 return false;
             }
         }
@@ -64,7 +64,7 @@ namespace Asset{
             }
             else{
                 //is this possible?
-                Logger::Print<Logger::Warning>("invalid config\n");
+                Log::Warning("invalid config\n");
                 return false;
             }
         }
@@ -81,13 +81,13 @@ namespace Asset{
         std::ifstream inFile{combined_path, std::ios::binary};
         if(!inFile.is_open()){
             if(!std::filesystem::exists(combined_path)){
-                Logger::Print<Logger::Warning>("attempting to open file that doesn't eixst\n");
+                Log::Warning("attempting to open file that doesn't eixst\n");
                 return false;
             }
             else{
                 inFile.open(combined_path, std::ios::binary);
                 if(!inFile.is_open()){
-                    Logger::Print<Logger::Warning>("failed to open file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
+                    Log::Warning("failed to open file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
                     return false;
                 }
             }
@@ -96,7 +96,7 @@ namespace Asset{
         std::size_t version_buffer;
         cast_read(version_buffer);
         if(version_buffer != file_version){
-            Logger::Print<Logger::Warning>("idk how to deal with htis yet\n");
+            Log::Warning("idk how to deal with htis yet\n");
             return false;
         }
 

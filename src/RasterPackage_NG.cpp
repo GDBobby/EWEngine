@@ -96,13 +96,13 @@ namespace Node{
     }
 
     void RasterPackage_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link created\n");
+        //Log::Debug("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
     void RasterPackage_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link destroyed\n");
+        //Log::Debug("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;
@@ -168,7 +168,7 @@ namespace Node{
                     rt.objectPackages.push_back(reinterpret_cast<Command::ObjectPackage*>(current_node->payload));
                     current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                 }
-                Logger::Print("writing raster ng to file - %s / %s -- %s\n", 
+                Log::Debug("writing raster ng to file - %s / %s -- %s\n", 
                     EWE::Global::assetManager->rasterTask.files.root_directory.string().c_str(),
                     proximate_path.string().c_str(),
                     saved_path.string().c_str()

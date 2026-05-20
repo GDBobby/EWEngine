@@ -62,7 +62,7 @@ namespace Node{
             }
         }
         else{
-            node.pins.resize(2); //erases everything past 2?
+            node.pins.erase(node.pins.begin() + 2, node.pins.end());
         }
     }
 
@@ -111,7 +111,7 @@ namespace Node{
         {
             Command::PackageRecord* pkg;
             if(DragDropPtr::Target(pkg)) {
-                Logger::Print("dropping in sub task\n");
+                Log::Debug("dropping in sub task\n");
 
 
                 auto const task_queue_type = Global::stcManager->GetQueueType(*pkg->queue);
@@ -185,13 +185,13 @@ namespace Node{
     }
 
     void SubmissionTask_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link created\n");
+        //Log::Debug("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
     void SubmissionTask_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link destroyed\n");
+        //Log::Debug("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;

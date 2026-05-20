@@ -41,10 +41,10 @@ namespace Asset{
             const auto current_param_size = Inst::GetParamSize(param_pool.instructions[i]);
             written_param_size += current_param_size;
         }
-        Logger::Print("current write position, before written param size : %zu\n", outFile.tellp());
+        Log::Debug("current write position, before written param size : %zu\n", outFile.tellp());
         outFile.write(reinterpret_cast<char*>(&written_param_size), sizeof(std::size_t));
         outFile.write(reinterpret_cast<const char*>(param_pool.instructions.data()), temp_buffer * sizeof(Inst::Type));
-        Logger::Print("current write position, after writing instructions : %zu\n", outFile.tellp());
+        Log::Debug("current write position, after writing instructions : %zu\n", outFile.tellp());
     
         //actually writign to file now
         for_each_frame {
@@ -56,7 +56,7 @@ namespace Asset{
                     //convert the buffer_address to a buffer hash
                     //convert the texture index to a dii hash
                     if(param_pool.instructions[i] == Inst::Push){
-                        Logger::Print("writing push at [%zu] : frame[%u]\n", outFile.tellp(), frame);
+                        Log::Debug("writing push at [%zu] : frame[%u]\n", outFile.tellp(), frame);
                         auto* temp_push = reinterpret_cast<ParamPack<Inst::Push>*>(param_pool.param_data[param_index].data[frame]);
                         outFile.write(reinterpret_cast<char*>(&temp_push->buffer_count), sizeof(temp_push->buffer_count));
                         outFile.write(reinterpret_cast<char*>(&temp_push->texture_count), sizeof(temp_push->texture_count));
@@ -66,7 +66,7 @@ namespace Asset{
                             //EWE_ASSERT(bda_array[j] != null_buffer);
                             auto const device_addr = temp_push->GetDeviceAddress(j);
                             if(device_addr == null_buffer){
-                                Logger::Print<Logger::Warning>("invalid push buffer being writen to file\n");
+                                Log::Warning("invalid push buffer being writen to file\n");
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
@@ -76,7 +76,7 @@ namespace Asset{
                         }
                         for(uint8_t j = 0; j < temp_push->texture_count; j++){
                             if(temp_push->GetTextureIndex(j) == null_texture){
-                                Logger::Print<Logger::Warning>("invalid push texture being writen to file\n");
+                                Log::Warning("invalid push texture being writen to file\n");
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
@@ -135,12 +135,12 @@ namespace Asset{
     bool LoadAssetFromFile(Command::InstructionPackage* ret, std::filesystem::path const& root_directory, std::filesystem::path const& path){
         
         auto const full_dir = root_directory / path;
-        Logger::Print("asset full dir : %s\n", full_dir.string().c_str());
+        Log::Debug("asset full dir : %s\n", full_dir.string().c_str());
         std::ifstream inFile{root_directory / path, std::ios::binary};
 
         if(!inFile.is_open()){
             if(!std::filesystem::exists(root_directory / path)){
-                Logger::Print<Logger::Error>("atempting to open instruction pkg but path[%s] doesn't exist", path.string().c_str());
+                Log::Error("atempting to open instruction pkg but path[%s] doesn't exist", path.string().c_str());
                 return false;
             }
             inFile.open(root_directory / path, std::ios::binary);
@@ -170,10 +170,10 @@ namespace Asset{
         const std::size_t instruction_count = temp_buffer;
         ret->paramPool.instructions.resize(instruction_count);
         std::size_t written_param_size = 0;
-        Logger::Print("current read position, before written param size : %zu\n", inFile.tellg());
+        Log::Debug("current read position, before written param size : %zu\n", inFile.tellg());
         inFile.read(reinterpret_cast<char*>(&written_param_size), sizeof(std::size_t));
         inFile.read(reinterpret_cast<char*>(ret->paramPool.instructions.data()), instruction_count * sizeof(Inst::Type));
-        Logger::Print("current read position, after writing instructions : %zu\n", inFile.tellg());
+        Log::Debug("current read position, after writing instructions : %zu\n", inFile.tellg());
         
         for_each_frame{
             ret->paramPool.params[frame].Resize(written_param_size);
@@ -202,7 +202,7 @@ namespace Asset{
                     //convert the buffer_address to a buffer hash
                     //convert the texture index to a dii hash
                     if(ret->paramPool.instructions[i] == Inst::Push){
-                        Logger::Print("reading push at [%zu] : frame[%u]\n", inFile.tellg(), frame);
+                        Log::Debug("reading push at [%zu] : frame[%u]\n", inFile.tellg(), frame);
                         auto* temp_push = reinterpret_cast<ParamPack<Inst::Push>*>(ret->paramPool.param_data[param_index].data[frame]);
                         inFile.read(reinterpret_cast<char*>(&temp_push->buffer_count), sizeof(temp_push->buffer_count));
                         inFile.read(reinterpret_cast<char*>(&temp_push->texture_count), sizeof(temp_push->texture_count));

@@ -50,7 +50,7 @@ namespace EWE{
 						const AssetHash temp_hash = Global::assetManager->dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
 #if EWE_DEBUG_BOOL
 						if(temp_hash == Asset::INVALID_HASH) {
-							Logger::Print<Logger::Warning>("caught an invalid push texture index\n");
+							Log::Warning("caught an invalid push texture index\n");
 							push->GetTextureIndex(iter) = null_texture;
 						}
 						else{
@@ -121,7 +121,7 @@ namespace EWE{
 						const AssetHash temp_hash = Global::assetManager->dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
 #if EWE_DEBUG_BOOL
 						if(temp_hash == Asset::INVALID_HASH) {
-							Logger::Print<Logger::Warning>("caught an invalid push texture index\n");
+							Log::Warning("caught an invalid push texture index\n");
 							push->GetTextureIndex(iter) = null_texture;
 						}
 						else{

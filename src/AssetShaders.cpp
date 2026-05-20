@@ -26,7 +26,7 @@ namespace Asset{
 
         if(ReadMetaFile(ret, root_directory, path)){
             if(ret.meta.buffer_written_to.Size() != ret.pushRange.buffers.size()){
-                Logger::Print<Logger::Warning>("incorrect meta buffer - %zu:%zu\n", ret.meta.buffer_written_to.Size(), ret.pushRange.buffers.size());
+                Log::Warning("incorrect meta buffer - %zu:%zu\n", ret.meta.buffer_written_to.Size(), ret.pushRange.buffers.size());
                 const auto lower_size = std::min(ret.meta.buffer_written_to.Size(), ret.pushRange.buffers.size());
                 ret.meta.buffer_written_to.ClearAndResize(lower_size);
 
@@ -37,7 +37,7 @@ namespace Asset{
 
             }
             if(ret.meta.texture_written_to.Size() != ret.pushRange.textures.size()){
-                Logger::Print<Logger::Warning>("incorrect meta buffer - %zu:%zu\n", ret.meta.texture_written_to.Size(), ret.pushRange.textures.size());
+                Log::Warning("incorrect meta buffer - %zu:%zu\n", ret.meta.texture_written_to.Size(), ret.pushRange.textures.size());
                 const auto lower_size = std::min(ret.meta.texture_written_to.Size(), ret.pushRange.textures.size());
                 ret.meta.texture_written_to.ClearAndResize(lower_size);
 

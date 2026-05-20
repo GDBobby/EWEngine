@@ -74,13 +74,13 @@ namespace Node{
     }
 
     void GPUTask_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link created\n");
+        //Log::Debug("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
     void GPUTask_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link destroyed\n");
+        //Log::Debug("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;

@@ -443,7 +443,7 @@ namespace EWE{
             }
             if(ImGui::Button("write meta to file")){
                 obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.name);
-                Logger::Print("wrote shader meta to file\n");
+                Log::Debug("wrote shader meta to file\n");
             }
         }
         else{

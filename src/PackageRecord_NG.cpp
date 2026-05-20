@@ -97,13 +97,13 @@ namespace Node{
     }
 
     void PackageRecord_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link created\n");
+        //Log::Debug("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
     void PackageRecord_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
-        //Logger::Print<Logger::Debug>("link destroyed\n");
+        //Log::Debug("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;
@@ -194,7 +194,7 @@ namespace Node{
                     saved_path,
                     EWE::Global::assetManager->pkgRecord.files.root_directory
                 );
-                Logger::Print("writing package record to file : %s / %s\n",
+                Log::Debug("writing package record to file : %s / %s\n",
                     EWE::Global::assetManager->pkgRecord.files.root_directory.string().c_str(), 
                     proximate_path.string().c_str()
                 );
@@ -227,7 +227,7 @@ namespace Node{
                 const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->pkgRecord.files.root_directory);
                 auto* record = Global::assetManager->pkgRecord.Get(localized_path);
                 if(record == nullptr){
-                    Logger::Print<Logger::Warning>("failed to read record from file : %s\n", localized_path.string().c_str());
+                    Log::Warning("failed to read record from file : %s\n", localized_path.string().c_str());
                 }
                 else{
                     InitFromObject(*record);

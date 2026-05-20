@@ -47,9 +47,9 @@ void PrintAllExtensions(VkPhysicalDevice physicalDevice) {
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, nullptr);
     std::vector<VkExtensionProperties> extProps(extCount);
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, extProps.data());
-    EWE::Logger::Print<EWE::Logger::Debug>("available extensions --\n");
+    EWE::Log::Debug("available extensions --\n");
     for (auto& prop : extProps) {
-        EWE::Logger::Print<EWE::Logger::Debug>("\t%s\n", prop.extensionName);
+        EWE::Log::Debug("\t%s\n", prop.extensionName);
     }
 }
 #endif
@@ -77,14 +77,14 @@ std::string GetMetaInfo_Temp(){
 int main(int argc, char* argv[]) {
 
     if(argc < 2){
-        EWE::Logger::Print<EWE::Logger::Warning>("working directory wasn't set via cmd line\n");
+        EWE::Log::Warning("working directory wasn't set via cmd line\n");
 
     //need to fix htis. its something with my windows debugger
         auto current_working_directory = std::filesystem::current_path();
         if (current_working_directory.parent_path().parent_path().stem() == "build") {
             current_working_directory = current_working_directory.parent_path().parent_path().parent_path();
 #if EWE_DEBUG_BOOL
-            EWE::Logger::Print<EWE::Logger::Normal>("build redacted working dir - %s\n", current_working_directory.string().c_str());
+            EWE::Log::Normal("build redacted working dir - %s\n", current_working_directory.string().c_str());
 #endif
         }
         else if (current_working_directory.parent_path().stem() == "build") {
@@ -95,32 +95,32 @@ int main(int argc, char* argv[]) {
         }
      std::filesystem::current_path(current_working_directory);
 #if EWE_DEBUG_BOOL
-        EWE::Logger::Print<EWE::Logger::Normal>("current dir (not set from cmd line) - %s\n", std::filesystem::current_path().string().c_str());
+        EWE::Log::Normal("current dir (not set from cmd line) - %s\n", std::filesystem::current_path().string().c_str());
 #endif
         EWE_Debug_Breakpoint();
     }
     else{
         auto argv1_length = strlen(argv[1]);
         if(argv1_length <= 5){
-            EWE::Logger::Print<EWE::Logger::Error>("im scared to fuck my system, not allowing working directories less than 5 characters\n");
+            EWE::Log::Error("im scared to fuck my system, not allowing working directories less than 5 characters\n");
             return -1;
         }
         const char* second_arg = argv[1];
         std::filesystem::current_path(second_arg);
-        EWE::Logger::Print<EWE::Logger::Normal>("current dir (set from cmd line) - %s\n", std::filesystem::current_path().string().c_str());
+        EWE::Log::Normal("current dir (set from cmd line) - %s\n", std::filesystem::current_path().string().c_str());
     }
 
 
 #if EWE_DEBUG_BOOL
-    EWE::Logger::Print<EWE::Logger::Debug>("starting working dir - %s\n", std::filesystem::current_path().string().c_str());
+    EWE::Log::Debug("starting working dir - %s\n", std::filesystem::current_path().string().c_str());
 #endif
 
 #ifdef USING_NVIDIA_AFTERMATH
-    EWE::Logger::Print<EWE::Logger::Debug>("using nvidia aftermath - %s\n", std::filesystem::current_path().string().c_str());
+    EWE::Log::Debug("using nvidia aftermath - %s\n", std::filesystem::current_path().string().c_str());
 #endif
 
 #if defined(__SANITIZE_ADDRESS__)
-    EWE::Logger::Print<EWE::Logger::Debug>("compiled with asan\n");
+    EWE::Log::Debug("compiled with asan\n");
 #endif
 
     uint32_t extensionCount = 0;
@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
     }
     if (renderQueue == nullptr) {
 #if EWE_DEBUG_BOOL
-        EWE::Logger::Print<EWE::Logger::Error>("failed to find a render queue, exiting\n");
+        EWE::Log::Error("failed to find a render queue, exiting\n");
 #endif
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return -1;
@@ -234,7 +234,7 @@ int main(int argc, char* argv[]) {
         if (str.name == "Vertex") {
 
 #if EWE_DEBUG_BOOL
-            EWE::Logger::Print<EWE::Logger::Debug>("size comparison - %zu : %zu\n", str.size, sizeof(TriangleVertex));
+            EWE::Log::Debug("size comparison - %zu : %zu\n", str.size, sizeof(TriangleVertex));
 #endif
         }
     }
@@ -682,7 +682,7 @@ int main(int argc, char* argv[]) {
 
 
 #if EWE_DEBUG_BOOL
-    EWE::Logger::Print<EWE::Logger::Debug>("returning successfully\n");
+    EWE::Log::Debug("returning successfully\n");
 #endif
 
     std::this_thread::sleep_for(std::chrono::seconds(2)); 

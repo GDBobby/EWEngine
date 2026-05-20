@@ -46,7 +46,7 @@ namespace Asset{
         void Destroy(AssetHash hash){
             Resource* res = Get(hash);
             if(res == nullptr){
-                Logger::Print<Logger::Warning>("attempting to delete non-existing object\n");
+                Log::Warning("attempting to delete non-existing object\n");
                 return;
             }
             data_arena.DestroyElement(res);
@@ -70,7 +70,7 @@ namespace Asset{
                     return nullptr;
                 }
                 Resource* ret = data_arena.GetCell();
-                Logger::Print("loading asset - %s / %s\n", files.root_directory.string().c_str(), path_hash_data->value.string().c_str());
+                Log::Debug("loading asset - %s / %s\n", files.root_directory.string().c_str(), path_hash_data->value.string().c_str());
                 if(LoadAssetFromFile<Resource>(ret, files.root_directory, path_hash_data->value)){
                     association_container.push_back(hash, ret);
                     return ret;

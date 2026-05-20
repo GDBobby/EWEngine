@@ -136,7 +136,7 @@ namespace EWE{
                     iter->closing_helper = false;
                 }
                 if(!iter->closing_helper){
-                    Logger::Print("attempted to close\n");
+                    Log::Debug("attempted to close\n");
                     ImGui::SetNextWindowFocus();
                     if(ImGui::Begin("Closing")){
                         if(ImGui::Button("close without saving")){

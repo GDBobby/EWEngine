@@ -94,7 +94,7 @@ namespace Asset{
         //if it doesnt have an instruction package, its special execution, aka hand coded, cant be written
 
         auto const full_save_path = root_directory / path;
-        Logger::Print("writing rt to : %s\n", full_save_path.string().c_str());
+        Log::Debug("writing rt to : %s\n", full_save_path.string().c_str());
         std::ofstream outFile{full_save_path, std::ios::binary};
         if(!outFile.is_open()){
             outFile.open(full_save_path);

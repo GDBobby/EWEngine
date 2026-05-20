@@ -57,7 +57,7 @@ namespace Asset{
 		auto const full_path = root_directory / path;
 		std::ofstream outFile{full_path, std::ios::binary};
 		if(!outFile.is_open()){
-			Logger::Print("failed to open file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
+			Log::Debug("failed to open file : %s / %s\n", root_directory.string().c_str(), path.string().c_str());
 			return false;
 		}
 		
@@ -101,14 +101,14 @@ namespace Asset{
 		std::ifstream inFile{full_path, std::ios::binary};
 		if(!inFile.is_open()){
 			auto const full_path_string = full_path.string();
-			Logger::Print("failed initial open attempt on file : %s\n", full_path_string.c_str());
+			Log::Debug("failed initial open attempt on file : %s\n", full_path_string.c_str());
 			if(!std::filesystem::exists(full_path)){
-				Logger::Print("attempting to open file that doesn't exist : %s\n", full_path_string.c_str());
+				Log::Debug("attempting to open file that doesn't exist : %s\n", full_path_string.c_str());
 				return false;
 			}
 			inFile.open(full_path, std::ios::binary);
 			if(!inFile.is_open()){
-				Logger::Print("failed explicit open : %s\n", full_path_string.c_str());
+				Log::Debug("failed explicit open : %s\n", full_path_string.c_str());
 				return false;
 			}
 		}
@@ -116,7 +116,7 @@ namespace Asset{
 		std::size_t version_buffer;
 		inFile.read(reinterpret_cast<char*>(&version_buffer), sizeof(std::size_t));
 		if(version_buffer != file_version){
-			Logger::Print<Logger::Warning>("invalid verison, not handled yet\n");
+			Log::Warning("invalid verison, not handled yet\n");
 			return false;
 		}
 
@@ -157,7 +157,7 @@ namespace Asset{
 				}
 				else{
 					//i dont know if this a valid configuration
-					Logger::Print<Logger::Warning>("unknown validity\n");
+					Log::Warning("unknown validity\n");
 					GenerateViewPair(fri, i);
 				}
 				//get the hash

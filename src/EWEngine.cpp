@@ -103,7 +103,7 @@ namespace EWE{
         glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
         if (!glfwInit()) {
     #if EWE_DEBUG_BOOL
-            Logger::Print<Logger::Debug>("failed to init glfw wayland\n");
+            Log::Debug("failed to init glfw wayland\n");
     #endif
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
             if(!glfwInit()){
@@ -172,27 +172,27 @@ namespace EWE{
         auto evaluatedDevices = specDev.ScorePhysicalDevices(instance);
 
 #if EWE_DEBUG_BOOL
-        Logger::Print<Logger::Debug>("evaluated %zu devices\n", evaluatedDevices.size());
-        Logger::Print<Logger::Debug>("if the first device failed, none are available\n");
+        Log::Debug("evaluated %zu devices\n", evaluatedDevices.size());
+        Log::Debug("if the first device failed, none are available\n");
         for(auto& dev : evaluatedDevices){
-            Logger::Print<Logger::Debug>("device name : %s\n", dev.name.c_str());
-            Logger::Print<Logger::Debug>("\trequirements : score : %d:%zu\n", dev.passedRequirements, dev.score);
+            Log::Debug("device name : %s\n", dev.name.c_str());
+            Log::Debug("\trequirements : score : %d:%zu\n", dev.passedRequirements, dev.score);
             auto& props12 = dev.properties.properties.Get<VkPhysicalDeviceVulkan12Properties>();
-            Logger::Print<Logger::Debug>("\tdriver\n");
-            Logger::Print<Logger::Debug>("\t\tid:%zu\n", props12.driverID);
-            Logger::Print<Logger::Debug>("\t\tname:%s\n", props12.driverName);
-            Logger::Print<Logger::Debug>("\t\tinfo:%s\n", props12.driverInfo);
+            Log::Debug("\tdriver\n");
+            Log::Debug("\t\tid:%zu\n", props12.driverID);
+            Log::Debug("\t\tname:%s\n", props12.driverName);
+            Log::Debug("\t\tinfo:%s\n", props12.driverInfo);
 
             const uint32_t variant_version = dev.api_version >> 29;
             const uint32_t major_version = (dev.api_version - (variant_version << 29)) >> 22;
             const uint32_t minor_version = (dev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
             const uint32_t patch_version = (dev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
 
-            Logger::Print<Logger::Debug>("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
+            Log::Debug("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
             if (dev.failureReport.size() > 0){
-                Logger::Print<Logger::Debug>("\tfailure report-\n");
+                Log::Debug("\tfailure report-\n");
                 for(auto& fp : dev.failureReport){
-                    Logger::Print<Logger::Debug>("\t\tfp - %s\n", fp.c_str());
+                    Log::Debug("\t\tfp - %s\n", fp.c_str());
                 }
             }
         }
@@ -306,7 +306,7 @@ namespace EWE{
         }
 
         if (ImGui::Combo("present mode", &index, available_presents.data(), available_presents.size())) {
-            Logger::Print<Logger::Debug>("present mode changed\n");
+            Log::Debug("present mode changed\n");
 
             swapchain.swapCreateInfo.presentMode = swapchain.available_presentModes[index];
             swapchain.wantsToRecreate = true;
@@ -368,7 +368,7 @@ namespace EWE{
             }
 
             if (DrawPresentModes(swapchain) || DrawSurfaceFormats(swapchain)) {
-                Logger::Print<Logger::Debug>("recreating swap at frame : %zu\n", totalFramesSubmitted);
+                Log::Debug("recreating swap at frame : %zu\n", totalFramesSubmitted);
             }
 
             ImGui::Text("working directory : %s", std::filesystem::current_path().string().c_str());

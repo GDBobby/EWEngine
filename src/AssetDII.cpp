@@ -172,7 +172,7 @@ namespace Asset{
             if(association_container.find(kvp.key) == association_container.end()){
                 if(ImGui::Button(kvp.value.string().c_str())){
                     Get(kvp.value.string());
-                    Logger::Print("created dii : %s\n", kvp.value.string().c_str());
+                    Log::Debug("created dii : %s\n", kvp.value.string().c_str());
                 }
             }
         }
@@ -217,7 +217,7 @@ namespace Asset{
                 
                 if(ImGui::Button("write to file")) {
                     WriteAssetToFile(*kvp.value, files.root_directory, kvp.value->name);
-                    Logger::Print("wrote [%s] to file[%s]\n", kvp.value->name.c_str(), files.root_directory.string().c_str());
+                    Log::Debug("wrote [%s] to file[%s]\n", kvp.value->name.c_str(), files.root_directory.string().c_str());
                 }
                 
                 ImGui::TreePop();

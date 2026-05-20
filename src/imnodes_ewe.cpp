@@ -210,7 +210,7 @@ namespace ImNodes{
                 PinID link_pin_id = -1;
                 if(ImNodes::IsLinkStarted(&link_pin_id)){
                     //this is holding a link
-                    //::EWE::Logger::Print<::EWE::Logger::Debug>("link started\n");
+                    //::EWE::Log::Debug<::EWE::Log::Debug("link started\n");
                 }
                 if(ImNodes::IsLinkDropped(&link_pin_id)){
 
@@ -230,7 +230,7 @@ namespace ImNodes{
                 }
                 if(ImNodes::IsLinkDestroyed(&link_pin_id)){
                     //i believe this is only when a link is dragged off a pin
-                    ::EWE::Logger::Print<::EWE::Logger::Debug>("imnodes::IsLinkDestroyed\n");
+                    ::EWE::Log::Debug("imnodes::IsLinkDestroyed\n");
 
                     //for(auto link_iter = links.begin(); link_iter != links.end(); link_iter++){
                         //if(link_iter->id == link_pin_id){

@@ -43,7 +43,7 @@ namespace EWE{
 
                     VkImageLayout dstLayout;
 
-                    Logger::Print<Logger::Level::Warning>("mipmaps aren't setup yet\n");
+                    Log::Warning("mipmaps aren't setup yet\n");
                     switch(dstQueueType){
                         case Queue::Type::Graphics: dstLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; break;
                         case Queue::Type::Compute: dstLayout = VK_IMAGE_LAYOUT_GENERAL; break;
@@ -107,7 +107,7 @@ namespace EWE{
                 }
             }
             catch(std::exception& e){
-                Logger::Print<Logger::Level::Error>("file load error : %s", e.what());
+                Log::Error("file load error : %s", e.what());
             }
         }
         else{
