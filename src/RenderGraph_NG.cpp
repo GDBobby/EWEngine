@@ -4,6 +4,7 @@
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/ImNodes/imnodes.h"
 #include "EightWinds/Backend/RenderInfo.h"
+#include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/RenderGraph/SubmissionTask.h"
 
 #include "EWEngine/Imgui/Objects.h"
@@ -54,10 +55,29 @@ namespace Node{
     }
     ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(SubmissionTask* subTask) {
         auto& added_node = AddNode();
-        added_node.payload = new NodePayload{
+        auto added_payload = new SubTaskPayload{
             .type = NodeType::TaskGroup,
-            .payload = new std::vector<SubmissionTask*>{subTask}
+            .sub_group = new std::vector<SubmissionTask*>{subTask}
         };
+        added_payload->raster_pkg_open.resize(1);
+        std::vector<std::vector<bool>>& back_task_group_raster_pkgs = added_payload->raster_pkg_open.back();
+        back_task_group_raster_pkgs.resize(subTask->tasks.size());
+        added_payload->task_meta_helpers.resize(1);
+
+        for(std::size_t task_index = 0; task_index < subTask->tasks.size(); task_index++){
+            std::size_t raster_index = 0;
+            for(auto& pkg : subTask->tasks[task_index]->pkgRecord->packages){
+                if(pkg->type == Command::InstructionPackage::Type::Raster){
+                    raster_index++;
+                }
+            }
+
+            back_task_group_raster_pkgs[task_index].resize(raster_index, false);
+            added_payload->task_meta_helpers.back().emplace_back(*subTask->tasks[task_index], GPUTaskMeta_Helper::HelperType::RenderGraph);
+        }
+
+        added_node.payload = added_payload;
+
         added_node.pos = menu_pos;
         added_node.pos = menu_pos;
         added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
@@ -171,90 +191,76 @@ namespace Node{
         uint16_t current_pin = 0;
 
         if(payload->type == NodeType::TaskGroup){
-            auto* sub_group = reinterpret_cast<std::vector<SubmissionTask*>*>(payload->payload);
-            if(ImGui::BeginTable("sub group", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)){
-                ImGui::TableSetupColumn("name");
-                ImGui::TableSetupColumn("render info");
+            auto* sub_task_payload = reinterpret_cast<SubTaskPayload*>(node.payload);
+            auto* sub_group = sub_task_payload->sub_group;
 
-                ImGui::TableHeadersRow();
+            for(std::size_t sub_task_index = 0; sub_task_index < sub_group->size(); sub_task_index++){
+                auto* subTask = sub_group->at(sub_task_index);
+                bool sub_task_tree_open = ImGui::TreeNode(subTask->name.string().c_str());
+                if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)){
 
-                for(auto* subTask : *sub_group){
-                    ImGui::TableNextColumn();
-                    if(ImGui::TreeNode(subTask->name.string().c_str())){
-                        ImguiExtension::Imgui(*subTask);
-                        for(auto& task : subTask->tasks) {
-                            for(auto& pkg : task->pkgRecord->packages){
-                                switch(pkg->type){
-                                    case Command::InstructionPackage::Type::Raster:{
-                                        auto& rasterPkg = *reinterpret_cast<RasterPackage*>(pkg);
-                                        for(auto& obj : rasterPkg.objectPackages){
-                                            std::size_t instruction_offset = 0;
-                                            for(auto const& inst : obj->paramPool.instructions){
-                                                if(inst == Inst::Push){
-                                                
-                                                    for(auto& shader : obj->payload.shaders){
-                                                        if(shader != nullptr){
-                                                            for(std::size_t buf_index = 0; buf_index < shader->meta.buffer_written_to.Size(); buf_index++){
+                }
+                if(sub_task_tree_open){
+                    if(!subTask->specializedSubmission){
+                    //expose the render infos
+                        for(std::size_t task_index = 0; task_index < subTask->tasks.size(); task_index++){
+                            auto* task = subTask->tasks[task_index];
 
-                                                                uint32_t color = (0xFF << 24) + 0xFF;
-                                                                
-                                                                if(shader->meta.buffer_written_to[buf_index]){
-                                                                    ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
-                                                                }
+                            bool task_meta_node = ImGui::TreeNode(task->name.string().c_str());
 
-                                                                //ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
-                                                                //ImGui::Text(shader->pushRange.buffers[buf_index].name.c_str());
-                                                                //current_pin++;
-                                                                //ImNodes::EndPinAttribute();
-
-                                                                if(shader->meta.buffer_written_to[buf_index]){
-                                                                    ImNodes::PopColorStyle();
-                                                                }
-                                                            }
-                                                            for(std::size_t img_index = 0; img_index < shader->meta.texture_written_to.Size(); img_index++){
-
-                                                                uint32_t color = (0xFF << 24) + 0xFF;
-                                                                
-                                                                if(shader->meta.texture_written_to[img_index]){
-                                                                    ImNodes::PushColorStyle(ImNodes::ImNodesCol_Pin, color);
-                                                                }
-
-                                                                //ImNodes::BeginPinAttribute(node.id + current_pin + 1, ImVec2{0.0f, 0.3f});
-                                                                //ImGui::Text(shader->pushRange.textures[img_index].name.c_str());
-                                                                //current_pin++;
-                                                                //ImNodes::EndPinAttribute();
-
-                                                                if(shader->meta.texture_written_to[img_index]){
-                                                                    ImNodes::PopColorStyle();
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                instruction_offset += Inst::GetParamSize(inst);
-                                            }
+                            if(task_meta_node){
+                                std::size_t raster_index = 0;
+                                for(auto* pkg : task->pkgRecord->packages){
+                                    if(pkg->type == Command::InstructionPackage::Type::Raster){
+                                        auto& raster_pkg = *reinterpret_cast<RasterPackage*>(pkg);
+                                        const std::string raster_tree_name = std::string("raster pkg attachments : ") + raster_pkg.name.string();
+                                        const bool raster_tree_open = ImGui::TreeNode(raster_tree_name.c_str());
+                                        if(sub_task_payload->raster_pkg_open[sub_task_index][task_index][raster_index] != raster_tree_open){
+                                            //ReadjustAttachmentPins(node, raster_index, raster_tree_open);
+                                            sub_task_payload->raster_pkg_open[sub_task_index][task_index][raster_index] = raster_tree_open;
                                         }
-                                        break;
+                                        if(raster_tree_open){
+                                            for(std::size_t a_i = 0; a_i < raster_pkg.attachmentMeta.Size(); a_i++){
+                                                if(a_i < raster_pkg.task_config.attachment_info.colors.Size()){
+                                                    ImGui::Text("color[%zu]", a_i);
+                                                }
+                                                else{
+                                                    ImGui::Text("depth");
+                                                }
+                                            }
+
+                                            ImGui::TreePop();
+                                        }
+                                        raster_index++;
                                     }
-                                    default: break;
                                 }
+
+                                for(auto& push_helper : sub_task_payload->task_meta_helpers[sub_task_index][task_index].pushes){
+                                    auto& m_rp = push_helper.pointer_chain;
+                                    Command::PackageRecord& pkgRecord = *m_rp.base;
+                                    RasterPackage& rasterPkg = *reinterpret_cast<RasterPackage*>(pkgRecord.packages[m_rp.package_iter]);
+                                    auto& obj_pkg = *rasterPkg.objectPackages[m_rp.pointer_into[0]];
+                                    //std::size_t instruction_offset = m_rp.pointer_into[1];
+                                    std::size_t resource_index = m_rp.pointer_into[2];
+
+                                    PushConstant& push = push_helper.push;
+                                    if(resource_index < push.buffers.size()){
+                                        ImGui::Button(push.buffers[resource_index].name.c_str());
+                                    }
+                                    else{
+                                        resource_index -= push.buffers.size();
+                                        ImGui::Button(push.textures[resource_index].name.c_str());
+                                    }
+                                }
+
+                                ImGui::TreePop();
                             }
                         }
-                        ImGui::TreePop();
                     }
-                    ImGui::TableNextColumn();
-                    ImGui::Text("sub task's render info");
+
+                    ImGui::TreePop();
                 }
-                ImGui::TableNextColumn();
-                ImGui::Button("task drag point");
-                SubmissionTask* dragTask;
-                if(DragDropPtr::Target(dragTask)){
-                    sub_group->push_back(dragTask);
-                }
-                ImGui::TableNextColumn();
-                ImGui::EndTable();
             }
-            //ImGui::Text("filler");   
         }
         else{
             ImguiExtension::Imgui(reinterpret_cast<FullRenderInfo*>(payload->payload)->full);
@@ -271,6 +277,63 @@ namespace Node{
             //ImGui::Text("%zu", static_cast<uint64_t>(payload->stageMask));
         }
         ImNodes::EndPinAttribute();
+    }
+    bool RenderGraph_NG::SaveFunc() {
+        explorer.enabled = save_open;
+        explorer.state = ExplorerContext::State::Save;
+        if(ImGui::Begin("file save")){
+            explorer.Imgui();
+            if(explorer.selected_file.has_value()){
+                const std::filesystem::path saved_path = *explorer.selected_file;
+
+                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
+                name = temp_path;
+
+                RenderGraph& written = Global::assetManager->renderGraph.ConstructInto(name, *Global::logicalDevice, *Global::swapchain);
+                
+                auto collected_tasks = CollectTasks();
+                
+                for(auto& task : collected_tasks){
+                    written.tasks.push_back(task);
+                }
+
+                Asset::WriteAssetToFile(written, Global::assetManager->renderGraph.files.root_directory, temp_path);
+
+                explorer.enabled = false;
+                explorer.selected_file.reset();
+            }
+            if(!ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)){
+                //auto imwin = ImGui::GetCurrentWindow();
+                explorer.enabled = false;
+            }
+        }
+        ImGui::End();
+        return !explorer.enabled;
+    }
+
+    bool RenderGraph_NG::LoadFunc() {
+        explorer.enabled = load_open;
+        explorer.state = ExplorerContext::State::Load;
+        if(ImGui::Begin("file load")){
+            explorer.Imgui();
+            if(explorer.selected_file.has_value()){
+                const std::filesystem::path load_path = *explorer.selected_file;
+
+                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
+
+                auto* graph = Global::assetManager->renderGraph.Get(temp);
+                InitFromObject(*graph);
+
+                explorer.enabled = false;
+                explorer.selected_file.reset();
+            }
+            if(!ImGui::IsWindowFocused()){
+                //auto imwin = ImGui::GetCurrentWindow();
+                explorer.enabled = false;
+            }
+        }
+        ImGui::End();
+        return !explorer.enabled;
     }
 
 

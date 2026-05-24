@@ -27,7 +27,11 @@ namespace EWE{
         //need to offset the textue index by buffer size
         void ToggleResource(bool value, ParamPointerChain const& chain_into, uint8_t res_index);
 
-        [[nodiscard]] explicit GPUTaskMeta_Helper(GPUTask& task);
+        enum HelperType{
+            SubTask,
+            RenderGraph
+        };
+        [[nodiscard]] explicit GPUTaskMeta_Helper(GPUTask& task, HelperType hType);
     };
 
 namespace Asset{

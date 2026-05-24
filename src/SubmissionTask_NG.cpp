@@ -68,7 +68,7 @@ namespace Node{
 
     SubmissionTask_NG::TaskMetaPayload::TaskMetaPayload(Command::PackageRecord* record)
     : task{GetTask(record)},
-        meta_helper{*task}   
+        meta_helper{*task, GPUTaskMeta_Helper::HelperType::SubTask}   
     {
         for(auto* pkg : task->pkgRecord->packages){
             if(pkg->type == Command::InstructionPackage::Type::Raster){
@@ -79,7 +79,7 @@ namespace Node{
 
     SubmissionTask_NG::TaskMetaPayload::TaskMetaPayload(GPUTask* _task)
     : task{_task},
-        meta_helper{*task}   
+        meta_helper{*task, GPUTaskMeta_Helper::HelperType::SubTask}   
     {
         for(auto* pkg : task->pkgRecord->packages){
             if(pkg->type == Command::InstructionPackage::Type::Raster){
@@ -211,135 +211,6 @@ namespace Node{
             if(ImGui::InputText("name", explorer.file_save_buf, explorer.path_length, ImGuiInputTextFlags_CallbackCharFilter, ImguiInputFilters::File)){
                 //name = name_buffer;
             }
-            
-            /*
-            if(current_queue_type == Queue::Type::Graphics){
-
-                this is going t be useful for editing renderinfo
-
-                if(ImGui::BeginTable("images", 2, ImGuiTableFlags_Borders)){
-                    ImGui::TableSetupColumn("frame[0]");
-                    ImGui::TableSetupColumn("frame[1]");
-                    ImGui::TableHeadersRow();
-                    
-                    auto image_color_cell = [&](ImageView*& view, uint8_t index, uint8_t frame){
-                        ImGui::TableNextColumn();
-                        if(view == nullptr){
-                            const std::string color_name = "color[" + std::to_string(index) + "][" + std::to_string(frame) + "] : null";
-                            ImGui::Button(color_name.c_str());
-                        }
-                        else{
-                            const std::string color_name = "color["+ std::to_string(index) + "][" + std::to_string(frame) + "] : " + view->image.name.string();
-                            ImGui::Button(color_name.c_str());
-                        }
-                        ImageView* dd_ptr = nullptr;
-                        if(DragDropPtr::Target(dd_ptr)){
-                            view = dd_ptr;
-                        }
-                    };
-                    auto img_depth_cell = [&](ImageView*& view, uint8_t frame){
-                        ImGui::TableNextColumn();
-                        if(view == nullptr){
-                            const std::string img_name = "depth : null##" + std::to_string(frame);
-                            ImGui::Button(img_name.c_str());
-                        }
-                        else{
-                            const std::string img_name = "depth : " + view->image.name.string();
-                            ImGui::Button(img_name.c_str());
-                        }
-                        ImageView* dd_ptr = nullptr;
-                        if(DragDropPtr::Target(dd_ptr)){
-                            view = dd_ptr;
-                        }
-                    };
-
-                    for(std::size_t i = 0; i < renderInfo->full.color_views.Size(); i++){
-                        image_color_cell(renderInfo->full.color_views[i][0], i, 0);
-                        image_color_cell(renderInfo->full.color_views[i][1], i, 1);
-                    }
-                    if(renderInfo->full.setInfo.using_depth){
-                        img_depth_cell(renderInfo->full.depth_views[0], 0);
-                        img_depth_cell(renderInfo->full.depth_views[1], 1);
-                    }
-                    ImGui::EndTable();
-                }
-                if(ImGui::TreeNode("attachment set info for generation")){
-                    
-                    ImguiExtension::Imgui(generate_attachment_info);
-
-                    if(ImGui::Button("generate color")){
-
-                        std::vector<AttachmentInfo> old_info{renderInfo->full.setInfo.colors.Size()};
-                        memcpy(old_info.data(), renderInfo->full.setInfo.colors.Data(), old_info.size() * sizeof(AttachmentInfo));
-                        renderInfo->full.setInfo.colors.ClearAndResize(old_info.size() + 1);
-                        memcpy(renderInfo->full.setInfo.colors.Data(), old_info.data(), old_info.size() * sizeof(AttachmentInfo));
-                        renderInfo->full.setInfo.colors[old_info.size()] = generate_attachment_info;
-
-                        PerFlight<Image*> img_con_ptr{};
-                        img_con_ptr[0] = Global::assetManager->image.data_arena.GetCell();
-                        img_con_ptr[1] = Global::assetManager->image.data_arena.GetCell();
-                        PerFlight<ImageView*> view_con_ptr{};
-                        view_con_ptr[0] = Global::assetManager->imageView.data_arena.GetCell();
-                        view_con_ptr[1] = Global::assetManager->imageView.data_arena.GetCell();
-
-                        std::vector<PerFlight<ImageView*>> old_views{renderInfo->full.color_views.Size()};
-                        for(std::size_t i = 0; i < old_views.size(); i++){
-                            for_each_frame{
-                                old_views[i][frame] = renderInfo->full.color_views[i][frame];
-                            }
-                        }
-                        renderInfo->full.color_views.ClearAndResize(old_views.size() + 1);
-                        renderInfo->full.GenerateImage(
-                            img_con_ptr, view_con_ptr,
-                            Global::window->screenDimensions.width, Global::window->screenDimensions.height, 
-                            old_views.size()
-                        );
-                        for(std::size_t i = 0; i < old_views.size(); i++){
-                            for_each_frame{
-                                renderInfo->full.color_views[i][frame] = old_views[i][frame];
-                            }
-                        }
-
-                        renderInfo->full.generated_reference_tracker.push_back(
-                            RenderAttachments::ViewTracker{
-                                .source_owner = nullptr,
-                                .dst_index = static_cast<int8_t>(old_views.size())
-                            }
-                        );
-                    }
-                    if(renderInfo->full.depth_views[0] == nullptr){
-                        if(ImGui::Button("generate depth")){
-
-                            renderInfo->full.setInfo.using_depth = true;
-                            renderInfo->full.setInfo.depth = generate_attachment_info;
-                            PerFlight<Image*> img_con_ptr{};
-                            img_con_ptr[0] = Global::assetManager->image.data_arena.GetCell();
-                            img_con_ptr[1] = Global::assetManager->image.data_arena.GetCell();
-                            PerFlight<ImageView*> view_con_ptr{};
-                            view_con_ptr[0] = Global::assetManager->imageView.data_arena.GetCell();
-                            view_con_ptr[1] = Global::assetManager->imageView.data_arena.GetCell();
-                            renderInfo->full.GenerateImage(
-                                img_con_ptr, view_con_ptr,
-                                Global::window->screenDimensions.width, Global::window->screenDimensions.height, 
-                                -1
-                            );
-
-                            //ensure its not double generated? potentially an issue
-                            renderInfo->full.generated_reference_tracker.push_back(
-                                RenderAttachments::ViewTracker{
-                                    .source_owner = nullptr,
-                                    .dst_index = -1
-                                }
-                            );
-                        }
-                    }
-
-                    ImGui::TreePop();
-                }
-
-
-            }
-            */
             return;
         }
         auto* task_payload = reinterpret_cast<TaskMetaPayload*>(node.payload);

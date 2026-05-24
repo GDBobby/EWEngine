@@ -20,6 +20,16 @@ namespace EWE{
                 NodeType type;
                 void* payload;
             };
+            struct SubTaskPayload{
+                NodeType type = TaskGroup;
+                std::vector<SubmissionTask*>* sub_group;
+
+                //sub_task_index, task_index
+                std::vector<std::vector<GPUTaskMeta_Helper>> task_meta_helpers{};
+
+                //per sub task, then per task, then per raster pkg
+                std::vector<std::vector<std::vector<bool>>> raster_pkg_open;
+            };
 
             [[nodiscard]] explicit RenderGraph_NG();
             
@@ -33,6 +43,9 @@ namespace EWE{
             bool RenderAddMenu() override final;
             void RenderNode(ImNodes::EWE::Node& node) override final;
             void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
+
+            bool SaveFunc() override final;
+            bool LoadFunc() override final;
 
             void InitFromObject(RenderGraph& _renderGraph);
         };

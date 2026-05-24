@@ -48,9 +48,7 @@ namespace Asset{
             }
         }
 
-
         cast_write(file_version);
-
 
         AssetHash const record_hash = GetHash(*task.pkgRecord);
         cast_write(record_hash);
@@ -153,47 +151,60 @@ namespace Asset{
         texture_active.resize(push.textures.size(), false);
     }
 
-    GPUTaskMeta_Helper::GPUTaskMeta_Helper(GPUTask& _task)
+    GPUTaskMeta_Helper::GPUTaskMeta_Helper(GPUTask& _task, HelperType hType)
     : task{_task}
     {
         auto& pkg_record = *task.pkgRecord;
 
-        for(std::size_t pkg_iter = 0; pkg_iter < pkg_record.packages.size(); pkg_iter++){
-            auto& pkg = pkg_record.packages[pkg_iter];
-            if(pkg->type == Command::InstructionPackage::Raster){
-                auto& raster_pkg = *reinterpret_cast<RasterPackage*>(pkg);
-                for(std::size_t obj_pkg_iter = 0; obj_pkg_iter < raster_pkg.objectPackages.size(); obj_pkg_iter++){
-                    auto& obj_pkg = *raster_pkg.objectPackages[obj_pkg_iter];
-                    std::size_t instruction_offset = 0;
-                    for(auto& inst : obj_pkg.paramPool.instructions){
-                        if(inst == Inst::Push){
-                            ParamPointerChain pointer_to_push;
-                            pointer_to_push.base = task.pkgRecord;
-                            pointer_to_push.package_iter = pkg_iter;
-                            pointer_to_push.pointer_into.push_back(obj_pkg_iter);
-                            pointer_to_push.pointer_into.push_back(instruction_offset);
+        if(hType == HelperType::SubTask){
+            for(std::size_t pkg_iter = 0; pkg_iter < pkg_record.packages.size(); pkg_iter++){
+                auto& pkg = pkg_record.packages[pkg_iter];
+                if(pkg->type == Command::InstructionPackage::Raster){
+                    auto& raster_pkg = *reinterpret_cast<RasterPackage*>(pkg);
+                    for(std::size_t obj_pkg_iter = 0; obj_pkg_iter < raster_pkg.objectPackages.size(); obj_pkg_iter++){
+                        auto& obj_pkg = *raster_pkg.objectPackages[obj_pkg_iter];
+                        std::size_t instruction_offset = 0;
+                        for(auto& inst : obj_pkg.paramPool.instructions){
+                            if(inst == Inst::Push){
+                                ParamPointerChain pointer_to_push;
+                                pointer_to_push.base = task.pkgRecord;
+                                pointer_to_push.package_iter = pkg_iter;
+                                pointer_to_push.pointer_into.push_back(obj_pkg_iter);
+                                pointer_to_push.pointer_into.push_back(instruction_offset);
 
-                            pushes.push_back(PushHelper{pointer_to_push, obj_pkg.payload.shaders});
-                            auto& back_push = pushes.back();
+                                pushes.push_back(PushHelper{pointer_to_push, obj_pkg.payload.shaders});
+                                auto& back_push = pushes.back();
 
-                            //hash the pointer_to_push?
-                            for(auto& existing : task.meta.resource_pointers){
-                                if(PointerChainParentEqual(pointer_to_push, existing)){
-                                    std::size_t back_iter = existing.pointer_into.back();
-                                    if(back_iter < back_push.buffer_active.size()){
-                                        back_push.buffer_active[back_iter] = true;
+                                //hash the pointer_to_push?
+                                for(auto& existing : task.meta.resource_pointers){
+                                    if(PointerChainParentEqual(pointer_to_push, existing)){
+                                        std::size_t back_iter = existing.pointer_into.back();
+                                        if(back_iter < back_push.buffer_active.size()){
+                                            back_push.buffer_active[back_iter] = true;
+                                        }
+                                        else{
+                                            back_push.texture_active[back_iter - back_push.buffer_active.size()] = true;
+                                        }
+                                        break;
                                     }
-                                    else{
-                                        back_push.texture_active[back_iter - back_push.buffer_active.size()] = true;
-                                    }
-                                    break;
                                 }
-                            }
 
+                            }
+                            instruction_offset += Inst::GetParamSize(inst);
                         }
-                        instruction_offset += Inst::GetParamSize(inst);
                     }
                 }
+            }
+        }
+        else if(hType == HelperType::RenderGraph){
+            for(auto& m_rp : task.meta.resource_pointers){
+                Command::PackageRecord& pkgRecord = *m_rp.base;
+                RasterPackage& rasterPkg = *reinterpret_cast<RasterPackage*>(pkgRecord.packages[m_rp.package_iter]);
+                auto& obj_pkg = *rasterPkg.objectPackages[m_rp.pointer_into[0]];
+                //std::size_t instruction_offset = m_rp.pointer_into[1];
+                //std::size_t resource_index = m_rp.pointer_into[2];
+
+                pushes.emplace_back(m_rp, obj_pkg.payload.shaders);
             }
         }
     }
