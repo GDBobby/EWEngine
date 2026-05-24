@@ -120,19 +120,19 @@ namespace EWE {
 			Log::Warning("selected engine is out of range \n");
 			return;
 		}
-		if(whichSong > music.at(selectedEngine).size()){
+		if((whichSong > music.at(selectedEngine).size()) && (whichSong != howling_wind_index)){
 			Log::Warning("selected effect is out of range \n");
 			return;
 		}
 
 		currentSong = whichSong;
-		ma_sound_set_looping(&music.at(selectedEngine).at(whichSong), repeat);
-
 		ma_result result;
 		if(whichSong == howling_wind_index){
+			ma_sound_set_looping(&hwSound, repeat);
 			result = ma_sound_start(&hwSound);
 		}
 		else{
+			ma_sound_set_looping(&music.at(selectedEngine).at(whichSong), repeat);
 			result = ma_sound_start(&music.at(selectedEngine).at(whichSong));
 		}
 		if (result != MA_SUCCESS) {
