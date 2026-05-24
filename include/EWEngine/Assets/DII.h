@@ -10,6 +10,12 @@
 namespace EWE{
 namespace Asset{
 
+    struct DiiCreation{
+        Sampler* sampler = nullptr;
+        ImageView* view = nullptr;
+        DescriptorType type = DescriptorType::Combined;
+        VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    };
     //this is a litle specialized, so I'll leave it as is
     template<>
     struct Manager<DescriptorImageInfo>{
@@ -30,20 +36,14 @@ namespace Asset{
         DescriptorImageInfo* Get(AssetHash hash);
         DescriptorImageInfo* Get(std::filesystem::path const& name);
 
-        struct Creation{
-            Sampler* sampler = nullptr;
-            ImageView* view = nullptr;
-            DescriptorType type = DescriptorType::Combined;
-            VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        };
 
-        DescriptorImageInfo& Get(Creation params);
+        DescriptorImageInfo& Get(DiiCreation const& params);
 
         AssetHash ConvertTextureIndexToHash(TextureIndex index) const;
 
 #ifdef EWE_IMGUI
         KeyValueContainer<DescriptorImageInfo*, ImTextureRef> imgui_texture_refs;
-        Creation creation_params;
+        DiiCreation creation_params;
         bool showCreation = false;
         void Imgui();
 #endif

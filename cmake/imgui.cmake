@@ -6,7 +6,7 @@ else()
         GIT_REPOSITORY https://github.com/GDBobby/imgui
         SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
         BINARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
-        GIT_TAG multiple-simultaneous-glfw-contexts
+        GIT_TAG master
         GIT_PROGRESS   TRUE
     )
     FetchContent_MakeAvailable(imgui)

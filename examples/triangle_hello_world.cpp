@@ -1,5 +1,6 @@
 //example
 #include "EWEngine/Assets/Hash.h"
+#include "EWEngine/Systems/Sound_Engine.h"
 #include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/Preprocessor.h"
 #include "EightWinds/VulkanHeader.h"
@@ -539,6 +540,14 @@ int main(int argc, char* argv[]) {
             const int payload_count = (int)dragdrop_payload->DataSize / (int)sizeof(ImGuiID);
             ImGui::Text("payload count : %d : %s", payload_count, reinterpret_cast<const char*>(dragdrop_payload->Data));
         }
+
+        if(ImGui::Button("start music")){
+            EWE::Global::soundEngine->PlayMusic(EWE::SoundEngine::howling_wind_index, true);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("stop music")){
+            EWE::Global::soundEngine->StopMusic();
+        }
     };
     {
         auto& vp_back = imguiHandler.viewports.emplace_back();
@@ -638,14 +647,15 @@ int main(int argc, char* argv[]) {
     };
     attachment_blit_submission.uses_present_image = true;
 
+    //int16_t songIndex = EWE::Global::soundEngine->AddMusicToBack("5secIntro.mp3");
+    //EWE::Global::soundEngine->PlayMusic(songIndex, true);
+
     renderGraph.InitializeSemaphores();
     try { //beginning of render loop
         auto timeBegin = std::chrono::high_resolution_clock::now();
         VkDescriptorImageInfo descImg;
         std::chrono::nanoseconds elapsedTime = std::chrono::nanoseconds(0);
         constexpr auto frameDuration = std::chrono::duration<double>(1.0 / 60.0); // seconds per frame
-
-
 
         while (!glfwWindowShouldClose(EWE::Global::window->window)) {
             const auto timeEnd = std::chrono::high_resolution_clock::now();

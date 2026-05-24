@@ -14,12 +14,15 @@ namespace EWE{
 
         AssetManager assetManager;
 
+        SoundEngine soundEngine;
+
         [[nodiscard]] explicit GlobalData(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& root_path)
         : logicalDevice{_logicalDevice},
             window{_window},
             scheduler{marl::Scheduler::Config::allCores()},
             stcManager{_stcManager},
-            assetManager{root_path, _logicalDevice, stcManager.renderQueue}
+            assetManager{root_path, _logicalDevice, stcManager.renderQueue},
+            soundEngine{}
         {
             glfwSetDropCallback(window.window, GLFW_Drop_Callback);
         }
@@ -41,6 +44,8 @@ namespace EWE{
 
         AssetManager* assetManager;
 
+        SoundEngine* soundEngine;
+
         
         bool Create(LogicalDevice& _logicalDevice, Window& _window, STC_Manager& _stcManager, std::filesystem::path const& _root_path) {
             EWE_ASSERT(globalData == nullptr);
@@ -54,6 +59,7 @@ namespace EWE{
             ::EWE::Global::scheduler = &globalData->scheduler;
             ::EWE::Global::stcManager = &globalData->stcManager;
             ::EWE::Global::assetManager = &globalData->assetManager;
+            ::EWE::Global::soundEngine = &globalData->soundEngine;
 
             return true;
         }

@@ -80,7 +80,7 @@ namespace Asset{
         return Get(hash);
     }
 
-    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(Creation params){
+    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(DiiCreation const& params){
         //search for a match, potentially, and return the existing one
         DescriptorImageInfo* ret = nullptr;
         if(params.sampler){

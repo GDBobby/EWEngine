@@ -9,6 +9,8 @@
 
 #include "EWEngine/Assets/Manager.h"
 
+#include "EWEngine/Systems/Sound_Engine.h"
+
 #include <cstdint>
 
 namespace EWE{
@@ -27,6 +29,7 @@ namespace EWE{
         extern AssetManager* assetManager;
 
         extern STC_Manager* stcManager;
+        extern SoundEngine* soundEngine;
         //dont move logicaldevice, just construct it in place
         bool Create(LogicalDevice& logicalDevice, Window& window, STC_Manager& stcManager, std::filesystem::path const& root_path);
     }

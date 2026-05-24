@@ -289,15 +289,16 @@ namespace Node{
                 const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
                 name = temp_path;
 
-                RenderGraph& written = Global::assetManager->renderGraph.ConstructInto(name, *Global::logicalDevice, *Global::swapchain);
+                Log::Error("saving rendergraph isn't setup yet\n");
+                //RenderGraph& written = Global::assetManager->renderGraph.ConstructInto(name, *Global::logicalDevice);
                 
-                auto collected_tasks = CollectTasks();
+                //auto collected_tasks = CollectTasks();
                 
-                for(auto& task : collected_tasks){
-                    written.tasks.push_back(task);
-                }
+                //for(auto& task : collected_tasks){
+                //    written.tasks.push_back(task);
+                //}
 
-                Asset::WriteAssetToFile(written, Global::assetManager->renderGraph.files.root_directory, temp_path);
+                //Asset::WriteAssetToFile(written, Global::assetManager->renderGraph.files.root_directory, temp_path);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
