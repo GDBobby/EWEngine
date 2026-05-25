@@ -18,15 +18,9 @@ namespace EWE{
     struct RenderGraph;
 
     class STC_Manager{
-    private:
-        LogicalDevice& logicalDevice;
-        RenderGraph& renderGraph;
     public:
-        Queue& renderQueue;
-        Queue& computeQueue; //potentially same as renderQueue
-        Queue& transferQueue; //potentially same as renderQueue
+        RenderGraph* current_renderGraph = nullptr;
 
-        Queue& GetQueue(Queue::Type type);
     private:
 
         RingBuffer<CommandPool, max_frames_in_flight * 2> renderCommandPools;
@@ -44,9 +38,7 @@ namespace EWE{
 
     public:
 
-        Queue::Type GetQueueType(Queue& queue) const;
-
-        [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& _transferQueue, RenderGraph& _renderGraph);
+        [[nodiscard]] explicit STC_Manager(LogicalDevice& logicalDevice, Queue& renderQueue, Queue& transferQueue, Queue& computeQueue);
         ~STC_Manager();
 
         STC_Manager(STC_Manager const& copySrc) = delete;

@@ -2,6 +2,8 @@
 #include "EWEngine/Global.h"
 #include "EightWinds/Backend/RenderInfo.h"
 
+#include "EWEngine/EWEngine.h"
+
 namespace EWE{
 namespace Asset{
 
@@ -11,12 +13,12 @@ namespace Asset{
 		PerFlight<Image*> image_con;
 		PerFlight<ImageView*> view_con;
 		for_each_frame{
-			image_con[frame] = Global::assetManager->image.data_arena.GetCell();
-			view_con[frame] = Global::assetManager->imageView.data_arena.GetCell();
+			image_con[frame] = engine->assetManager.image.data_arena.GetCell();
+			view_con[frame] = engine->assetManager.imageView.data_arena.GetCell();
 		}
 		fri.full.GenerateImage(
 			image_con, view_con, 
-			Global::window->screenDimensions.width, Global::window->screenDimensions.height, 
+			engine->window.screenDimensions.width, engine->window.screenDimensions.height, 
 			index
 		);
 	}
@@ -137,11 +139,11 @@ namespace Asset{
 
 		auto& fri = *std::construct_at(ptr_to_raw_mem, 
 			path.string(), 
-			*Global::logicalDevice, 
-			Global::stcManager->renderQueue, 
+			engine->logicalDevice, 
+			engine->renderQueue, 
 			setInfo, 
 			attachmentMeta,
-			Global::window->screenDimensions.width, Global::window->screenDimensions.height
+			engine->window.screenDimensions.width, engine->window.screenDimensions.height
 		);
 
 		/*
@@ -152,7 +154,7 @@ namespace Asset{
 				if(view_hash[0] != INVALID_HASH){
 					EWE_ASSERT(view_hash[1] != INVALID_HASH);
 					for_each_frame{
-						fri.full.color_views[i][frame] = Global::assetManager->imageView.Get(view_hash[frame]);
+						fri.full.color_views[i][frame] = engine->assetManager.imageView.Get(view_hash[frame]);
 					}
 				}
 				else{
@@ -169,7 +171,7 @@ namespace Asset{
 				if(view_hash[0] != INVALID_HASH){
 					EWE_ASSERT(view_hash[1] != INVALID_HASH);
 					for_each_frame{
-						fri.full.depth_views[frame] = Global::assetManager->imageView.Get(view_hash[frame]);
+						fri.full.depth_views[frame] = engine->assetManager.imageView.Get(view_hash[frame]);
 					}
 				}
 				else{

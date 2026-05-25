@@ -1,6 +1,6 @@
 #include "EWEngine/Assets/Manager.h"
 
-#include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 
 #include "imgui.h"
 #include <vulkan/vulkan_core.h>
@@ -196,7 +196,7 @@ namespace Asset{
 
         for(int i = 0; i < count; i++){
             std::filesystem::path drop_path{paths[i]};
-            Global::assetManager->DropCallback(drop_path);
+            engine->assetManager.DropCallback(drop_path);
         }
     }
 

@@ -1,5 +1,5 @@
 #include "EWEngine/Assets/PackageRecords.h"
-#include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/InstructionPackage.h"
@@ -27,7 +27,7 @@ namespace Asset{
             outFile.close();
             return false;
         }
-        auto queue_type = Global::stcManager->GetQueueType(*rec.queue);
+        auto queue_type = engine->GetQueueType(*rec.queue);
         outFile.write(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
 
         temp_buffer = rec.packages.size();
@@ -60,7 +60,7 @@ namespace Asset{
         ret.name = name;
         Queue::Type queue_type;
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
-        ret.queue = &Global::stcManager->GetQueue(queue_type);
+        ret.queue = &engine->GetQueue(queue_type);
 
         //pkg size
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
@@ -73,13 +73,13 @@ namespace Asset{
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
             switch(type){
                 case Command::InstructionPackage::Type::Base:
-                    ret.packages.push_back(Global::assetManager->instPkg.Get(hash_buffer));
+                    ret.packages.push_back(engine->assetManager.instPkg.Get(hash_buffer));
                     break;
                 case Command::InstructionPackage::Type::Object:
-                    ret.packages.push_back(Global::assetManager->objPkg.Get(hash_buffer));
+                    ret.packages.push_back(engine->assetManager.objPkg.Get(hash_buffer));
                     break;
                 case Command::InstructionPackage::Type::Raster:
-                    ret.packages.push_back(Global::assetManager->rasterTask.Get(hash_buffer));
+                    ret.packages.push_back(engine->assetManager.rasterTask.Get(hash_buffer));
                     break;
                 default: EWE_UNREACHABLE;
             }

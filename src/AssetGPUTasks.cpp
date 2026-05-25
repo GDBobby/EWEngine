@@ -1,5 +1,5 @@
 #include "EWEngine/Assets/GPUTasks.h"
-#include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 #include "EightWinds/Command/ParamPointerChain.h"
 
 #include <fstream>
@@ -103,9 +103,9 @@ namespace Asset{
         if(base_pkg_hash == INVALID_HASH){
             return false;
         }
-        Command::PackageRecord* base_pkg = Global::assetManager->pkgRecord.Get(base_pkg_hash);
+        Command::PackageRecord* base_pkg = engine->assetManager.pkgRecord.Get(base_pkg_hash);
         
-        auto& task = *std::construct_at(ptr_to_raw_mem, base_pkg->name, *Global::logicalDevice, *base_pkg, false);
+        auto& task = *std::construct_at(ptr_to_raw_mem, base_pkg->name, engine->logicalDevice, *base_pkg, false);
         
         std::size_t size_buffer;
         cast_read(size_buffer);

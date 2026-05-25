@@ -1,10 +1,14 @@
 #include "EWEngine/Imgui/ImNodes/Graph/InstructionPackage_NG.h"
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
+
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"
 #include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/Params.h"
+
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/ObjectInstructionPackage.h"
+
 #include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/ObjectRasterConfig.h"
 #include "EightWinds/Pipeline/Layout.h"
@@ -21,7 +25,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+        explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
         acceptable_add_instructions = std::vector<Inst::Type>{
             Command::InstructionPackage::allowed_instructions.begin(), 
             Command::InstructionPackage::allowed_instructions.end()
@@ -34,7 +38,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+        explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
         InitFromObject(pkg);
     }
 
@@ -122,7 +126,7 @@ namespace Node{
                         Command::InstructionPackage::allowed_instructions.begin(), 
                         Command::InstructionPackage::allowed_instructions.end()
                     };
-                    explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+                    explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
                     break;
                 case Command::InstructionPackage::Object:
                     acceptable_add_instructions = std::vector<Inst::Type>{
@@ -130,7 +134,7 @@ namespace Node{
                         Command::ObjectPackage::allowed_instructions.end()
                     };
                     package_payload = new Command::ObjectPackage::Payload();
-                    explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
+                    explorer.acceptable_extensions = engine->assetManager.objPkg.files.acceptable_extensions;
                     break;
                 default: break;
             }
@@ -570,8 +574,8 @@ namespace Node{
             explorer.Imgui();
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
-                const std::filesystem::path proximate = std::filesystem::proximate(saved_path, Global::assetManager->root_directory);
-                Asset::WriteToInstPkgFile(paramPool, package_payload, packageType, Global::assetManager->root_directory, proximate);
+                const std::filesystem::path proximate = std::filesystem::proximate(saved_path, engine->assetManager.root_directory);
+                Asset::WriteToInstPkgFile(paramPool, package_payload, packageType, engine->assetManager.root_directory, proximate);
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }
@@ -671,11 +675,11 @@ namespace Node{
         packageType = Command::InstructionPackage::Base;
         switch(pkg.type){
             case Command::InstructionPackage::Base: 
-                explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+                explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
                 InitFromFile(pkg.paramPool, pkg.type);
                 break;
             case Command::InstructionPackage::Object:
-                explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
+                explorer.acceptable_extensions = engine->assetManager.objPkg.files.acceptable_extensions;
                 package_payload = new Command::ObjectPackage::Payload();
                 memcpy(package_payload, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, sizeof(Command::ObjectPackage::Payload));
                 InitFromFile(pkg.paramPool, pkg.type);
@@ -697,11 +701,11 @@ namespace Node{
                 const std::filesystem::path load_path = *explorer.selected_file;
                 //put the record somewhere
                 
-                const auto proximate_path = std::filesystem::proximate(load_path, Global::assetManager->root_directory);
+                const auto proximate_path = std::filesystem::proximate(load_path, engine->assetManager.root_directory);
 
                 switch(packageType){
                     case Command::InstructionPackage::Base:{
-                        auto* pkg = EWE::Global::assetManager->instPkg.Get(proximate_path);
+                        auto* pkg = EWE::engine->assetManager.instPkg.Get(proximate_path);
                         if(pkg != nullptr){
                             InitFromObject(*pkg);
                             Log::Debug("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
@@ -712,7 +716,7 @@ namespace Node{
                         break;
                     }
                     case Command::InstructionPackage::Object:{
-                        auto* pkg = EWE::Global::assetManager->objPkg.Get(proximate_path);
+                        auto* pkg = EWE::engine->assetManager.objPkg.Get(proximate_path);
                         if(pkg != nullptr){
                             InitFromObject(*pkg);
                             Log::Debug("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());

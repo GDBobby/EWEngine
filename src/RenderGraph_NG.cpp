@@ -1,6 +1,7 @@
 #include "EWEngine/Imgui/ImNodes/Graph/RenderGraph_NG.h"
 
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/ImNodes/imnodes.h"
 #include "EightWinds/Backend/RenderInfo.h"
@@ -136,7 +137,7 @@ namespace Node{
         if(ImGui::Begin("add menu")){
             
             //if(ImGui::Button("add render info")){
-                //CreateRGNode(new FullRenderInfo("unnamed", *Global::logicalDevice, Global::stcManager->renderQueue, AttachmentSetInfo{}));
+                //CreateRGNode(new FullRenderInfo("unnamed", engine->logicalDevice, engine->renderQueue, AttachmentSetInfo{}));
                 //wantsClose = true;
             //}
 
@@ -286,11 +287,11 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
+                const auto temp_path = std::filesystem::proximate(saved_path, engine->assetManager.subTask.files.root_directory);
                 name = temp_path;
 
                 Log::Error("saving rendergraph isn't setup yet\n");
-                //RenderGraph& written = Global::assetManager->renderGraph.ConstructInto(name, *Global::logicalDevice);
+                //RenderGraph& written = engine->assetManager.renderGraph.ConstructInto(name, engine->logicalDevice);
                 
                 //auto collected_tasks = CollectTasks();
                 
@@ -298,7 +299,7 @@ namespace Node{
                 //    written.tasks.push_back(task);
                 //}
 
-                //Asset::WriteAssetToFile(written, Global::assetManager->renderGraph.files.root_directory, temp_path);
+                //Asset::WriteAssetToFile(written, engine->assetManager.renderGraph.files.root_directory, temp_path);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -320,9 +321,9 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
 
-                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
+                const std::filesystem::path temp = std::filesystem::proximate(load_path, engine->assetManager.subTask.files.root_directory);
 
-                auto* graph = Global::assetManager->renderGraph.Get(temp);
+                auto* graph = engine->assetManager.renderGraph.Get(temp);
                 InitFromObject(*graph);
 
                 explorer.enabled = false;

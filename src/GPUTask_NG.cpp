@@ -220,7 +220,7 @@ namespace Node{
         /*
         Command::PackageRecord record{};
         record.name = name;
-        record.queue = &Global::stcManager->renderQueue;
+        record.queue = &engine->renderQueue;
         record.packages;
 
         ImNodes::EWE::Node* current_node = headNode->pins[0].payload;

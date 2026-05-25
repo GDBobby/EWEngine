@@ -1,5 +1,7 @@
 #include "EWEngine/Assets/Samplers.h"
 
+#include "EWEngine/EWEngine.h"
+
 #include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "imgui.h"
@@ -40,7 +42,7 @@ namespace Asset{
         }
 
         auto samplerInfo = Sampler::Expand(condensed_val);
-        auto& ret = data_arena.AddElement(*Global::logicalDevice, samplerInfo);
+        auto& ret = data_arena.AddElement(engine->logicalDevice, samplerInfo);
         association_container.push_back(condensed_val, &ret);
         return ret;
     }

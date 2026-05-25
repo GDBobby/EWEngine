@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
     std::vector<VkExtensionProperties> extensions(extensionCount);
     EWE::EWE_VK(vkEnumerateInstanceExtensionProperties, nullptr, &extensionCount, extensions.data());
 
-    EWE::EWEngine engine{ "triangle hello world" };
+    EWE::EWEngine engine{ "triangle hello world", std::filesystem::current_path()};
     EWE::LogicalDevice& logicalDevice = engine.logicalDevice;
     
 
@@ -147,19 +147,17 @@ int main(int argc, char* argv[]) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return -1;
     }
-#if EWE_DEBUG_NAMING
     renderQueue->SetName("render queue");
-#endif
 
     EWE::Input::Mouse mouseData{};
     mouseData.TakeCallbackControl();
 
-    glfwSetMouseButtonCallback(EWE::Global::window->window, EWE::Input::Mouse::MouseCallback);
+    glfwSetMouseButtonCallback(EWE::engine->window.window, EWE::Input::Mouse::MouseCallback);
     EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
 
     //pipeline
-    EWE::Shader* triangle_vert = EWE::Global::assetManager->shader.Get("basic.vert.spv");
-    EWE::Shader* triangle_frag = EWE::Global::assetManager->shader.Get("basic.frag.spv");
+    EWE::Shader* triangle_vert = EWE::engine->assetManager.shader.Get("basic.vert.spv");
+    EWE::Shader* triangle_frag = EWE::engine->assetManager.shader.Get("basic.frag.spv");
 
     EWE::AttachmentSetInfo mainSetInfo{};
     {
@@ -191,7 +189,7 @@ int main(int argc, char* argv[]) {
     EWE::PipeLayout triangle_layout(logicalDevice, triangle_shaders);
     //passconfig should be using a full rendergraph setup
     EWE::TaskRasterConfig passConfig;
-    EWE::FullRenderInfo& renderInfo = EWE::Global::assetManager->attachment_info.ConstructInto("main ri", logicalDevice, *renderQueue, mainSetInfo, EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
+    EWE::FullRenderInfo& renderInfo = EWE::engine->assetManager.attachment_info.ConstructInto("main ri", logicalDevice, *renderQueue, mainSetInfo, EWE::engine->window.screenDimensions.width, EWE::engine->window.screenDimensions.height);
     {
         passConfig.SetDefaults();
         passConfig.attachment_info = renderInfo.full.setInfo;
@@ -210,7 +208,8 @@ int main(int argc, char* argv[]) {
     triangle_rasterObj.config.rasterizerDiscard = false;
     triangle_rasterObj.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-    EWE::RenderGraph& renderGraph = engine.renderGraph;
+    EWE::RenderGraph renderGraph{EWE::engine->logicalDevice, EWE::engine->swapchain, EWE::engine->renderQueue, EWE::engine->computeQueue, engine.graphics_stc_task, engine.compute_stc_task};
+    engine.current_renderGraph = &renderGraph;
     EWE::GPUTask* renderTask = new EWE::GPUTask("main render", logicalDevice, *renderQueue);
 
     //just generates the buffer so I can pull from it later
@@ -240,7 +239,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto& vertex_buffer = EWE::Global::assetManager->buffer.ConstructInto(EWE::Asset::CrossPlatformPathHash("triangle vertex buffer"), sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+    auto& vertex_buffer = EWE::engine->assetManager.buffer.ConstructInto(EWE::Asset::CrossPlatformPathHash("triangle vertex buffer"), sizeof(TriangleVertex) * 3, 1, vmaAllocInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
     {
         vertex_buffer.name = "triangle vertex buffer";
         TriangleVertex* mappedData = reinterpret_cast<TriangleVertex*>(vertex_buffer.Map());
@@ -292,19 +291,19 @@ int main(int argc, char* argv[]) {
         merge_task_config.depthStencilInfo.depthWriteEnable = VK_FALSE;
         merge_task_config.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     }
-    auto& merge_render_info = EWE::Global::assetManager->attachment_info.ConstructInto("swap info", logicalDevice, *renderQueue, swapSetInfo, EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height);
+    auto& merge_render_info = EWE::engine->assetManager.attachment_info.ConstructInto("swap info", logicalDevice, *renderQueue, swapSetInfo, EWE::engine->window.screenDimensions.width, EWE::engine->window.screenDimensions.height);
     merge_task_config.attachment_info = merge_render_info.full.setInfo;
 
-    EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
-    EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
+    EWE::Shader* merge_vert = EWE::engine->assetManager.shader.Get("merge.vert.spv");
+    EWE::Shader* merge_frag = EWE::engine->assetManager.shader.Get("merge.frag.spv");
 
     EWE::RasterPackage mergeRaster{ "merge raster", logicalDevice, *renderQueue, merge_task_config };
 
-    mergeRaster.scissor = EWE::Global::window->screenDimensions;
+    mergeRaster.scissor = EWE::engine->window.screenDimensions;
     mergeRaster.viewport.x = 0.f;
-    mergeRaster.viewport.y = static_cast<float>(EWE::Global::window->screenDimensions.height);
-    mergeRaster.viewport.width = static_cast<float>(EWE::Global::window->screenDimensions.width);
-    mergeRaster.viewport.height = -static_cast<float>(EWE::Global::window->screenDimensions.height);
+    mergeRaster.viewport.y = static_cast<float>(EWE::engine->window.screenDimensions.height);
+    mergeRaster.viewport.width = static_cast<float>(EWE::engine->window.screenDimensions.width);
+    mergeRaster.viewport.height = -static_cast<float>(EWE::engine->window.screenDimensions.height);
     mergeRaster.viewport.minDepth = 0.0f;
     mergeRaster.viewport.maxDepth = 1.f;
 
@@ -384,7 +383,7 @@ int main(int argc, char* argv[]) {
     renderTask->GenerateWorkload();
     mergeTask->GenerateWorkload();
 
-    EWE::SubmissionTask& imgui_submission = EWE::Global::assetManager->subTask.ConstructInto("imgui", *EWE::Global::logicalDevice, *renderQueue);
+    EWE::SubmissionTask& imgui_submission = EWE::engine->assetManager.subTask.ConstructInto("imgui", EWE::engine->logicalDevice, *renderQueue);
     imgui_submission.specializedSubmission = true;
 
     auto imgui_port_info = [&](EWE::ImguiViewport& vp){
@@ -405,7 +404,7 @@ int main(int argc, char* argv[]) {
             ImGui::BulletText("size : %.2f:%.2f", ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
             
             lab::ivec2 difference{vp.current_viewport.offset.x, vp.current_viewport.offset.y};
-            if(ImGui::DragInt2((std::string("offset") + extension_string).c_str(), &vp.current_viewport.offset.x, 1.f, 0, EWE::Global::window->screenDimensions.width)){
+            if(ImGui::DragInt2((std::string("offset") + extension_string).c_str(), &vp.current_viewport.offset.x, 1.f, 0, EWE::engine->window.screenDimensions.width)){
                 difference.x -= vp.current_viewport.offset.x;
                 difference.y -= vp.current_viewport.offset.y;
 
@@ -423,7 +422,7 @@ int main(int argc, char* argv[]) {
             current_im_vp->Pos.x = vp.current_viewport.offset.x;
             current_im_vp->Pos.y = vp.current_viewport.offset.y;
             
-            ImGui::DragInt2("extent", reinterpret_cast<int*>(&vp.current_viewport.extent.width), 1.f, 0.f, EWE::Global::window->screenDimensions.width - vp.current_viewport.offset.x);
+            ImGui::DragInt2("extent", reinterpret_cast<int*>(&vp.current_viewport.extent.width), 1.f, 0.f, EWE::engine->window.screenDimensions.width - vp.current_viewport.offset.x);
         //}
         //ImGui::End();
         if(ImGui::Begin("test mover")){
@@ -445,7 +444,7 @@ int main(int argc, char* argv[]) {
 
     auto assets_imgui_window = [&](EWE::ImguiViewport& vp){
 
-        EWE::Global::assetManager->ApplyGLFWDrops();
+        EWE::engine->assetManager.ApplyGLFWDrops();
 
         if(ImGui::TreeNode("resources")){
             if(ImGui::TreeNode("buffers")){
@@ -508,13 +507,13 @@ int main(int argc, char* argv[]) {
             ImGui::TreePop();
         }
 
-        EWE::Global::assetManager->Imgui();
+        EWE::engine->assetManager.Imgui();
 
     };
 
     auto engine_imgui_window = [&](EWE::ImguiViewport& vp){
         engine.Imgui();
-        ImGui::BulletText("asset root directory : %s", EWE::Global::assetManager->root_directory.string().c_str());
+        ImGui::BulletText("asset root directory : %s", EWE::engine->assetManager.root_directory.string().c_str());
         ImGui::BulletText("mouse pos : %.2f:%.2f", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
         static EWE::Inst::Type inst_type = EWE::Inst::Type::BindPipeline;
         Reflect::Enum::Imgui_Combo_Selectable("inst dd", inst_type);
@@ -542,33 +541,33 @@ int main(int argc, char* argv[]) {
         }
 
         if(ImGui::Button("start music")){
-            EWE::Global::soundEngine->PlayMusic(EWE::SoundEngine::howling_wind_index, true);
+            EWE::engine->soundEngine.PlayMusic(EWE::SoundEngine::howling_wind_index, true);
         }
         ImGui::SameLine();
         if(ImGui::Button("stop music")){
-            EWE::Global::soundEngine->StopMusic();
+            EWE::engine->soundEngine.StopMusic();
         }
     };
     {
         auto& vp_back = imguiHandler.viewports.emplace_back();
         vp_back.exec_func = engine_imgui_window;
         vp_back.context = imguiHandler.InitializeContext();
-        vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.8f;
-        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.2f;
+        vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.8f;
+        vp_back.current_viewport.extent.height = EWE::engine->window.screenDimensions.height * 0.2f;
     }
     {
         auto& vp_back = imguiHandler.viewports[0];
         vp_back.exec_func = node_imgui_vp;
-        vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.8f;
-        vp_back.current_viewport.offset.y = EWE::Global::window->screenDimensions.height * 0.2f;
-        vp_back.current_viewport.extent.height = EWE::Global::window->screenDimensions.height * 0.8f;
+        vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.8f;
+        vp_back.current_viewport.offset.y = EWE::engine->window.screenDimensions.height * 0.2f;
+        vp_back.current_viewport.extent.height = EWE::engine->window.screenDimensions.height * 0.8f;
     }
     {
         auto& vp_back = imguiHandler.viewports.emplace_back();
         vp_back.exec_func = assets_imgui_window;
         vp_back.context = imguiHandler.InitializeContext();
-        vp_back.current_viewport.offset.x = EWE::Global::window->screenDimensions.width * 0.8f;
-        vp_back.current_viewport.extent.width = EWE::Global::window->screenDimensions.width * 0.2f;
+        vp_back.current_viewport.offset.x = EWE::engine->window.screenDimensions.width * 0.8f;
+        vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.2f;
     }
 
     imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
@@ -580,7 +579,7 @@ int main(int argc, char* argv[]) {
         return false;
     }
     );
-    EWE::SubmissionTask& attachment_blit_submission = EWE::Global::assetManager->subTask.ConstructInto("attachment blit", *EWE::Global::logicalDevice, *renderQueue);
+    EWE::SubmissionTask& attachment_blit_submission = EWE::engine->assetManager.subTask.ConstructInto("attachment blit", EWE::engine->logicalDevice, *renderQueue);
     attachment_blit_submission.specializedSubmission = true;
 
     VkSamplerCreateInfo samplerCreateInfo{
@@ -604,7 +603,7 @@ int main(int argc, char* argv[]) {
         .unnormalizedCoordinates = VK_FALSE
     };
 
-    EWE::Sampler& attachmentSampler = EWE::Global::assetManager->sampler.Get(samplerCreateInfo);
+    EWE::Sampler& attachmentSampler = EWE::engine->assetManager.sampler.Get(samplerCreateInfo);
 
     EWE::PerFlight<EWE::DescriptorImageInfo> imgui_attachment_descriptor(
         EWE::DescriptorImageInfo{attachmentSampler, *imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
@@ -657,7 +656,7 @@ int main(int argc, char* argv[]) {
         std::chrono::nanoseconds elapsedTime = std::chrono::nanoseconds(0);
         constexpr auto frameDuration = std::chrono::duration<double>(1.0 / 60.0); // seconds per frame
 
-        while (!glfwWindowShouldClose(EWE::Global::window->window)) {
+        while (!glfwWindowShouldClose(EWE::engine->window.window)) {
             const auto timeEnd = std::chrono::high_resolution_clock::now();
             elapsedTime += timeEnd - timeBegin;
             timeBegin = timeEnd;
@@ -665,18 +664,18 @@ int main(int argc, char* argv[]) {
 
                 glfwPollEvents();
 
-                if (renderGraph.Acquire(EWE::Global::frameIndex)) {
+                if (renderGraph.Acquire(EWE::engine->frameIndex)) {
                     auto& swapImage = engine.swapchain.GetCurrentImage();
                     swapImage.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-                    mouseData.UpdatePosition(EWE::Global::window->window);
-                    renderGraph.ChangeResource(*mergeTask, present_img_att_index, &swapImage, EWE::Global::frameIndex);
-                    renderGraph.presentBridge.UpdateSrcData(&mergeTask->queue, &mergeTask->resources.images[present_img_att_index], EWE::Global::frameIndex);
-                    renderGraph.RecreateBarriers(EWE::Global::frameIndex);
+                    mouseData.UpdatePosition(EWE::engine->window.window);
+                    renderGraph.ChangeResource(*mergeTask, present_img_att_index, &swapImage, EWE::engine->frameIndex);
+                    renderGraph.presentBridge.UpdateSrcData(&mergeTask->queue, &mergeTask->resources.images[present_img_att_index], EWE::engine->frameIndex);
+                    renderGraph.RecreateBarriers(EWE::engine->frameIndex);
 
-                    renderGraph.Execute(EWE::Global::frameIndex);
+                    renderGraph.Execute(EWE::engine->frameIndex);
 
-                    EWE::Global::frameIndex = (EWE::Global::frameIndex + 1) % EWE::max_frames_in_flight;
+                    EWE::engine->frameIndex = (EWE::engine->frameIndex + 1) % EWE::max_frames_in_flight;
                     engine.totalFramesSubmitted++;
                 }
                 else {

@@ -1,6 +1,7 @@
 #include "EWEngine/Imgui/Objects.h"
 
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 #include "EWEngine/Imgui/Params.h"
 #include "EightWinds/VulkanHeader.h"
 
@@ -60,7 +61,7 @@ namespace EWE{
     template<> void ImguiExtension::Imgui(Image& obj){
         ImGui::Text("name : %s", obj.name.c_str());
         if(obj.owningQueue != nullptr){
-            ImGui::Text("owning Queue : %s", Reflect::Enum::ToString(Global::stcManager->GetQueueType(*obj.owningQueue)).data());
+            ImGui::Text("owning Queue : %s", Reflect::Enum::ToString(engine->GetQueueType(*obj.owningQueue)).data());
         }
         else{
             ImGui::Text("owning queue : nullptr");
@@ -442,7 +443,7 @@ namespace EWE{
                 ImGui::EndTable();
             }
             if(ImGui::Button("write meta to file")){
-                obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.name);
+                obj.meta.WriteToFile(engine->assetManager.shader.files.root_directory / "meta" / obj.name);
                 Log::Debug("wrote shader meta to file\n");
             }
         }

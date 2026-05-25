@@ -4,6 +4,7 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 //#include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
 #include "EightWinds/Backend/RenderInfo.h"
 
@@ -24,9 +25,9 @@ namespace Node{
         EWE_ASSERT(record != nullptr);
         std::filesystem::path task_path = record->name;
         task_path.replace_extension("egt");
-        GPUTask* ret = Global::assetManager->gpuTask.Get(task_path);
+        GPUTask* ret = engine->assetManager.gpuTask.Get(task_path);
         if(ret == nullptr) {
-            return &Global::assetManager->gpuTask.ConstructInto(record->name, *Global::logicalDevice, *record, false);
+            return &engine->assetManager.gpuTask.ConstructInto(record->name, engine->logicalDevice, *record, false);
         }
         return ret;
     }
@@ -94,7 +95,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->subTask.files.acceptable_extensions;
+        explorer.acceptable_extensions = engine->assetManager.subTask.files.acceptable_extensions;
     }
 
     ImNodes::EWE::Node* SubmissionTask_NG::CreateHeadNode(){
@@ -114,7 +115,7 @@ namespace Node{
                 Log::Debug("dropping in sub task\n");
 
 
-                auto const task_queue_type = Global::stcManager->GetQueueType(*pkg->queue);
+                auto const task_queue_type = engine->GetQueueType(*pkg->queue);
                 bool adding_allowed = false;
                 if(current_queue_type != task_queue_type){
                     if(headNode->pins[0].payload == nullptr){
@@ -364,10 +365,10 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
+                const auto temp_path = std::filesystem::proximate(saved_path, engine->assetManager.subTask.files.root_directory);
                 name = temp_path;
 
-                SubmissionTask& written = Global::assetManager->subTask.ConstructInto(name, *Global::logicalDevice, Global::stcManager->renderQueue);
+                SubmissionTask& written = engine->assetManager.subTask.ConstructInto(name, engine->logicalDevice, engine->renderQueue);
                 
                 auto collected_tasks = CollectTasks();
                 
@@ -375,7 +376,7 @@ namespace Node{
                     written.tasks.push_back(task);
                 }
 
-                Asset::WriteAssetToFile(written, Global::assetManager->subTask.files.root_directory, temp_path);
+                Asset::WriteAssetToFile(written, engine->assetManager.subTask.files.root_directory, temp_path);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -397,9 +398,9 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
 
-                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
+                const std::filesystem::path temp = std::filesystem::proximate(load_path, engine->assetManager.subTask.files.root_directory);
 
-                auto* subTask = Global::assetManager->subTask.Get(temp);
+                auto* subTask = engine->assetManager.subTask.Get(temp);
                 InitFromObject(*subTask);
 
                 explorer.enabled = false;
@@ -443,7 +444,7 @@ namespace Node{
         }
 
         if(subTask.queue != nullptr){
-            current_queue_type = Global::stcManager->GetQueueType(*subTask.queue);
+            current_queue_type = engine->GetQueueType(*subTask.queue);
         }
 
         {

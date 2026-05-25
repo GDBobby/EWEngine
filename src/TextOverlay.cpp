@@ -8,6 +8,8 @@
 #include "EightWinds/RenderGraph/Resources.h"
 #include "EWEngine/STC_Manager.h"
 
+#include "EWEngine/EWEngine.h"
+
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
@@ -37,7 +39,7 @@ namespace EWE {
 	}
 
 	Font::~Font() {
-		vkDestroySampler(*Global::logicalDevice, sampler, nullptr);
+		vkDestroySampler(engine->logicalDevice, sampler, nullptr);
 	}
 
 	Font::Font(std::unordered_map<wchar_t, CharacterData>& _vertData, std::unordered_map<wchar_t, float>& _advanceData, uint16_t _width, uint16_t _height, void* imgdata)
@@ -45,10 +47,10 @@ namespace EWE {
 		height{ _height },
 		vertData{ std::move(_vertData) },
 		advanceData{ std::move(_advanceData) },
-		image{ *Global::logicalDevice },
+		image{ engine->logicalDevice },
 		image_view{ image, false },
 		buffers{
-			*Global::logicalDevice,
+			engine->logicalDevice,
 			sizeof(Font::CharacterData::Vert) * 4, TextOverlay::TEXTOVERLAY_MAX_CHAR_COUNT,
 			VmaAllocationCreateInfo{
 				.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -62,7 +64,7 @@ namespace EWE {
 			}
 		},
 		sampler{
-			*Global::logicalDevice,
+			engine->logicalDevice,
 			VkSamplerCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 				.pNext = nullptr,
@@ -107,7 +109,7 @@ namespace EWE {
 
 
 		//i havent done staging buffer yet
-		StagingBuffer* stagingBuffer = new StagingBuffer(*Global::logicalDevice, width * height * 4, imgdata);
+		StagingBuffer* stagingBuffer = new StagingBuffer(engine->logicalDevice, width * height * 4, imgdata);
 		// Copy to image
 
 		//i need to create a new STC manager
@@ -121,7 +123,7 @@ namespace EWE {
 				}
 			}
 		};
-		Global::stcManager->AsyncTransfer(transferContext, Queue::Graphics);
+		engine->stcManager.AsyncTransfer(transferContext, Queue::Graphics);
 
 		VkDescriptorImageInfo descImgInfo;
 		descImgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -142,7 +144,7 @@ namespace EWE {
 
 
 	uint16_t TextStruct::GetSelectionIndex(double xpos) {
-		const float charW = 1.5f * scale / Global::window->screenDimensions.width;
+		const float charW = 1.5f * scale / engine->window.screenDimensions.width;
 		const float width = GetWidth();
 		float currentPos = x;
 
@@ -158,12 +160,12 @@ namespace EWE {
 
 		//float lastPos = currentPos;
 		for (uint16_t i = 0; i < string.length(); i++) {
-			currentPos += font->GetCharWidth(string[i], charW) * Global::window->screenDimensions.width / 8.f;
+			currentPos += font->GetCharWidth(string[i], charW) * engine->window.screenDimensions.width / 8.f;
 #if EWE_DEBUG
 			Log::Debug("currentPos : %.2f \n", currentPos);
 #endif
 			if (xpos <= currentPos) { return i; }
-			currentPos += font->GetCharWidth(string[i], charW) * Global::window->screenDimensions.width * 3.f / 8.f;
+			currentPos += font->GetCharWidth(string[i], charW) * engine->window.screenDimensions.width * 3.f / 8.f;
 		}
 		return static_cast<uint16_t>(string.length());
 	}
@@ -184,13 +186,13 @@ namespace EWE {
 
 	float TextStruct::GetWidth() {
 		//std::cout << "yo? : " << frameBufferWidth << std::endl;
-		const float charW = 1.5f * scale / Global::window->screenDimensions.width;
+		const float charW = 1.5f * scale / engine->window.screenDimensions.width;
 		//Log::Debug("text struct get width : %.5f \n", textWidth);
 #if EWE_DEBUG
 		const float textWidth = textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetStringWidth(string, charW);
 		if (textWidth < 0.0f) {
 
-			Log::Debug("width less than 0, what  was the string? : %s:%u \n", string.c_str(), Global::window->screenDimensions.width);
+			Log::Debug("width less than 0, what  was the string? : %s:%u \n", string.c_str(), engine->window.screenDimensions.width);
 			EWE_ASSERT(false);
 		}
 		return textWidth;
@@ -324,9 +326,9 @@ namespace EWE {
 		const int16_t previousFont = textOverlayPtr->currentFont;
 		SetCurrentFont(0);
 		if (textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped == nullptr) {
-			textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped = reinterpret_cast<Font::CharacterData::Vert*>(textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[Global::frameIndex].mapped);
+			textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped = reinterpret_cast<Font::CharacterData::Vert*>(textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[engine->frameIndex].mapped);
 		}
-		AddText(TextStruct{ Global::logicalDevice->physicalDevice.name, 0, textOverlayPtr->framebuffer_height - (20.f * textOverlayPtr->scale), TA_left, 1.f });
+		AddText(TextStruct{ engine->logicalDevice.physicalDevice.name, 0, textOverlayPtr->framebuffer_height - (20.f * textOverlayPtr->scale), TA_left, 1.f });
 		int lastFPS = static_cast<int>(1 / time);
 		int averageFPS = static_cast<int>(1 / averageTime);
 		std::string buffer_string = std::format("frame time: {:.2f} ms ({} fps)", time * 1000.0f, lastFPS);
@@ -353,7 +355,7 @@ namespace EWE {
 	void TextOverlay::AddText(TextStruct const& textStruct, const float scaleX) {
 		Font::CharacterData::Vert* mapped = textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped;
 		if (mapped == nullptr) {
-			mapped = reinterpret_cast<Font::CharacterData::Vert*>(textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[Global::frameIndex].Map());
+			mapped = reinterpret_cast<Font::CharacterData::Vert*>(textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[engine->frameIndex].Map());
 			textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped = mapped;
 			EWE_ASSERT(mapped != nullptr);
 		}
@@ -434,8 +436,8 @@ namespace EWE {
 	void TextOverlay::Draw() {
 		for (auto& font : textOverlayPtr->fonts) {
 			if (font->drawnLetterCount > 0) {
-				font->buffers[Global::frameIndex].Flush();
-				font->buffers[Global::frameIndex].Unmap();
+				font->buffers[engine->frameIndex].Flush();
+				font->buffers[engine->frameIndex].Unmap();
 				font->mapped = nullptr;
 				font->drawnLetterCount = 0; // reset drawn letter count after binding
 			}
@@ -476,6 +478,12 @@ namespace EWE {
 #endif
 			return false;
 		}
+	}
+
+	void TextOverlay::WindowResize() {
+		framebuffer_width = engine->window.screenDimensions.width;
+		framebuffer_height = engine->window.screenDimensions.height;
+		scale = framebuffer_width / DEFAULT_WIDTH;
 	}
 
 	int16_t TextOverlay::GetCurrentFont() {

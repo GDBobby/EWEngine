@@ -2,6 +2,8 @@
 #include "EWEngine/Global.h"
 #include "EWEngine/STC_Manager.h"
 
+#include "EWEngine/EWEngine.h"
+
 #define USING_VULKAN_CONVERSION
 #include "ImageProcessor.h"
 
@@ -54,10 +56,10 @@ namespace EWE{
                     if(img.owningQueue != nullptr){
                         //potentially do a assert here to make sure the queue type is the same as the owning queue?
                         //or just dont set the owning queue
-                        //dstQueueType = Global::stcManager->GetQueueType(*img.owningQueue);
+                        //dstQueueType = engine->GetQueueType(*img.owningQueue);
                     }
                     else{
-                        img.owningQueue = &Global::stcManager->transferQueue;
+                        img.owningQueue = &engine->transferQueue;
                     }
 
                     AsyncTransferContext_Image transferContext{
@@ -97,9 +99,9 @@ namespace EWE{
                             .priority = 1.f
                         }
                     );
-                    EWE_ASSERT(*img.owningQueue == Global::stcManager->transferQueue && "not ready for single queue uploads yet");
-                    Global::stcManager->AsyncTransfer(transferContext, dstQueueType);
-                    //img.owningQueue = &Global::stcManager->GetQueue(dstQueueType);
+                    EWE_ASSERT(*img.owningQueue == engine->transferQueue && "not ready for single queue uploads yet");
+                    engine->stcManager.AsyncTransfer(transferContext, dstQueueType);
+                    //img.owningQueue = &engine->GetQueue(dstQueueType);
                     return true;
                 }
                 else{

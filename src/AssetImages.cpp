@@ -1,6 +1,8 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/Images.h"
 
+#include "EWEngine/EWEngine.h"
+
 #include "EWEngine/Assets/Image/Loader.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/Objects.h"
@@ -16,7 +18,7 @@ namespace Asset{
     template<>
     bool LoadAssetFromFile(Image* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& path){
         const auto full_path = root_directory / path;
-        Image& img = *std::construct_at(ptr_to_raw_mem, *Global::logicalDevice);
+        Image& img = *std::construct_at(ptr_to_raw_mem, engine->logicalDevice);
         img.name = path;
 
         auto load_img_fiber = marl::Task{[&img, full_path, root_directory, path](){
@@ -27,7 +29,7 @@ namespace Asset{
             img.readyForUsage = InitializeImage(img, full_path, Queue::Type::Graphics);
 
         }};
-        Global::scheduler->enqueue(std::move(load_img_fiber));
+        engine->scheduler.enqueue(std::move(load_img_fiber));
         //do a comparison here on overwritten values, possibly
         //thats extent, format, miplevels
 

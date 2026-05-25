@@ -1,6 +1,7 @@
 #include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
 
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/ObjectInstructionPackage.h"
@@ -16,7 +17,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->pkgRecord.files.acceptable_extensions;
+        explorer.acceptable_extensions = engine->assetManager.pkgRecord.files.acceptable_extensions;
     }
 
     ImNodes::EWE::Node* PackageRecord_NG::CreateHeadNode(){
@@ -183,7 +184,7 @@ namespace Node{
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
                 Command::PackageRecord record{};
-                record.queue = &Global::stcManager->GetQueue(queue_type);
+                record.queue = &engine->GetQueue(queue_type);
                 record.name = saved_path;
                 ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
                 while(current_node != nullptr){
@@ -192,15 +193,15 @@ namespace Node{
                 }
                 const auto proximate_path = std::filesystem::proximate(
                     saved_path,
-                    EWE::Global::assetManager->pkgRecord.files.root_directory
+                    EWE::engine->assetManager.pkgRecord.files.root_directory
                 );
                 Log::Debug("writing package record to file : %s / %s\n",
-                    EWE::Global::assetManager->pkgRecord.files.root_directory.string().c_str(), 
+                    EWE::engine->assetManager.pkgRecord.files.root_directory.string().c_str(), 
                     proximate_path.string().c_str()
                 );
                 Asset::WriteAssetToFile(
                     record, 
-                    EWE::Global::assetManager->pkgRecord.files.root_directory, 
+                    EWE::engine->assetManager.pkgRecord.files.root_directory, 
                     proximate_path
                 );
 
@@ -224,8 +225,8 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 
-                const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->pkgRecord.files.root_directory);
-                auto* record = Global::assetManager->pkgRecord.Get(localized_path);
+                const auto localized_path = std::filesystem::proximate(load_path, engine->assetManager.pkgRecord.files.root_directory);
+                auto* record = engine->assetManager.pkgRecord.Get(localized_path);
                 if(record == nullptr){
                     Log::Warning("failed to read record from file : %s\n", localized_path.string().c_str());
                 }

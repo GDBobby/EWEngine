@@ -1,6 +1,6 @@
 #include "EWEngine/Assets/BaseInstPackages.h"
 #include "EWEngine/Assets/RasterPackages.h"
-#include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 
 
 #include "EWEngine/Imgui/DragDrop.h"
@@ -116,7 +116,7 @@ namespace Asset{
 
         for(auto* pkg : rt.objectPackages){
             AssetHash hash_buffer = GetHash(*pkg);
-            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), Global::assetManager->objPkg.files.root_directory, pkg->name);
+            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), engine->assetManager.objPkg.files.root_directory, pkg->name);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
 
@@ -137,7 +137,7 @@ namespace Asset{
         
         TaskRasterConfig tempConfig;
         ReadConfig(tempConfig, inFile);
-        auto& ret = *std::construct_at(ptr_to_raw_mem, name.string(), *Global::logicalDevice, Global::stcManager->renderQueue, tempConfig);
+        auto& ret = *std::construct_at(ptr_to_raw_mem, name.string(), engine->logicalDevice, engine->renderQueue, tempConfig);
 
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
 
@@ -146,7 +146,7 @@ namespace Asset{
             AssetHash hash_buffer;
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
             //i need to make sure this is also written to file, or it will become invalid
-            ret.objectPackages.push_back(Global::assetManager->objPkg.Get(hash_buffer));
+            ret.objectPackages.push_back(engine->assetManager.objPkg.Get(hash_buffer));
         }
 
         inFile.close();

@@ -260,14 +260,22 @@ namespace EWE{
 
     std::unordered_map<std::string, bool> optionalExtensions{};
 
-    EWEngine::EWEngine(std::string_view application_name)
-        : instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
+    EWEngine* engine;
+
+    EWEngine::EWEngine(std::string_view application_name, std::filesystem::path const& root_directory)
+    : scheduler{marl::Scheduler::Config::allCores()},
+        frameIndex{0},
+        instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
         window{instance, 1920, 1080, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
         renderQueue{GetPresentQueue(logicalDevice)}, computeQueue{GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)}, 
         swapchain{logicalDevice, window, renderQueue},
-        renderGraph{logicalDevice, swapchain, renderQueue, computeQueue},
-        stcManager{logicalDevice, transferQueue, renderGraph}//,
+        stcManager{logicalDevice, renderQueue, transferQueue, computeQueue},
+        assetManager{root_directory, logicalDevice, renderQueue},
+        soundEngine{},
+        current_renderGraph{stcManager.current_renderGraph},
+        graphics_stc_task{assetManager.subTask.ConstructInto("graphics STC task", logicalDevice, renderQueue)},
+        compute_stc_task{assetManager.subTask.ConstructInto("compute STC task", logicalDevice, computeQueue)}
         /*
         textOverlay{ 
             logicalDevice, 
@@ -276,13 +284,25 @@ namespace EWE{
         }
         */
     {
-        Global::Create(logicalDevice, window, stcManager, std::filesystem::current_path());
+        EWE_ASSERT(engine == nullptr);
+        engine = this;
 
+        EWE_ASSERT(std::filesystem::is_directory(root_directory));
 
-        renderGraph.graphics_stc_task = &Global::assetManager->subTask.ConstructInto("graphics STC task", logicalDevice, renderQueue);
-        renderGraph.compute_stc_task = &Global::assetManager->subTask.ConstructInto("compute STC task", logicalDevice, computeQueue);
-        renderGraph.graphics_stc_task->specializedSubmission = true;
-        renderGraph.compute_stc_task->specializedSubmission = true;
+        graphics_stc_task.specializedSubmission = true;
+        compute_stc_task.specializedSubmission = true;
+
+        glfwSetDropCallback(window.window, GLFW_Drop_Callback);
+
+		renderQueue.SetName("render queue");
+		if(computeQueue == transferQueue){
+			computeQueue.SetName("C&T queue, compute handle");
+			transferQueue.SetName("C&T queue, transfer handle");
+		}
+		else{
+			computeQueue.SetName("compute queue");
+			transferQueue.SetName("transfer queue");
+		}
     }
 
 #if EWE_IMGUI
@@ -350,6 +370,30 @@ namespace EWE{
         }
         return false;
     }
+
+
+	Queue::Type EWEngine::GetQueueType(Queue& queue) const{
+		if(queue == engine->renderQueue){
+			return Queue::Graphics;
+		}
+		else if (queue == engine->computeQueue){
+			return Queue::Compute;
+		}
+		else if (queue == engine->transferQueue){
+			return Queue::Transfer;
+		}
+		EWE_UNREACHABLE;
+	}
+
+	Queue& EWEngine::GetQueue(Queue::Type type) {
+		switch (type) {
+			case Queue::Graphics: return engine->renderQueue;
+			case Queue::Compute: return engine->computeQueue;
+			case Queue::Transfer: return engine->transferQueue;
+			default: EWE_UNREACHABLE;
+		}
+		EWE_UNREACHABLE;
+	}
 
     void EWEngine::Imgui() {
         if (ImGui::Begin("engine")) {

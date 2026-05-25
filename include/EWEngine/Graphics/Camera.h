@@ -6,6 +6,7 @@
 #include "EWEngine/Global.h"
 
 #include <LAB/Camera.h>
+#include "EWEngine/EWEngine.h"
 
 #include <vector>
 #include <array>
@@ -46,16 +47,16 @@ namespace EWE {
 
 		template<typename CoordinateSystem>
 		requires(lab::IsCoordinateSystem<CoordinateSystem>::value)
-		void UpdateCamera() {
-			if (dataHasBeenUpdated == 0) {
-				return;
-			}
-			dataHasBeenUpdated--;
-			const lab::vec3 forward = lab::Normalized(target - position);
-			ViewDirection<CoordinateSystem>(position, forward, cameraUp);
-			memcpy(buffers[Global::frameIndex].mapped, &data, sizeof(CameraBufferObject));
-			buffers[Global::frameIndex].Flush();
+		void UpdateCamera(){
+		if (dataHasBeenUpdated == 0) {
+			return;
 		}
+		dataHasBeenUpdated--;
+		const lab::vec3 forward = lab::Normalized(target - position);
+		ViewDirection<CoordinateSystem>(position, forward, cameraUp);
+		memcpy(buffers[engine->frameIndex].mapped, &data, sizeof(CameraBufferObject));
+		buffers[engine->frameIndex].Flush();
+	}
 
 		lab::mat4 const& GetProjection() const { return data.proj; }
 		lab::mat4 const& GetView() const { return data.view; }

@@ -2,6 +2,7 @@
 
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/ObjectInstructionPackage.h"
@@ -19,7 +20,7 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->rasterTask.files.acceptable_extensions;
+        explorer.acceptable_extensions = engine->assetManager.rasterTask.files.acceptable_extensions;
         task_config.SetDefaults();
     }
 
@@ -152,16 +153,16 @@ namespace Node{
                 const std::filesystem::path saved_path = *explorer.selected_file;
                 auto const proximate_path = std::filesystem::proximate(
                     saved_path,
-                    EWE::Global::assetManager->rasterTask.files.root_directory
+                    EWE::engine->assetManager.rasterTask.files.root_directory
                 );
                 {
-                    auto* pkg = Global::assetManager->rasterTask.Get(Asset::CrossPlatformPathHash(proximate_path));
+                    auto* pkg = engine->assetManager.rasterTask.Get(Asset::CrossPlatformPathHash(proximate_path));
                     if(pkg != nullptr){
-                        Global::assetManager->rasterTask.Destroy(*pkg);
+                        engine->assetManager.rasterTask.Destroy(*pkg);
                     }
                 }
 
-                RasterPackage& rt = Global::assetManager->rasterTask.ConstructInto(saved_path.string(), *Global::logicalDevice, Global::stcManager->renderQueue, task_config);
+                RasterPackage& rt = engine->assetManager.rasterTask.ConstructInto(saved_path.string(), engine->logicalDevice, engine->renderQueue, task_config);
                 
                 ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
                 while(current_node != nullptr){
@@ -169,13 +170,13 @@ namespace Node{
                     current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
                 }
                 Log::Debug("writing raster ng to file - %s / %s -- %s\n", 
-                    EWE::Global::assetManager->rasterTask.files.root_directory.string().c_str(),
+                    EWE::engine->assetManager.rasterTask.files.root_directory.string().c_str(),
                     proximate_path.string().c_str(),
                     saved_path.string().c_str()
                 );
                 Asset::WriteAssetToFile(
                     rt,
-                    EWE::Global::assetManager->rasterTask.files.root_directory,
+                    EWE::engine->assetManager.rasterTask.files.root_directory,
                     proximate_path
                 );
 
@@ -199,8 +200,8 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 
-                const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->rasterTask.files.root_directory);
-                auto* rt = Global::assetManager->rasterTask.Get(localized_path);
+                const auto localized_path = std::filesystem::proximate(load_path, engine->assetManager.rasterTask.files.root_directory);
+                auto* rt = engine->assetManager.rasterTask.Get(localized_path);
                 InitFromObject(*rt);
 
                 explorer.enabled = false;

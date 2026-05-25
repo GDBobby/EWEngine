@@ -1,5 +1,7 @@
 #include "EWEngine/Assets/Buffers.h"
 
+#include "EWEngine/EWEngine.h"
+
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
@@ -40,7 +42,7 @@ namespace Asset{
         VmaAllocationCreateInfo const& vmaAllocCreateInfo, 
         VkBufferUsageFlags usageFlags
     ){
-        auto& ele = data_arena.AddElement(*Global::logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
+        auto& ele = data_arena.AddElement(engine->logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
         association_container.push_back(hash, &ele);
         return ele;
     }

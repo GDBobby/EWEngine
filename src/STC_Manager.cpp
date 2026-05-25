@@ -6,6 +6,7 @@
 #include "EightWinds/Image.h"
 
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 
 #include "EightWinds/RenderGraph/RenderGraph.h"
 
@@ -16,44 +17,21 @@
 
 namespace EWE {
 
-	Queue::Type STC_Manager::GetQueueType(Queue& queue) const{
-		if(queue == renderQueue){
-			return Queue::Graphics;
-		}
-		else if (queue == computeQueue){
-			return Queue::Compute;
-		}
-		else if (queue == transferQueue){
-			return Queue::Transfer;
-		}
-		EWE_UNREACHABLE;
-	}
-
-	Queue& STC_Manager::GetQueue(Queue::Type type) {
-		switch (type) {
-			case Queue::Graphics: return renderQueue;
-			case Queue::Compute: return computeQueue;
-			case Queue::Transfer: return transferQueue;
-			default: EWE_UNREACHABLE;
-		}
-		EWE_UNREACHABLE;
-	}
-
 	SingleTimeCommand* STC_Manager::GetSTC(Queue::Type requested_queue) {
 		Queue::Type actualQueueType = requested_queue;
 		switch (requested_queue) {
 			case Queue::Transfer:
-				if (transferQueue == renderQueue) {
+				if (engine->transferQueue == engine->renderQueue) {
 					actualQueueType = Queue::Graphics;
 				}
-				else if (transferQueue == computeQueue) {
+				else if (engine->transferQueue == engine->computeQueue) {
 					//if the compute queue is also the transfer queue, it will behave the same as tranfer->render
 					//if the destination queue is compute, it will be considered a 1 queue transfer
 					actualQueueType = Queue::Compute; 
 				}
 				break;
 			case Queue::Compute:
-				if (computeQueue == renderQueue) {
+				if (engine->computeQueue == engine->renderQueue) {
 					actualQueueType = Queue::Graphics;
 				}
 				break;
@@ -62,11 +40,8 @@ namespace EWE {
 		return new SingleTimeCommand(stc_command_pools[requested_queue].GetNext(), semaphores.GetNext());
 	}
 
-    STC_Manager::STC_Manager(LogicalDevice& _logicalDevice, Queue& _transferQueue, RenderGraph& _renderGraph)
-    : logicalDevice{_logicalDevice},
-		renderGraph{_renderGraph},
-		renderQueue{ _renderGraph.renderQueue }, computeQueue{ _renderGraph.computeQueue}, transferQueue{_transferQueue},
-        renderCommandPools{logicalDevice, renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
+    STC_Manager::STC_Manager(LogicalDevice& logicalDevice, Queue& renderQueue, Queue& transferQueue, Queue& computeQueue)
+    : renderCommandPools{logicalDevice, renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
         stc_mutexes{},
         stc_command_pools{
             RingBuffer<CommandPool, 16>{logicalDevice, renderQueue, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT},
@@ -75,29 +50,18 @@ namespace EWE {
         },
 		semaphores{logicalDevice}
     {
-#if EWE_DEBUG_NAMING
-		renderQueue.SetName("render queue");
-		if(computeQueue == transferQueue){
-			computeQueue.SetName("C&T queue, compute handle");
-			transferQueue.SetName("C&T queue, transfer handle");
-		}
-		else{
-			computeQueue.SetName("compute queue");
-			transferQueue.SetName("transfer queue");
-		}
-#endif
     }
     STC_Manager::~STC_Manager() {
 		
     }
     
     void STC_Manager::AsyncTransfer(AsyncTransferContext_Image& transferContext, Queue& rh_queue){
-		AsyncTransfer(transferContext, GetQueueType(rh_queue));
+		AsyncTransfer(transferContext, engine->GetQueueType(rh_queue));
 	}
 
 	void STC_Manager::AsyncTransfer_Helper(AsyncTransferContext_Image& transferContext, Queue::Type dstQueueType){
 
-        Queue& rh_queue = GetQueue(dstQueueType);
+        Queue& rh_queue = engine->GetQueue(dstQueueType);
 
 
 		VkCommandBufferBeginInfo const cmdBeginInfo{
@@ -122,7 +86,7 @@ namespace EWE {
 		Resource<Image> initial_resource{ *transferContext.resource.resource[0], initial_usage};
 
 		{ //initial transition from UNDEFINED to either TRANSFER_DST_OPTIMAL or GENERAL
-			auto initial_transition_barrier = Barrier::Acquire_Image(transferQueue, initial_resource, 0);
+			auto initial_transition_barrier = Barrier::Acquire_Image(engine->transferQueue, initial_resource, 0);
 			VkDependencyInfo dependency_info{
 				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
 				.pNext = nullptr,
@@ -161,7 +125,7 @@ namespace EWE {
 			.pSignalSemaphoreInfos = &semInfo
 		};
 
-		auto ownershipBarrier = Barrier::Transition_Image(transferQueue, initial_resource, rh_queue, transferContext.resource, 0);
+		auto ownershipBarrier = Barrier::Transition_Image(engine->transferQueue, initial_resource, rh_queue, transferContext.resource, 0);
 
 		VkDependencyInfo dependency_info{
 			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
@@ -190,7 +154,8 @@ namespace EWE {
 			.res = transferContext.resource,
 			.dstQueue = &rh_queue
 		};
-		renderGraph.ResourceOwnershipTransfer(stc_helper);
+		EWE_ASSERT(current_renderGraph != nullptr);
+		current_renderGraph->ResourceOwnershipTransfer(stc_helper);
 
 		//ownership_stc = GetSTC(dstQueueType);
 		//cmdInfo.commandBuffer = ownership_stc->cmdBuf;
@@ -236,7 +201,7 @@ namespace EWE {
 
 	void STC_Manager::SingleQueueTransfer(AsyncTransferContext_Image& transferContext, Queue::Type dstQueueType){
 
-		Queue& queue = GetQueue(dstQueueType);
+		Queue& queue = engine->GetQueue(dstQueueType);
 
 		VkCommandBufferBeginInfo const cmdBeginInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -344,13 +309,13 @@ namespace EWE {
 		EWE_ASSERT(!CheckMainThread());
 		std::string thread_name = std::string("AT:") + transferContext.resource.resource[0]->name.string();
 		NameCurrentThread(thread_name);
-        Queue& rh_queue = GetQueue(dstQueueType);
+        Queue& rh_queue = engine->GetQueue(dstQueueType);
 		if (transferContext.generatingMipMaps) {
 			EWE_ASSERT(rh_queue.family.SupportsGraphics());
 		}
 
 		//when im ready for signle queue transfers i can fix this up
-        Queue& lh_queue = transferQueue;
+        Queue& lh_queue = engine->transferQueue;
 
 		if(lh_queue != rh_queue){
 			AsyncTransfer_Helper(transferContext, dstQueueType);

@@ -151,11 +151,7 @@ namespace EWE {
 		static bool RemoveFont(uint16_t fontIndex);
 
 
-		void WindowResize() {
-			framebuffer_width = Global::window->screenDimensions.width;
-			framebuffer_height = Global::window->screenDimensions.height;
-			scale = framebuffer_width / DEFAULT_WIDTH;
-		}
+		void WindowResize();
 
 
 		void Record(RasterPackage& task){

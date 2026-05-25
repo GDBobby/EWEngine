@@ -3,6 +3,8 @@
 #include "EWEngine/Assets/PackageRecords.h"
 #include "EWEngine/Global.h"
 
+#include "EWEngine/EWEngine.h"
+
 
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/PackageRecord.h"
@@ -49,7 +51,7 @@ namespace Asset{
             Log::Warning("queue was nullptr in written subtask\n");
             return false;
         }
-        auto queue_type = Global::stcManager->GetQueueType(*task.queue);
+        auto queue_type = engine->GetQueueType(*task.queue);
         outFile.write(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
 
         temp_buffer = task.tasks.size();
@@ -82,10 +84,10 @@ namespace Asset{
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
         EWE_ASSERT(temp_buffer == current_file_version, "needs support otherwise");
         
-        auto& ret = *std::construct_at(ptr_to_raw_mem, name.string(), *Global::logicalDevice, Global::stcManager->renderQueue);
+        auto& ret = *std::construct_at(ptr_to_raw_mem, name.string(), engine->logicalDevice, engine->renderQueue);
         Queue::Type queue_type;
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
-        ret.queue = &Global::stcManager->GetQueue(queue_type);
+        ret.queue = &engine->GetQueue(queue_type);
 
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));
         ret.tasks.reserve(temp_buffer);
@@ -93,9 +95,9 @@ namespace Asset{
             AssetHash hash_buffer;
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
             //create a gpu task from the inst package
-            Command::PackageRecord* pkgRecord = EWE::Global::assetManager->pkgRecord.Get(hash_buffer);
+            Command::PackageRecord* pkgRecord = EWE::engine->assetManager.pkgRecord.Get(hash_buffer);
 
-            GPUTask* task = new GPUTask(pkgRecord->name, *Global::logicalDevice, *pkgRecord, false);
+            GPUTask* task = new GPUTask(pkgRecord->name, engine->logicalDevice, *pkgRecord, false);
             ret.tasks.push_back(task);
         }
 

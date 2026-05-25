@@ -3,7 +3,7 @@
 namespace EWE {
 	Camera::Camera() 
 		: buffers{
-			*Global::logicalDevice,
+			engine->logicalDevice,
 			sizeof(CameraBufferObject), 1,
 			VmaAllocationCreateInfo{
 				.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -13,6 +13,7 @@ namespace EWE {
 	{
 		data.view.At(3, 3) = 1.f;
 	}
+
 
 
 	void Camera::SetBuffers() {
@@ -43,7 +44,7 @@ namespace EWE {
 		buffers[frameIndex].Flush();
 	}
 	void Camera::UpdateBuffer() {
-		UpdateBuffer(Global::frameIndex);
+		UpdateBuffer(engine->frameIndex);
 	}
 
 	void Camera::UpdateViewData(lab::vec3 const& _position, lab::vec3 const& _target, lab::vec3 const& _cameraUp) {

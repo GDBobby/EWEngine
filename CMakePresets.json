@@ -142,14 +142,21 @@
             }
         },
         {
-            "name": "Custom configure preset",
-            "displayName": "Custom configure preset",
-            "description": "Sets Ninja generator, build and install directory",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "name": "gcc-debug-asan",
+            "inherits": "gcc-base",
             "cacheVariables": {
+                "USING_ASAN": true,
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+                "CMAKE_CXX_FLAGS": "-DEWE_DEBUG",
+                "OUTPUT_POSTFIX": "-d"
+            }
+        },
+        {
+            "name": "gcc-release-asan",
+            "inherits": "gcc-base",
+            "cacheVariables": {
+                "USING_ASAN": true,
+                "CMAKE_BUILD_TYPE": "Release"
             }
         }
     ],

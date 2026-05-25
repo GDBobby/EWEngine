@@ -6,6 +6,8 @@
 #include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/DragDrop.h"
 
+#include "EWEngine/EWEngine.h"
+
 namespace EWE{
 namespace Asset{
 
@@ -21,7 +23,7 @@ namespace Asset{
 
     template<>
     bool LoadAssetFromFile(Shader* ptr_to_raw_mem, std::filesystem::path const& root_directory, const std::filesystem::path &path){
-        Shader& ret = *std::construct_at(ptr_to_raw_mem, *Global::logicalDevice, root_directory / path);
+        Shader& ret = *std::construct_at(ptr_to_raw_mem, engine->logicalDevice, root_directory / path);
         ret.name = path;
 
         if(ReadMetaFile(ret, root_directory, path)){

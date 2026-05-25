@@ -3,6 +3,7 @@
 #include "EightWinds/CommandBuffer.h"
 
 #include "EWEngine/Global.h"
+#include "EWEngine/EWEngine.h"
 
 #include "EightWinds/Backend/STC_Helper.h"
 
@@ -24,7 +25,7 @@ namespace EWE{
 	std::array<VkFormat, 1> colorFormats{ VK_FORMAT_R8G8B8A8_UNORM };
 
 	PerFlight<Image> CreateColorAttachmentImages(Queue& queue, VkSampleCountFlagBits sampleCount) {
-		PerFlight<Image> ret{ *Global::logicalDevice };
+		PerFlight<Image> ret{ engine->logicalDevice };
 
 		VmaAllocationCreateInfo vmaAllocCreateInfo{
 			.flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) | static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT),
@@ -32,7 +33,7 @@ namespace EWE{
 		};
 		for (auto& cai : ret) {
 			cai.data.arrayLayers = 1;
-			cai.data.extent = { EWE::Global::window->screenDimensions.width, EWE::Global::window->screenDimensions.height, 1 };
+			cai.data.extent = { EWE::engine->window.screenDimensions.width, EWE::engine->window.screenDimensions.height, 1 };
 			cai.data.mipLevels = 1;
 			cai.owningQueue = &queue;
 			cai.data.samples = sampleCount;
@@ -43,10 +44,8 @@ namespace EWE{
 
 			cai.Create(vmaAllocCreateInfo);
 		}
-#if EWE_DEBUG_NAMING
 		ret[0].SetName("cai imgui 0");
 		ret[1].SetName("cai imgui 1");
-#endif
 		return ret;
 	}
 
@@ -58,11 +57,11 @@ namespace EWE{
 		uint32_t imageCount, VkSampleCountFlagBits sampleCount
 	)
 		: queue{ _queue },
-		//cmdPool{ *Global::logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
+		//cmdPool{ engine->logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
 		//cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
 		renderInfo{
 			"imgui render info",
-			*Global::logicalDevice, queue,
+			engine->logicalDevice, queue,
 			AttachmentSetInfo{
 				1,  1,
 				VkRenderingFlags{0},
@@ -82,7 +81,7 @@ namespace EWE{
 					.clearValue{.color{0.f, 0.f, 0.f, 0.f}}
 				}
 			},
-			Global::window->screenDimensions.width, Global::window->screenDimensions.height
+			engine->window.screenDimensions.width, engine->window.screenDimensions.height
 		},
 		image_count{imageCount},
 		sample_count{sampleCount}
@@ -94,7 +93,7 @@ namespace EWE{
 		main_vp.context = InitializeContext();
 		ImGui::CreateDragDropContext();
 
-		TakeCallbackControl(Global::window->window);
+		TakeCallbackControl(engine->window.window);
 
     }
 
@@ -113,10 +112,10 @@ namespace EWE{
 
 
         ImGui_ImplVulkan_InitInfo vulkan_init_info{
-			.ApiVersion = Global::instance->api_version,
-			.Instance = Global::logicalDevice->instance,
-			.PhysicalDevice = Global::logicalDevice->physicalDevice.device,
-			.Device = Global::logicalDevice->device,
+			.ApiVersion = engine->instance.api_version,
+			.Instance = engine->logicalDevice.instance,
+			.PhysicalDevice = engine->logicalDevice.physicalDevice.device,
+			.Device = engine->logicalDevice.device,
 			.QueueFamily = queue.family.index,
 			.Queue = queue,
 			.DescriptorPoolSize = 1024,
@@ -150,7 +149,7 @@ namespace EWE{
 		ret->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		ImGui::StyleColorsDark();
 	
-		ImGui_ImplGlfw_InitForVulkan(Global::window->window, false);
+		ImGui_ImplGlfw_InitForVulkan(engine->window.window, false);
 		ImGui_ImplVulkan_Init(&vulkan_init_info);
 
 		if(prev_context != nullptr){
@@ -164,7 +163,7 @@ namespace EWE{
 		if(viewports.size() > 0){
 			isRendering = true;
 
-			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[Global::frameIndex]);
+			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[engine->frameIndex]);
 
 			ImGui::NewFrameDD();
 			//im doing a index based approached because i want to allow the creation/removal of viewports from within the exec_func
@@ -172,7 +171,6 @@ namespace EWE{
 				auto& vp = viewports[i];
 				if(vp.exec_func != nullptr){
 
-#if EWE_DEBUG_NAMING
 					std::string label_name = std::string("imgui[") + std::to_string(i) + "]";
 					VkDebugUtilsLabelEXT labelUtil{
 						.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
@@ -180,8 +178,7 @@ namespace EWE{
 						.pLabelName = label_name.c_str(),
 						.color = {0.f, 0.f, 0.f, 1.f}
 					};
-					Global::logicalDevice->BeginLabel(cmdBuf, &labelUtil);
-#endif
+					engine->logicalDevice.BeginLabel(cmdBuf, &labelUtil);
 
 					ImGui::SetCurrentContext(vp.context);
 					ImGui_ImplVulkan_NewFrame();
@@ -211,11 +208,11 @@ namespace EWE{
 					if(viewport->Pos.y < 0.f){
 						viewport->Pos.y = 0.f;
 					}
-					if((viewport->Size.x + viewport->Pos.x) > Global::window->screenDimensions.width){
-						viewport->Size.x = Global::window->screenDimensions.width - viewport->Pos.x;
+					if((viewport->Size.x + viewport->Pos.x) > engine->window.screenDimensions.width){
+						viewport->Size.x = engine->window.screenDimensions.width - viewport->Pos.x;
 					}
-					if((viewport->Size.y + viewport->Pos.y) > Global::window->screenDimensions.height){
-						viewport->Size.y = Global::window->screenDimensions.height - viewport->Pos.y;
+					if((viewport->Size.y + viewport->Pos.y) > engine->window.screenDimensions.height){
+						viewport->Size.y = engine->window.screenDimensions.height - viewport->Pos.y;
 					}
 
 					//ImGui::FindBottomMostVisibleWindowWithinBeginStack(ImGuiWindow *window)
@@ -245,9 +242,7 @@ namespace EWE{
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
 
 
-#if EWE_DEBUG_NAMING
-			Global::logicalDevice->EndLabel(cmdBuf);
-#endif
+					engine->logicalDevice.EndLabel(cmdBuf);
 				}
 			}
 			ImGui::EndFrameDD();
