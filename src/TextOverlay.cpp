@@ -1,18 +1,13 @@
 
 #include "EWEngine/TextOverlay.h"
 
+#include "EWEngine/EWEngine.h"
 
 //#define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
 //#include "EWEngine/Fonts/stb_font_consolas_24_latin1.inl"
 #include "EightWinds/Backend/StagingBuffer.h"
 #include "EightWinds/RenderGraph/Resources.h"
-#include "EWEngine/STC_Manager.h"
 
-#include "EWEngine/EWEngine.h"
-
-#include <stdexcept>
-#include <sstream>
-#include <iomanip>
 
 #include <hb.h>
 #include <hb-ft.h>
@@ -20,20 +15,19 @@
 
 namespace EWE {
 
-	TextOverlay* textOverlayPtr{ nullptr };
 
-
-	TextOverlay::TextOverlay(LogicalDevice& _logicalDevice, float screenWidth, float screenHeight)
-		: logicalDevice{ _logicalDevice }, 
-		scale{ screenWidth / DEFAULT_WIDTH },
-		framebuffer_width {screenWidth},
-		framebuffer_height{ screenHeight },
-		vertShader{ logicalDevice, "common/shaders/textoverlay.vert.spv" },
-		fragShader{ logicalDevice, "common/shaders/textoverlay.frag.spv" },
-		pipeLayout{ nullptr }
+	TextOverlay::TextOverlay()
+		: scale{ engine->window.screenDimensions.width / DEFAULT_WIDTH },
+		framebuffer_width {engine->window.screenDimensions.width},
+		framebuffer_height{ engine->window.screenDimensions.height },
+		pipeLayout{
+			engine->logicalDevice, 
+			{
+				engine->assetManager.shader.Get("textoverlay.vert.spv"), 
+				engine->assetManager.shader.Get("textoverlay.frag.spv")
+			}
+		}
 	{
-		EWE_ASSERT(textOverlayPtr == nullptr, "trying to recreate textoverlay??");
-		textOverlayPtr = this;
 
 		LoadConsolas24();
 	}
@@ -148,7 +142,7 @@ namespace EWE {
 		const float width = GetWidth();
 		float currentPos = x;
 
-		const Font* font = textOverlayPtr->fonts[textOverlayPtr->currentFont];
+		const Font* font = engine->textOverlay.fonts[engine->textOverlay.currentFont];
 #if EWE_DEBUG
 		Log::Debug("xpos get selection index - %.1f \n", xpos);
 #endif
@@ -185,11 +179,10 @@ namespace EWE {
 	}
 
 	float TextStruct::GetWidth() {
-		//std::cout << "yo? : " << frameBufferWidth << std::endl;
 		const float charW = 1.5f * scale / engine->window.screenDimensions.width;
 		//Log::Debug("text struct get width : %.5f \n", textWidth);
 #if EWE_DEBUG
-		const float textWidth = textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetStringWidth(string, charW);
+		const float textWidth = engine->textOverlay.fonts[engine->textOverlay.currentFont]->GetStringWidth(string, charW);
 		if (textWidth < 0.0f) {
 
 			Log::Debug("width less than 0, what  was the string? : %s:%u \n", string.c_str(), engine->window.screenDimensions.width);
@@ -197,7 +190,7 @@ namespace EWE {
 		}
 		return textWidth;
 #else
-		return textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetStringWidth(string, charW);
+		return engine->textOverlay.fonts[engine->textOverlay.currentFont]->GetStringWidth(string, charW);
 #endif
 	}
 
@@ -323,72 +316,72 @@ namespace EWE {
 	*/
 
 	void TextOverlay::AddDefaultText(double time, double peakTime, double averageTime, double highTime) {
-		const int16_t previousFont = textOverlayPtr->currentFont;
+		const int16_t previousFont = engine->textOverlay.currentFont;
 		SetCurrentFont(0);
-		if (textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped == nullptr) {
-			textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped = reinterpret_cast<Font::CharacterData::Vert*>(textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[engine->frameIndex].mapped);
+		if (engine->textOverlay.fonts[engine->textOverlay.currentFont]->mapped == nullptr) {
+			engine->textOverlay.fonts[engine->textOverlay.currentFont]->mapped = reinterpret_cast<Font::CharacterData::Vert*>(engine->textOverlay.fonts[engine->textOverlay.currentFont]->buffers[engine->frameIndex].mapped);
 		}
-		AddText(TextStruct{ engine->logicalDevice.physicalDevice.name, 0, textOverlayPtr->framebuffer_height - (20.f * textOverlayPtr->scale), TA_left, 1.f });
+		AddText(TextStruct{ engine->logicalDevice.physicalDevice.name, 0, engine->textOverlay.framebuffer_height - (20.f * engine->textOverlay.scale), TA_left, 1.f });
 		int lastFPS = static_cast<int>(1 / time);
 		int averageFPS = static_cast<int>(1 / averageTime);
 		std::string buffer_string = std::format("frame time: {:.2f} ms ({} fps)", time * 1000.0f, lastFPS);
-		AddText(TextStruct{ buffer_string, 0.f, textOverlayPtr->framebuffer_height - (40.f * textOverlayPtr->scale), TA_left, 1.f });
+		AddText(TextStruct{ buffer_string, 0.f, engine->textOverlay.framebuffer_height - (40.f * engine->textOverlay.scale), TA_left, 1.f });
 		buffer_string = std::format("average FPS: {}", averageFPS);
-		AddText(TextStruct{ buffer_string, 0.f, textOverlayPtr->framebuffer_height - (60.f * textOverlayPtr->scale), TA_left, 1.f });
+		AddText(TextStruct{ buffer_string, 0.f, engine->textOverlay.framebuffer_height - (60.f * engine->textOverlay.scale), TA_left, 1.f });
 		buffer_string = std::format("peak: {:.2f} ms ~ average: {:.2f} ms ~ high: {:.2f} ms", peakTime * 1000, averageTime * 1000, highTime * 1000);
-		AddText(TextStruct{ buffer_string, 0.f, textOverlayPtr->framebuffer_height - (80.f * textOverlayPtr->scale), TA_left, 1.f });
+		AddText(TextStruct{ buffer_string, 0.f, engine->textOverlay.framebuffer_height - (80.f * engine->textOverlay.scale), TA_left, 1.f });
 		SetCurrentFont(previousFont);
 	}
 
 	float TextOverlay::GetWidth(std::string const& text, float textScale) {
-		//const float charW = 1.5f * textOverlayPtr->scale * textScale / textOverlayPtr->frameBufferWidth;
+		//const float charW = 1.5f * engine->textOverlay.scale * textScale / engine->textOverlay.frameBufferWidth;
 		float textWidth = 0.f;
 		for (auto const& letter : text) {
-			textWidth += textOverlayPtr->fonts[textOverlayPtr->currentFont]->advanceData.at(letter);
+			textWidth += engine->textOverlay.fonts[engine->textOverlay.currentFont]->advanceData.at(letter);
 		}
 		return textWidth;
 	}
 	void TextOverlay::StaticAddText(TextStruct textStruct) {
-		textOverlayPtr->AddText(textStruct);
+		engine->textOverlay.AddText(textStruct);
 	}
 
 	void TextOverlay::AddText(TextStruct const& textStruct, const float scaleX) {
-		Font::CharacterData::Vert* mapped = textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped;
+		Font::CharacterData::Vert* mapped = engine->textOverlay.fonts[engine->textOverlay.currentFont]->mapped;
 		if (mapped == nullptr) {
-			mapped = reinterpret_cast<Font::CharacterData::Vert*>(textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[engine->frameIndex].Map());
-			textOverlayPtr->fonts[textOverlayPtr->currentFont]->mapped = mapped;
+			mapped = reinterpret_cast<Font::CharacterData::Vert*>(engine->textOverlay.fonts[engine->textOverlay.currentFont]->buffers[engine->frameIndex].Map());
+			engine->textOverlay.fonts[engine->textOverlay.currentFont]->mapped = mapped;
 			EWE_ASSERT(mapped != nullptr);
 		}
-		mapped = mapped + (4 * textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount);
-		const float charW = 1.5f * textOverlayPtr->scale * scaleX * textStruct.scale / textOverlayPtr->framebuffer_width;
-		const float charH = 1.5f * textOverlayPtr->scale * textStruct.scale / textOverlayPtr->framebuffer_height;
+		mapped = mapped + (4 * engine->textOverlay.fonts[engine->textOverlay.currentFont]->drawnLetterCount);
+		const float charW = 1.5f * engine->textOverlay.scale * scaleX * textStruct.scale / engine->textOverlay.framebuffer_width;
+		const float charH = 1.5f * engine->textOverlay.scale * textStruct.scale / engine->textOverlay.framebuffer_height;
 
-		float xPos = (textStruct.x / textOverlayPtr->framebuffer_width * 2.0f) - 1.0f;
-		const float yPos = (textStruct.y / textOverlayPtr->framebuffer_height * 2.0f) - 1.0f;
+		float xPos = (textStruct.x / engine->textOverlay.framebuffer_width * 2.0f) - 1.0f;
+		const float yPos = (textStruct.y / engine->textOverlay.framebuffer_height * 2.0f) - 1.0f;
 
 		switch (textStruct.align) {
 			case TA_right:
 				for (auto const& letter : textStruct.string) {
-					xPos -= textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetCharWidth(letter, charW);
+					xPos -= engine->textOverlay.fonts[engine->textOverlay.currentFont]->GetCharWidth(letter, charW);
 				}
 				break;
 			case TA_center:
 				for (auto const& letter : textStruct.string) {
-					xPos -= textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetCharWidth(letter, charW) / 2.f;
+					xPos -= engine->textOverlay.fonts[engine->textOverlay.currentFont]->GetCharWidth(letter, charW) / 2.f;
 				}
 				break;
 			case TA_left:
 				break;
 		}
 
-		const std::size_t startingLetterCount = textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount;
+		const std::size_t startingLetterCount = engine->textOverlay.fonts[engine->textOverlay.currentFont]->drawnLetterCount;
 		for (auto const& letter : textStruct.string) {
-			if (textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount >= TEXTOVERLAY_MAX_CHAR_COUNT) {
-				Log::Debug("trying to add more letters than allowed in textoverlay. consider expanding the TEXTOVERLAY_MAX_CHAR_COUNT constant - (drawn/max) (%zu/%u) \n", textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount, TEXTOVERLAY_MAX_CHAR_COUNT);
-				textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount++;
+			if (engine->textOverlay.fonts[engine->textOverlay.currentFont]->drawnLetterCount >= TEXTOVERLAY_MAX_CHAR_COUNT) {
+				Log::Debug("trying to add more letters than allowed in textoverlay. consider expanding the TEXTOVERLAY_MAX_CHAR_COUNT constant - (drawn/max) (%zu/%u) \n", engine->textOverlay.fonts[engine->textOverlay.currentFont]->drawnLetterCount, TEXTOVERLAY_MAX_CHAR_COUNT);
+				engine->textOverlay.fonts[engine->textOverlay.currentFont]->drawnLetterCount++;
 				break;
 			}
-			Font::CharacterData::Vert const* verts = textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetVertData(letter);
+			Font::CharacterData::Vert const* verts = engine->textOverlay.fonts[engine->textOverlay.currentFont]->GetVertData(letter);
 
 			mapped[0].x = (xPos + verts[0].x * charW);
 			mapped[0].y = -(yPos + verts[0].y * charH);
@@ -410,23 +403,23 @@ namespace EWE {
 			mapped[3].u = verts[1].u;
 			mapped[3].v = verts[1].v;
 
-			mapped = reinterpret_cast<Font::CharacterData::Vert*>(reinterpret_cast<std::size_t>(mapped) + textOverlayPtr->fonts[textOverlayPtr->currentFont]->buffers[0].alignmentSize);
+			mapped = reinterpret_cast<Font::CharacterData::Vert*>(reinterpret_cast<std::size_t>(mapped) + engine->textOverlay.fonts[engine->textOverlay.currentFont]->buffers[0].alignmentSize);
 
-			xPos += textOverlayPtr->fonts[textOverlayPtr->currentFont]->GetCharWidth(letter, charW);
+			xPos += engine->textOverlay.fonts[engine->textOverlay.currentFont]->GetCharWidth(letter, charW);
 
-			textOverlayPtr->fonts[textOverlayPtr->currentFont]->drawnLetterCount++;
+			engine->textOverlay.fonts[engine->textOverlay.currentFont]->drawnLetterCount++;
 
-			textOverlayPtr->numLetters++;
+			engine->textOverlay.numLetters++;
 		}
 
 
 		/* we dont do this here anymore
-		EWE_VK(vkCmdBindPipeline, EWE::VK::Object->GetFrameBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, textOverlayPtr->pipeline);
+		EWE_VK(vkCmdBindPipeline, EWE::VK::Object->GetFrameBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, engine->textOverlay.pipeline);
 
 		EWE::VK::Object->BindVPScissor();
 
 
-		EWE_VK(vkCmdBindDescriptorSets, VK::Object->GetFrameBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, textOverlayPtr->pipeLayout->vkLayout, 0, 1, &textOverlayPtr->fonts[textOverlayPtr->currentFont]->descriptorSets[VK::Object->frameIndex], 0, nullptr);
+		EWE_VK(vkCmdBindDescriptorSets, VK::Object->GetFrameBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, engine->textOverlay.pipeLayout->vkLayout, 0, 1, &engine->textOverlay.fonts[engine->textOverlay.currentFont]->descriptorSets[VK::Object->frameIndex], 0, nullptr);
 		EWE_VK(vkCmdDraw, VK::Object->GetFrameBuffer(), 4, textStruct.string.size(), 0, startingLetterCount);
 		*/
 	}
@@ -434,7 +427,7 @@ namespace EWE {
 
 
 	void TextOverlay::Draw() {
-		for (auto& font : textOverlayPtr->fonts) {
+		for (auto& font : engine->textOverlay.fonts) {
 			if (font->drawnLetterCount > 0) {
 				font->buffers[engine->frameIndex].Flush();
 				font->buffers[engine->frameIndex].Unmap();
@@ -453,8 +446,8 @@ namespace EWE {
 	}
 
 	bool TextOverlay::RemoveFont(uint16_t fontIndex) {
-		if (fontIndex < textOverlayPtr->fonts.size()) {
-			textOverlayPtr->fonts.erase(textOverlayPtr->fonts.begin() + fontIndex);
+		if (fontIndex < engine->textOverlay.fonts.size()) {
+			engine->textOverlay.fonts.erase(engine->textOverlay.fonts.begin() + fontIndex);
 			return true;
 		}
 		return false;
@@ -462,19 +455,19 @@ namespace EWE {
 
 
 	int TextOverlay::AddFont(Font* font) {
-		textOverlayPtr->fonts.push_back(font);
-		return textOverlayPtr->fonts.size() - 1;
+		engine->textOverlay.fonts.push_back(font);
+		return engine->textOverlay.fonts.size() - 1;
 	}
 
 	bool TextOverlay::SetCurrentFont(uint16_t whichFont) {
-		if (whichFont < textOverlayPtr->fonts.size()) {
-			textOverlayPtr->currentFont = whichFont;
+		if (whichFont < engine->textOverlay.fonts.size()) {
+			engine->textOverlay.currentFont = whichFont;
 			return true;
 		}
 		else {
 #if EWE_DEBUG
-			//Log::Debug("trying to set current font to %d, but only %d fonts available \n", whichFont, textOverlayPtr->fonts.size());
-			EWE_ASSERT(whichFont < textOverlayPtr->fonts.size(), "trying to set current font to %d, but only %d fonts available");
+			//Log::Debug("trying to set current font to %d, but only %d fonts available \n", whichFont, engine->textOverlay.fonts.size());
+			EWE_ASSERT(whichFont < engine->textOverlay.fonts.size(), "trying to set current font to %d, but only %d fonts available");
 #endif
 			return false;
 		}
@@ -487,12 +480,12 @@ namespace EWE {
 	}
 
 	int16_t TextOverlay::GetCurrentFont() {
-		return textOverlayPtr->currentFont;
+		return engine->textOverlay.currentFont;
 	}
-	uint16_t TextOverlay::GetFontCount() { return textOverlayPtr->fonts.size(); };
+	uint16_t TextOverlay::GetFontCount() { return engine->textOverlay.fonts.size(); };
 
 	std::string_view TextOverlay::GetCurrentFontName() {
-		if (textOverlayPtr->currentFont >= 0 && textOverlayPtr->currentFont < textOverlayPtr->fonts.size()) { return textOverlayPtr->fonts[textOverlayPtr->currentFont]->name; }
+		if (engine->textOverlay.currentFont >= 0 && engine->textOverlay.currentFont < engine->textOverlay.fonts.size()) { return engine->textOverlay.fonts[engine->textOverlay.currentFont]->name; }
 		else { 
 			return "no font currently selected"; 
 		}

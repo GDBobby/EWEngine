@@ -62,8 +62,8 @@ namespace EWE {
 			}
 		}
 
-		for (auto& engine : engines) {
-			ma_engine_uninit(&engine);
+		for (auto& s_engine : engines) {
+			ma_engine_uninit(&s_engine);
 		}
 		for (auto& device : devices) {
 			ma_device_uninit(&device);
@@ -510,8 +510,8 @@ namespace EWE {
 
 		switch (whichVolume) {
 		case SoundVolume::master: {
-			for (auto& engine : engines) {
-				ma_engine_set_volume(&engine, volume);
+			for (auto& s_engine : engines) {
+				ma_engine_set_volume(&s_engine, volume);
 			}
 			break;
 		}

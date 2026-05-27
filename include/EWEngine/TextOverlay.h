@@ -16,7 +16,6 @@
 
 #include <LAB/Vector.h>
 
-#include <iostream>
 #include <vector>
 #include <unordered_map>
 
@@ -102,16 +101,12 @@ namespace EWE {
 	class TextOverlay {
 	private:
 		static constexpr uint32_t TEXTOVERLAY_MAX_CHAR_COUNT = 65536 / sizeof(lab::vec4);
-		LogicalDevice& logicalDevice;
 	public:
 		float scale;
 		
 		float framebuffer_width;
 		float framebuffer_height;
-
-		Shader vertShader;
-		Shader fragShader;
-		PipeLayout* pipeLayout;
+		PipeLayout pipeLayout;
 
 		uint32_t numLetters;
 
@@ -128,7 +123,7 @@ namespace EWE {
 
 		ObjectRasterData objectConfig;
 
-		[[nodiscard]] explicit TextOverlay(LogicalDevice& logicalDevice, float screenWidth, float screenHeight);
+		[[nodiscard]] explicit TextOverlay();
 		~TextOverlay();
 		
 		static float GetWidth(std::string const& text, float textScale = 1.f);
@@ -156,8 +151,6 @@ namespace EWE {
 
 		void Record(RasterPackage& task){
 			objectConfig.config.SetDefaults();
-
-			//task.Add_Vert_IndirectCountDraw(objectConfig, indirect_vert_raw);
 		}
 	};
 }

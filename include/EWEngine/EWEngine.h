@@ -1,20 +1,17 @@
 #pragma once
 
-#include "EightWinds/Preprocessor.h"
-
-#include "EWEngine/EngineSettings.h"
 #include "EightWinds/VulkanHeader.h"
 #include "EightWinds/Window.h"
 #include "EightWinds/Instance.h"
 #include "EightWinds/PhysicalDevice.h"
 #include "EightWinds/LogicalDevice.h"
 #include "EightWinds/Swapchain.h"
-
-#include "EWEngine/STC_Manager.h"
-
 #include "EightWinds/RenderGraph/RenderGraph.h"
 
+#include "EWEngine/EngineSettings.h"
+#include "EWEngine/STC_Manager.h"
 #include "EWEngine/TextOverlay.h"
+#include "EWEngine/Imgui/ImguiHandler.h"
 
 #include <string_view>
 
@@ -33,10 +30,12 @@ namespace EWE{
 
         Swapchain swapchain;
 
-        STC_Manager stcManager;
-        //TextOverlay textOverlay;
         AssetManager assetManager;
+        STC_Manager stcManager;
+        TextOverlay textOverlay;
         SoundEngine soundEngine;
+
+        ImguiHandler imguiHandler;
 
         uint64_t totalFramesSubmitted = 0;
 

@@ -131,7 +131,7 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
 target_precompile_headers(${PROJECT_NAME} PUBLIC 
     <imgui.h>
 	<imgui_internal.h>
-	"include/EWEngine/Global.h"
+	"include/EWEngine/EWEngine.h"
 )
 
 message(STATUS "linking directories")

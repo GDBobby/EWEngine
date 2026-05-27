@@ -10,7 +10,6 @@
 #endif
 #include "EWEngine/resources/leafRes.h"
 #include <string> //for std::string
-#include <iostream>
 #include <fstream>  //for ofstream
 namespace bin2cpp {
   class LeafDataFile : public virtual bin2cpp::File {

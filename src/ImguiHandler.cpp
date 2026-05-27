@@ -1,4 +1,4 @@
-#include "EWEngine/Tools/ImguiHandler.h"
+#include "EWEngine/Imgui/ImguiHandler.h"
 
 #include "EightWinds/CommandBuffer.h"
 
@@ -214,8 +214,6 @@ namespace EWE{
 					if((viewport->Size.y + viewport->Pos.y) > engine->window.screenDimensions.height){
 						viewport->Size.y = engine->window.screenDimensions.height - viewport->Pos.y;
 					}
-
-					//ImGui::FindBottomMostVisibleWindowWithinBeginStack(ImGuiWindow *window)
 
 					ImGui::SetNextWindowPos(viewport->Pos);
 					ImGui::SetNextWindowSize(viewport->Size);

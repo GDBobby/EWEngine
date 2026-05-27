@@ -25,7 +25,7 @@
 #include "EWEngine/Default/Models.h"
 
 #include "EightWinds/Reflect/Enum.h"
-#include "EWEngine/Tools/ImguiHandler.h"
+#include "EWEngine/Imgui/ImguiHandler.h"
 #include "EWEngine/Reflect/ImguiReflection.h"
 #include "EWEngine/Imgui/ImNodes/NodeGraph_Manager.h"
 #include "EWEngine/Imgui/DragDrop.h"
@@ -149,12 +149,6 @@ int main(int argc, char* argv[]) {
     }
     renderQueue->SetName("render queue");
 
-    EWE::Input::Mouse mouseData{};
-    mouseData.TakeCallbackControl();
-
-    glfwSetMouseButtonCallback(EWE::engine->window.window, EWE::Input::Mouse::MouseCallback);
-    EWE::ImguiHandler imguiHandler{ *renderQueue, 3, VK_SAMPLE_COUNT_1_BIT };
-
     //pipeline
     EWE::Shader* triangle_vert = EWE::engine->assetManager.shader.Get("basic.vert.spv");
     EWE::Shader* triangle_frag = EWE::engine->assetManager.shader.Get("basic.frag.spv");
@@ -185,8 +179,7 @@ int main(int argc, char* argv[]) {
     }
 
 
-    EWE::Shader* triangle_shaders[] = { triangle_vert, triangle_frag };
-    EWE::PipeLayout triangle_layout(logicalDevice, triangle_shaders);
+    EWE::PipeLayout triangle_layout(logicalDevice, { triangle_vert, triangle_frag });
     //passconfig should be using a full rendergraph setup
     EWE::TaskRasterConfig passConfig;
     EWE::FullRenderInfo& renderInfo = EWE::engine->assetManager.attachment_info.ConstructInto("main ri", logicalDevice, *renderQueue, mainSetInfo, EWE::engine->window.screenDimensions.width, EWE::engine->window.screenDimensions.height);
@@ -357,8 +350,8 @@ int main(int argc, char* argv[]) {
     EWE::GPUTask* imguiTask = new EWE::GPUTask("imgui", logicalDevice, *renderQueue);
 
     EWE::PerFlight<EWE::Image*> temp_att_res{};
-    temp_att_res[0] = &imguiHandler.renderInfo.full.color_views[0][0]->image;
-    temp_att_res[1] = &imguiHandler.renderInfo.full.color_views[0][1]->image;
+    temp_att_res[0] = &EWE::engine->imguiHandler.renderInfo.full.color_views[0][0]->image;
+    temp_att_res[1] = &EWE::engine->imguiHandler.renderInfo.full.color_views[0][1]->image;
     uint32_t imgui_att_index = imguiTask->resources.AddResource(temp_att_res, initial_acquire_usage);
     renderGraph.syncManager.AddAcquisition_Image(*imguiTask, imgui_att_index);
 
@@ -549,23 +542,23 @@ int main(int argc, char* argv[]) {
         }
     };
     {
-        auto& vp_back = imguiHandler.viewports.emplace_back();
+        auto& vp_back = EWE::engine->imguiHandler.viewports.emplace_back();
         vp_back.exec_func = engine_imgui_window;
-        vp_back.context = imguiHandler.InitializeContext();
+        vp_back.context = EWE::engine->imguiHandler.InitializeContext();
         vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.8f;
         vp_back.current_viewport.extent.height = EWE::engine->window.screenDimensions.height * 0.2f;
     }
     {
-        auto& vp_back = imguiHandler.viewports[0];
+        auto& vp_back = EWE::engine->imguiHandler.viewports[0];
         vp_back.exec_func = node_imgui_vp;
         vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.8f;
         vp_back.current_viewport.offset.y = EWE::engine->window.screenDimensions.height * 0.2f;
         vp_back.current_viewport.extent.height = EWE::engine->window.screenDimensions.height * 0.8f;
     }
     {
-        auto& vp_back = imguiHandler.viewports.emplace_back();
+        auto& vp_back = EWE::engine->imguiHandler.viewports.emplace_back();
         vp_back.exec_func = assets_imgui_window;
-        vp_back.context = imguiHandler.InitializeContext();
+        vp_back.context = EWE::engine->imguiHandler.InitializeContext();
         vp_back.current_viewport.offset.x = EWE::engine->window.screenDimensions.width * 0.8f;
         vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.2f;
     }
@@ -573,7 +566,7 @@ int main(int argc, char* argv[]) {
     imgui_submission.packaged_tasks.push_back([&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
 #ifdef EWE_IMGUI
         imguiTask->prefix.Execute(cmdBuf, frameIndex);
-        imguiHandler.Render(cmdBuf);
+        EWE::engine->imguiHandler.Render(cmdBuf);
         return true;
 #endif
         return false;
@@ -606,8 +599,8 @@ int main(int argc, char* argv[]) {
     EWE::Sampler& attachmentSampler = EWE::engine->assetManager.sampler.Get(samplerCreateInfo);
 
     EWE::PerFlight<EWE::DescriptorImageInfo> imgui_attachment_descriptor(
-        EWE::DescriptorImageInfo{attachmentSampler, *imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-        EWE::DescriptorImageInfo{attachmentSampler, *imguiHandler.renderInfo.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+        EWE::DescriptorImageInfo(attachmentSampler, *EWE::engine->imguiHandler.renderInfo.full.color_views[0][0], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL),
+        EWE::DescriptorImageInfo(attachmentSampler, *EWE::engine->imguiHandler.renderInfo.full.color_views[0][1], EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
     );
 
     std::size_t currentMergeTaskIndex = 0;
@@ -668,7 +661,7 @@ int main(int argc, char* argv[]) {
                     auto& swapImage = engine.swapchain.GetCurrentImage();
                     swapImage.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-                    mouseData.UpdatePosition(EWE::engine->window.window);
+                    //mouseData.UpdatePosition(EWE::engine->window.window);
                     renderGraph.ChangeResource(*mergeTask, present_img_att_index, &swapImage, EWE::engine->frameIndex);
                     renderGraph.presentBridge.UpdateSrcData(&mergeTask->queue, &mergeTask->resources.images[present_img_att_index], EWE::engine->frameIndex);
                     renderGraph.RecreateBarriers(EWE::engine->frameIndex);

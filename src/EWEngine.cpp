@@ -262,30 +262,33 @@ namespace EWE{
 
     EWEngine* engine;
 
+        //the scheduler is unrelated, it's just the first thing I initialize, so it's packaged into this function. 
+        // im taking advantage of the construction to insert the global pointer assignment
+    marl::Scheduler::Config PointlessFunctionJustToSetTheGlobalVariable(EWEngine* this_ref){
+        EWE_ASSERT(engine == nullptr);
+        engine = this_ref;
+        return marl::Scheduler::Config::allCores();
+    }
+
     EWEngine::EWEngine(std::string_view application_name, std::filesystem::path const& root_directory)
-    : scheduler{marl::Scheduler::Config::allCores()},
+    : scheduler{PointlessFunctionJustToSetTheGlobalVariable(this)},
         frameIndex{0},
         instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
         window{instance, 1920, 1080, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
         renderQueue{GetPresentQueue(logicalDevice)}, computeQueue{GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)}, 
         swapchain{logicalDevice, window, renderQueue},
-        stcManager{logicalDevice, renderQueue, transferQueue, computeQueue},
         assetManager{root_directory, logicalDevice, renderQueue},
+        stcManager{logicalDevice, renderQueue, transferQueue, computeQueue},
+        textOverlay{},
         soundEngine{},
+        imguiHandler{renderQueue, swapchain.images.Size(), VK_SAMPLE_COUNT_1_BIT},
         current_renderGraph{stcManager.current_renderGraph},
         graphics_stc_task{assetManager.subTask.ConstructInto("graphics STC task", logicalDevice, renderQueue)},
         compute_stc_task{assetManager.subTask.ConstructInto("compute STC task", logicalDevice, computeQueue)}
-        /*
-        textOverlay{ 
-            logicalDevice, 
-            static_cast<float>(window.screenDimensions.width), 
-            static_cast<float>(window.screenDimensions.height) 
-        }
-        */
+        
+        
     {
-        EWE_ASSERT(engine == nullptr);
-        engine = this;
 
         EWE_ASSERT(std::filesystem::is_directory(root_directory));
 
@@ -418,7 +421,7 @@ namespace EWE{
             ImGui::Text("working directory : %s", std::filesystem::current_path().string().c_str());
 
 
-            static bool draw_demo = false;
+            static bool draw_demo = true;
             ImGui::Checkbox("draw demo", &draw_demo);
             if (draw_demo) {
                 ImGui::ShowDemoWindow();

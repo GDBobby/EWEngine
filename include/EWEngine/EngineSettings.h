@@ -8,7 +8,6 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <type_traits>
 
 
@@ -85,7 +84,7 @@ namespace EngineSettings {
 		bool pointLights = false;
 		bool renderInfo = false;
 
-		void setVolume(int8_t whichVolume, uint8_t value);
+		void SetVolume(int8_t whichVolume, uint8_t value);
 		const uint8_t& getVolume(int8_t whichVolume);
 
 		std::string GetDimensionsString() {

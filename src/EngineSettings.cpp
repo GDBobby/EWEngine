@@ -162,7 +162,7 @@ bool ReadFromJsonFile(rapidjson::Document& document) {
 }
 
 
-void EngineSettings::SettingsData::setVolume(int8_t whichVolume, uint8_t value) {
+void EngineSettings::SettingsData::SetVolume(int8_t whichVolume, uint8_t value) {
 	//ma_device_set_SoundVolume::master(&device, volume[whichVolume]);
 	//printf("setting volume %d : %.2f \n", whichVolume, value);
 
@@ -192,8 +192,7 @@ const uint8_t& EngineSettings::SettingsData::getVolume(int8_t whichVolume) {
 	else if (whichVolume == (uint8_t)SoundVolume::voice) {
 		return voiceVolume;
 	}
-	std::cout << "invalid volumne type " << std::endl;
-	throw std::runtime_error("invalid volume type");
+	Log::Error("invalid volume type");
 	return masterVolume;
 }
 
