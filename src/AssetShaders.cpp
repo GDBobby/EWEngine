@@ -2,7 +2,6 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/Shaders.h"
 
-#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/DragDrop.h"
 

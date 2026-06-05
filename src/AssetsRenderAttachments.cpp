@@ -1,5 +1,4 @@
 #include "EWEngine/Assets/RenderAttachments.h"
-#include "EWEngine/Global.h"
 #include "EightWinds/Backend/RenderInfo.h"
 
 #include "EWEngine/EWEngine.h"

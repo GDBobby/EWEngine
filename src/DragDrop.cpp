@@ -2,8 +2,6 @@
 
 #include "EightWinds/Image.h"
 
-#include "EWEngine/Global.h"
-
 
 namespace EWE{
 

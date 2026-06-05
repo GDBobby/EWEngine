@@ -1,12 +1,12 @@
 #include "EWEngine/EWEngine.h"
 
+#include "EightWinds/Reflect/Enum.h"
+
 #include "EightWinds/Backend/DeviceSpecialization/Extensions.h"
 #include "EightWinds/Backend/DeviceSpecialization/DeviceSpecialization.h"
 #include "EightWinds/Backend/DeviceSpecialization/FeatureProperty.h"
 
-#include "EWEngine/Global.h"
 #include "GLFW/glfw3.h"
-#include <filesystem>
 
 #ifdef USING_NVIDIA_AFTERMATH
 #include "EightWinds/Backend/nvidia/Aftermath.h"
@@ -16,9 +16,24 @@
 #include "imgui.h"
 #endif
 
-#include "EightWinds/Reflect/Enum.h"
+#include "marl/event.h"
+
+#include <filesystem>
+
+
 
 namespace EWE{
+
+    std::thread::id mainThreadID;
+    void SetMainThread(){
+        mainThreadID = std::this_thread::get_id();
+    }
+
+    bool CheckMainThread() {
+        return std::this_thread::get_id() == mainThreadID;
+    }
+
+
     constexpr ConstEvalStr swapchainExt{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     //https://docs.vulkan.org/refpages/latest/refpages/source/VK_EXT_extended_dynamic_state3.html
     constexpr ConstEvalStr dynState3Ext{ VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME };
@@ -233,7 +248,7 @@ namespace EWE{
                 return queue;
             }
         }
-        throw std::runtime_error("failed to find a present queue");
+        EWE_UNREACHABLE;
     }
 
 	Queue& GetComputeQueue(LogicalDevice& logicalDevice, Queue& renderQueue) {
@@ -242,7 +257,7 @@ namespace EWE{
 				return logicalDevice.queues[i];
 			}
 		}
-		EWE_ASSERT(renderQueue.family.SupportsTransfer());
+		EWE_ASSERT(renderQueue.family.SupportsCompute());
 		return renderQueue;
 	}
 	Queue& GetTransferQueue(LogicalDevice& logicalDevice, Queue& renderQueue, Queue& computeQueue) {
@@ -262,11 +277,19 @@ namespace EWE{
 
     EWEngine* engine;
 
-        //the scheduler is unrelated, it's just the first thing I initialize, so it's packaged into this function. 
-        // im taking advantage of the construction to insert the global pointer assignment
+    //the scheduler is unrelated, it's just the first thing I initialize, so it's packaged into this function. 
+    // im taking advantage of the construction to insert the global pointer assignment
     marl::Scheduler::Config PointlessFunctionJustToSetTheGlobalVariable(EWEngine* this_ref){
         EWE_ASSERT(engine == nullptr);
         engine = this_ref;
+
+        TimelineSemaphore::RelinquishThreadControl = [](TimelineSemaphore* sem){
+            marl::Event event{ marl::Event::Mode::Manual };
+            while (!sem->Check(sem->value)) {
+                event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
+            }
+        };
+
         return marl::Scheduler::Config::allCores();
     }
 
@@ -282,12 +305,11 @@ namespace EWE{
         stcManager{logicalDevice, renderQueue, transferQueue, computeQueue},
         textOverlay{},
         soundEngine{},
+        sceneManager{},
         imguiHandler{renderQueue, swapchain.images.Size(), VK_SAMPLE_COUNT_1_BIT},
         current_renderGraph{stcManager.current_renderGraph},
         graphics_stc_task{assetManager.subTask.ConstructInto("graphics STC task", logicalDevice, renderQueue)},
         compute_stc_task{assetManager.subTask.ConstructInto("compute STC task", logicalDevice, computeQueue)}
-        
-        
     {
 
         EWE_ASSERT(std::filesystem::is_directory(root_directory));
@@ -375,7 +397,7 @@ namespace EWE{
     }
 
 
-	Queue::Type EWEngine::GetQueueType(Queue& queue) const{
+	Queue::Type EWEngine::GetQueueType(Queue& queue) {
 		if(queue == engine->renderQueue){
 			return Queue::Graphics;
 		}
@@ -397,6 +419,15 @@ namespace EWE{
 		}
 		EWE_UNREACHABLE;
 	}
+
+    lab::vec2 EWEngine::GetCursorWindowPos() {
+        lab::vec2d ret;
+        glfwGetCursorPos(engine->window.window, &ret.x, &ret.y);
+        return lab::vec2{
+            static_cast<float>(ret.x),
+            static_cast<float>(ret.y)
+        };
+    }
 
     void EWEngine::Imgui() {
         if (ImGui::Begin("engine")) {

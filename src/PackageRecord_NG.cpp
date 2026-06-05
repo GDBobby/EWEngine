@@ -1,6 +1,5 @@
 #include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
 
-#include "EWEngine/Global.h"
 #include "EWEngine/EWEngine.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/InstructionPackage.h"

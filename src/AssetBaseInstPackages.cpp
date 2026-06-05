@@ -3,7 +3,7 @@
 
 #include "EWEngine/EWEngine.h"
 
-#include "EightWinds/Backend/Logger.h"
+#include "EightWinds/Logger.h"
 #include "EightWinds/Command/InstructionPackage.h"
 
 #include "EightWinds/Command/ObjectInstructionPackage.h"

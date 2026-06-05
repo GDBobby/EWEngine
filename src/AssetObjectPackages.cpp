@@ -1,8 +1,7 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/ObjectPackages.h"
 #include "EWEngine/Assets/BaseInstPackages.h"
-#include "EWEngine/Global.h"
-#include "EightWinds/Backend/Logger.h"
+#include "EightWinds/Logger.h"
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/GlobalPushConstant.h"
 

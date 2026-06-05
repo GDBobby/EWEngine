@@ -6,7 +6,6 @@
 #include "EightWinds/VulkanHeader.h"
 
 #include "EWEngine/EWEngine.h"
-#include "EWEngine/Global.h"
 #include "EightWinds/Image.h"
 #include "EightWinds/ImageView.h"
 
@@ -444,7 +443,7 @@ int main(int argc, char* argv[]) {
                 logicalDevice.buffers.mut.lock();
                 for(auto res : logicalDevice.buffers){
                     const auto string_addr = std::to_string(reinterpret_cast<std::size_t>(res));
-                    std::string res_name = res->name + "##" + string_addr;
+                    std::string res_name = res->name.string() + "##" + string_addr;
                     if(res->name == ""){
                         res_name = string_addr;
                     }
@@ -643,6 +642,11 @@ int main(int argc, char* argv[]) {
     //EWE::Global::soundEngine->PlayMusic(songIndex, true);
 
     renderGraph.InitializeSemaphores();
+
+    renderGraph.presentBridge.final_swap_img_usage = &mergeTask->resources.images[present_img_att_index];
+
+    renderGraph.swap_image_instances.emplace_back(mergeTask, present_img_att_index);
+
     try { //beginning of render loop
         auto timeBegin = std::chrono::high_resolution_clock::now();
         VkDescriptorImageInfo descImg;
@@ -658,12 +662,8 @@ int main(int argc, char* argv[]) {
                 glfwPollEvents();
 
                 if (renderGraph.Acquire(EWE::engine->frameIndex)) {
-                    auto& swapImage = engine.swapchain.GetCurrentImage();
-                    swapImage.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
                     //mouseData.UpdatePosition(EWE::engine->window.window);
-                    renderGraph.ChangeResource(*mergeTask, present_img_att_index, &swapImage, EWE::engine->frameIndex);
-                    renderGraph.presentBridge.UpdateSrcData(&mergeTask->queue, &mergeTask->resources.images[present_img_att_index], EWE::engine->frameIndex);
+                    renderGraph.UpdateSwapImage(EWE::engine->frameIndex);
                     renderGraph.RecreateBarriers(EWE::engine->frameIndex);
 
                     renderGraph.Execute(EWE::engine->frameIndex);

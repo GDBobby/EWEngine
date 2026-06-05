@@ -2,7 +2,6 @@
 #include "EWEngine/Imgui/ImNodes/imnodes.h"
 #include "imgui.h"
 
-#include "EWEngine/Global.h"
 #include "EightWinds/Window.h"
 
 #include "LAB/Support/Generic.h"

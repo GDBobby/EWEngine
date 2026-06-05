@@ -1,7 +1,6 @@
 #include "EWEngine/Assets/Base.h"
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Assets/PackageRecords.h"
-#include "EWEngine/Global.h"
 
 #include "EWEngine/EWEngine.h"
 

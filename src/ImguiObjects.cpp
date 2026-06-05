@@ -1,6 +1,5 @@
 #include "EWEngine/Imgui/Objects.h"
 
-#include "EWEngine/Global.h"
 #include "EWEngine/EWEngine.h"
 #include "EWEngine/Imgui/Params.h"
 #include "EightWinds/VulkanHeader.h"
@@ -415,11 +414,9 @@ namespace EWE{
         ImGui::Text("filepath : %s", obj.name.string().c_str());
         auto stage_val = ShaderStage{obj.shaderStageCreateInfo.stage}.value;
         ImGui::Text("stage : %s", Reflect::Enum::ToString(stage_val).data());
-        const std::string layout_tree_name = std::string{"descriptors["} + std::to_string(obj.descriptorSets.sets.size()) + ']';
-        if(ImGui::TreeNode(layout_tree_name.c_str())){
 
-            ImGui::TreePop();
-        }
+        bool bool_copy = obj.has_bindless_textures;
+        ImGui::Checkbox("has descriptors", &bool_copy);
 
         //Push
         if(obj.pushRange.size > 0){

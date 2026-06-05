@@ -97,10 +97,10 @@ namespace EngineSettings {
 	extern SettingsData settingsData;
 	extern SettingsData tempSettings;
 
-	static void InitializeSettings();
+	void InitializeSettings();
 
-	static void GenerateDefaultFile();
-	static void SaveToJsonFile();
+	void GenerateDefaultFile();
+	void SaveToJsonFile();
 
 } //namespace EngineSettings
 } //namespace EWE

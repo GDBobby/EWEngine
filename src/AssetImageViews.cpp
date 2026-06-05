@@ -35,6 +35,13 @@ namespace Asset{
 
         return &view;
     }
+    ImageView* Manager<ImageView>::Get(Image& img){
+        AssetHash image_hash = GetHash(img);
+        ImageView& view = data_arena.AddElement(img);
+        association_container.push_back(image_hash, &view);
+
+        return &view;
+    }
 
 
 #if EWE_IMGUI

@@ -3,7 +3,6 @@
 #include "EWEngine/Assets/GPUTasks.h"
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Imgui/DragDrop.h"
-#include "EWEngine/Global.h"
 #include "EWEngine/EWEngine.h"
 //#include "EWEngine/Imgui/ImNodes/Graph/PackageRecord_NG.h"
 #include "EightWinds/Backend/RenderInfo.h"

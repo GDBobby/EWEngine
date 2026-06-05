@@ -17,6 +17,7 @@
         },
         {
             "name": "msvc-base",
+            "hidden": true,
             "inherits": "base",
             "generator": "Visual Studio 18 2026",
             "architecture": "x64"

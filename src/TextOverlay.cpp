@@ -11,6 +11,7 @@
 
 #include <hb.h>
 #include <hb-ft.h>
+#include <vulkan/vulkan_core.h>
 
 
 namespace EWE {
@@ -103,20 +104,27 @@ namespace EWE {
 
 
 		//i havent done staging buffer yet
-		StagingBuffer* stagingBuffer = new StagingBuffer(engine->logicalDevice, width * height * 4, imgdata);
 		// Copy to image
 
 		//i need to create a new STC manager
-		AsyncTransferContext_Image transferContext{
-			.resource{
-				image,
-				UsageData<Image>{
-					.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-					.accessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-				}
-			}
+		TransferContext<Image> transferContext{
+			.images{1},
+			.regions{1},
+			.stagingBuffer{engine->logicalDevice, width * height * 4, imgdata},
+			.final_usage{
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.accessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			},
+			.generatingMipMaps = false
+			
 		};
+		transferContext.images[0] = &image;
+		Log::Error("fix this\n");
+		transferContext.regions[0] = VkBufferImageCopy{
+			
+		};
+
 		engine->stcManager.AsyncTransfer(transferContext, Queue::Graphics);
 
 		VkDescriptorImageInfo descImgInfo;

@@ -1,6 +1,5 @@
 #include "EWEngine/Imgui/ImNodes/Graph/RenderGraph_NG.h"
 
-#include "EWEngine/Global.h"
 #include "EWEngine/EWEngine.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/ImNodes/imnodes.h"

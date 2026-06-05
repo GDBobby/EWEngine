@@ -2,7 +2,6 @@
 
 #include "LAB/Support/Simple.h"
 #include "LAB/Vector.h"
-#include "EWEngine/Global.h"
 #include "EWEngine/EWEngine.h"
 
 namespace EWE{

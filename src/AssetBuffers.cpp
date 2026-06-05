@@ -3,7 +3,6 @@
 #include "EWEngine/EWEngine.h"
 
 #include "EWEngine/Assets/Hash.h"
-#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/Objects.h"
 

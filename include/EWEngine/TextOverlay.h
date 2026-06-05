@@ -12,8 +12,6 @@
 
 #include "EightWinds/Window.h"
 
-#include "EWEngine/Global.h"
-
 #include <LAB/Vector.h>
 
 #include <vector>

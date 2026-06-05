@@ -1,6 +1,5 @@
 #include "EWEngine/Imgui/ImNodes/Graph/GPUTask_NG.h"
 
-#include "EWEngine/Global.h"
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EightWinds/Command/PackageRecord.h"
 #include "imgui.h"

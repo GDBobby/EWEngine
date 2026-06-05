@@ -1,5 +1,4 @@
 #include "EWEngine/Imgui/ImNodes/Graph/InstructionPackage_NG.h"
-#include "EWEngine/Global.h"
 #include "EWEngine/EWEngine.h"
 
 #include "EWEngine/Imgui/ImNodes/imnodes_ewe.h"

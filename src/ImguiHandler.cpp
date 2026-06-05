@@ -2,10 +2,9 @@
 
 #include "EightWinds/CommandBuffer.h"
 
-#include "EWEngine/Global.h"
 #include "EWEngine/EWEngine.h"
 
-#include "EightWinds/Backend/STC_Helper.h"
+#include "EightWinds/Command/STC_Helper.h"
 
 
 #include "EightWinds/VulkanHeader.h"

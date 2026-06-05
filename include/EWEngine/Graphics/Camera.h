@@ -3,8 +3,6 @@
 #include "EightWinds/Buffer.h"
 #include "EightWinds/Data/PerFlight.h"
 
-#include "EWEngine/Global.h"
-
 #include <LAB/Camera.h>
 #include "EWEngine/EWEngine.h"
 

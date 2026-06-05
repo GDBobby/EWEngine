@@ -1,18 +1,15 @@
 #pragma once
 
 #include "EWEngine/Scene.h"
-#include "EWEngine/EWEngine.h"
 
 #include <unordered_map>
-#include <future>
-#include <thread>
 
 namespace EWE {
 
 	//this class does not handle destruction of scenes, left explicitly to user
 	class SceneManager {
 	public:
-		SceneManager(EightWindsEngine& ewEngine);
+		[[nodiscard]] SceneManager();
 		~SceneManager();
 
 		void RunSceneLoop();
@@ -24,8 +21,6 @@ namespace EWE {
 		void SetStartupScene(SceneKey sceneKey);
 
 		const SceneKey scene_exit = 255;
-
-		double renderRefreshRate = 0.0;
 	private:
 		SceneKey currentScene;
 
