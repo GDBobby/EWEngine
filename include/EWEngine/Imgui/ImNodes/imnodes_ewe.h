@@ -60,6 +60,10 @@ namespace ImNodes{
         bool operator==(NodePair const& other){
             return start == other.start && end == other.end;
         }
+        bool AnyEqual(NodePair const& other){
+            return (start == other.start && end == other.end)
+                || (start == other.end && end == other.start);
+        }
         void Clear(){
             start.node = nullptr;
             end.node = nullptr;
