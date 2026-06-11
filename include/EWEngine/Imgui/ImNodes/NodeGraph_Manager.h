@@ -13,12 +13,12 @@ namespace EWE{
     struct NG_Manager{
 
         struct GraphIdentifier{
-            ImNodes::EWE::Editor::Type type;
+            ImNodes::Editor::Type type;
             std::string name;
         };
         
         struct NewPage{
-            KeyValueContainer<GraphIdentifier, std::function<ImNodes::EWE::Editor*()>> potential_graphs;
+            KeyValueContainer<GraphIdentifier, std::function<ImNodes::Editor*()>> potential_graphs;
 
             ImGuiTextFilter filter;
 
@@ -30,7 +30,7 @@ namespace EWE{
         };
 
         struct TabItem{
-            ImNodes::EWE::Editor* editor;
+            ImNodes::Editor* editor;
             bool closing_helper;
         };
         
@@ -44,10 +44,10 @@ namespace EWE{
         int force_selection = -1;
 
         //come back to this in a moment
-        void AddPotentialGraph(ImNodes::EWE::Editor::Type type, std::function<ImNodes::EWE::Editor*()> creation_func);
+        void AddPotentialGraph(ImNodes::Editor::Type type, std::function<ImNodes::Editor*()> creation_func);
         template<typename T>
-        void AddPotentialDefaultGraph(ImNodes::EWE::Editor::Type type){
-            auto default_creation_func = [&, type]() -> ImNodes::EWE::Editor* {
+        void AddPotentialDefaultGraph(ImNodes::Editor::Type type){
+            auto default_creation_func = [&, type]() -> ImNodes::Editor* {
                 std::string_view name = Reflect::Enum::ToString(type);
                 T* temp = new T();
                 temp->name = name;
@@ -59,7 +59,7 @@ namespace EWE{
                 }
                 editors.push_back(
                     TabItem{
-                        .editor = static_cast<ImNodes::EWE::Editor*>(temp),
+                        .editor = static_cast<ImNodes::Editor*>(temp),
                         .closing_helper = true
                     }
                 );
@@ -70,18 +70,18 @@ namespace EWE{
 
 
         struct OpenGraph_LayoverStorage{
-            ImNodes::EWE::Editor::Type type;
+            ImNodes::Editor::Type type;
             void* payload;
         };
         OpenGraph_LayoverStorage layover_storage;
 
-        void OpenGraphLayover(ImNodes::EWE::Editor::Type type, void* payload);
+        void OpenGraphLayover(ImNodes::Editor::Type type, void* payload);
 
         void DefaultFillGraphs();
 
         void Render();
 
-        void OpenGraph(ImNodes::EWE::Editor::Type type, void* payload);
+        void OpenGraph(ImNodes::Editor::Type type, void* payload);
         void SetOpenGraphFunc();
     }; 
 }

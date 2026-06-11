@@ -13,9 +13,9 @@
 namespace EWE{
 namespace Node{
 
-    struct SubmissionTask_NG : ImNodes::EWE::Editor {
+    struct SubmissionTask_NG : ImNodes::Editor {
         ExplorerContext explorer;
-        ImNodes::EWE::Node* headNode;
+        ImNodes::Node* headNode;
 
         Queue::Type current_queue_type = Queue::Type::COUNT;
 
@@ -38,18 +38,18 @@ namespace Node{
 
         void RenderNodes() override final;
 
-        ImNodes::EWE::Node* CreateHeadNode();
-        ImNodes::EWE::Node& CreateRGNode(Command::PackageRecord* record);
-        ImNodes::EWE::Node& CreateRGNode(GPUTask* task);
+        ImNodes::Node* CreateHeadNode();
+        ImNodes::Node& CreateRGNode(Command::PackageRecord* record);
+        ImNodes::Node& CreateRGNode(GPUTask* task);
 
-        //void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
+        //void ImGuiNodeDebugPrint(ImNodes::Node& node) const override final;
         void OpenAddMenu() override final;
         bool RenderAddMenu() override final;
-        void LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) override final;
-        void LinkCreated(ImNodes::EWE::NodePair& link) override final;
-        void LinkDestroyed(ImNodes::EWE::NodePair& link) override final;
-        void RenderNode(ImNodes::EWE::Node& node) override final;
-        void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
+        void LinkEmptyDrop(ImNodes::Node& src_node, ImNodes::PinOffset pin_offset) override final;
+        void LinkCreated(ImNodes::NodePair& link) override final;
+        void LinkDestroyed(ImNodes::NodePair& link) override final;
+        void RenderNode(ImNodes::Node& node) override final;
+        void RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) override final;
         bool SaveFunc() override final;
         bool LoadFunc() override final;
 
@@ -57,7 +57,7 @@ namespace Node{
         void InitFromObject(SubmissionTask& subTask);
 
         std::vector<GPUTask*> CollectTasks();
-        void ReadjustAttachmentPins(ImNodes::EWE::Node& node, std::size_t raster_index, bool value);
+        void ReadjustAttachmentPins(ImNodes::Node& node, std::size_t raster_index, bool value);
     };
 } //namespace Node 
 } //namespace EWE

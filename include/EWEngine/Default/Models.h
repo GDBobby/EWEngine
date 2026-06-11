@@ -22,7 +22,7 @@ namespace Basic{
 
         const std::string grp_name = "grp[" + std::to_string(CornerCount) + ']';
         const std::filesystem::path grp_path{grp_name};
-        auto* vertex_buffer = EWE::engine->assetManager.buffer.Get(grp_path);
+        auto* vertex_buffer = EWE::Global::assetManager->buffer.Get(grp_path);
 
         if(vertex_buffer != nullptr){
             return *vertex_buffer;
@@ -39,7 +39,7 @@ namespace Basic{
             .priority = 1.f
         };
 
-        vertex_buffer = engine->assetManager.buffer.ConstructInto(
+        vertex_buffer = Global::assetManager->buffer.ConstructInto(
             Asset::CrossPlatformPathHash(grp_path),
             CornerCount * sizeof(lab::vec2), 1,
             vmaAllocInfo

@@ -72,7 +72,7 @@ namespace Asset{
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
-                                hash_buffer = engine->assetManager.buffer.ConvertBDAToHash(device_addr);
+                                hash_buffer = Global::assetManager->buffer.ConvertBDAToHash(device_addr);
                             }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
@@ -82,7 +82,7 @@ namespace Asset{
                                 hash_buffer = INVALID_HASH;
                             }
                             else{
-                                hash_buffer = engine->assetManager.dii.ConvertTextureIndexToHash(temp_push->GetTextureIndex(j));
+                                hash_buffer = Global::assetManager->dii.ConvertTextureIndexToHash(temp_push->GetTextureIndex(j));
                             }
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
@@ -157,12 +157,12 @@ namespace Asset{
         inFile.read(reinterpret_cast<char*>(&pkg_type), sizeof(Command::InstructionPackage::Type));
         switch(pkg_type){
             case Command::InstructionPackage::Base: 
-                //ret = &engine->assetManager.instPkg.ConstructInto();
+                //ret = &Global::assetManager->instPkg.ConstructInto();
                 ret = std::construct_at(ret);
                 //EWE_ASSERT(dynamic_cast<
                 break;
             case Command::InstructionPackage::Object: 
-                //ret = static_cast<Command::InstructionPackage*>(&engine->assetManager.objPkg.ConstructInto());
+                //ret = static_cast<Command::InstructionPackage*>(&Global::assetManager->objPkg.ConstructInto());
                 ret = static_cast<Command::InstructionPackage*>(std::construct_at(static_cast<Command::ObjectPackage*>(ret)));
                 //EWE_ASSERT(dynamic_cast<Command::ObjectPackage*>(ret) != nullptr);
                 break;
@@ -213,7 +213,7 @@ namespace Asset{
                         for(uint8_t j = 0; j < temp_push->buffer_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
-                                temp_push->GetDeviceAddress(j) = engine->assetManager.buffer.Get(hash_buffer)->deviceAddress;
+                                temp_push->GetDeviceAddress(j) = Global::assetManager->buffer.Get(hash_buffer)->deviceAddress;
                                 
                             }
                             else{
@@ -223,7 +223,7 @@ namespace Asset{
                         for(uint8_t j = 0; j < temp_push->texture_count; j++){
                             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                             if(hash_buffer != INVALID_HASH){
-                                auto* temp_dii = engine->assetManager.dii.Get(hash_buffer);
+                                auto* temp_dii = Global::assetManager->dii.Get(hash_buffer);
                                 temp_push->GetTextureIndex(j) = temp_dii->index;
                             }
                             else{
@@ -251,7 +251,7 @@ namespace Asset{
             for(uint8_t i = 0; i < shader_count; i++){
                 AssetHash temp_shader_hash;
                 inFile.read(reinterpret_cast<char*>(&temp_shader_hash), sizeof(AssetHash));
-                auto* shader_get = engine->assetManager.shader.Get(temp_shader_hash);
+                auto* shader_get = Global::assetManager->shader.Get(temp_shader_hash);
                 auto& payload_shader = obj_payload.shaders[ShaderStage{shader_get->shaderStageCreateInfo.stage}.value];
                 EWE_ASSERT(payload_shader == nullptr && shader_get != nullptr);
                 payload_shader = shader_get;

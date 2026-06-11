@@ -103,7 +103,7 @@ namespace Asset{
         if(base_pkg_hash == INVALID_HASH){
             return false;
         }
-        Command::PackageRecord* base_pkg = engine->assetManager.pkgRecord.Get(base_pkg_hash);
+        Command::PackageRecord* base_pkg = Global::assetManager->pkgRecord.Get(base_pkg_hash);
         
         auto& task = *std::construct_at(ptr_to_raw_mem, base_pkg->name, engine->logicalDevice, *base_pkg, false);
         
@@ -237,11 +237,11 @@ namespace std{
     std::size_t hash<EWE::ParamPointerChain>::operator()(EWE::ParamPointerChain const& chain) const noexcept {
         std::size_t seed = 0;
         
-        EWE::hash_combine(seed, EWE::Asset::GetHash(*chain.base));
-        EWE::hash_combine(seed, std::hash<std::size_t>{}(chain.package_iter));
+        EWE::HashCombine(seed, EWE::Asset::GetHash(*chain.base));
+        EWE::HashCombine(seed, std::hash<std::size_t>{}(chain.package_iter));
         
         for (const auto& val : chain.pointer_into) {
-            EWE::hash_combine(seed, std::hash<std::size_t>{}(val));
+            EWE::HashCombine(seed, std::hash<std::size_t>{}(val));
         }
 
         return seed;

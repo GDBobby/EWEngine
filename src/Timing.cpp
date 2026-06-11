@@ -20,11 +20,13 @@ namespace EWE{
         return last_time - ClockType::now();
     }
 
-    bool LoopTimer::ReadyForUpdate() {
+    bool LoopTimer::ReadyForRenderUpdate() {
         const auto current_time = ClockType::now();
 
         delta = current_time - last_time;
-        if(delta >= duration){
+
+        const bool ret = delta >= duration;
+        if(ret){
             last_time = current_time;
             if(++avg_count >= avg_max){
                 last_average = average / avg_count;
@@ -32,6 +34,24 @@ namespace EWE{
                 average = DurationType{0};
             }
         }
-        return delta >= duration;
+        return ret;
+    }
+    bool LoopTimer::ReadyForLogicUpdate(){
+        const auto current_time = ClockType::now();
+
+        const auto local_delta = current_time - last_time;
+        last_time = current_time;
+        delta += local_delta;
+
+        const bool ret = delta >= duration;
+        if(ret){
+            delta -= duration;
+            if(++avg_count >= avg_max){
+                last_average = average / avg_count;
+                avg_count = 0;
+                average = DurationType{0};
+            }
+        }
+        return ret;
     }
 }

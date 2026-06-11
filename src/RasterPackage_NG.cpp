@@ -15,25 +15,25 @@
 namespace EWE{
 namespace Node{
     RasterPackage_NG::RasterPackage_NG()
-    : ImNodes::EWE::Editor{true, true},
+    : ImNodes::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = engine->assetManager.rasterTask.files.acceptable_extensions;
+        explorer.acceptable_extensions = Global::assetManager->rasterTask.files.acceptable_extensions;
         task_config.SetDefaults();
     }
 
-    ImNodes::EWE::Node* RasterPackage_NG::CreateHeadNode(){
+    ImNodes::Node* RasterPackage_NG::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
 
         head.pos = node_editor_window_pos;
-        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        head.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
     
     void RasterPackage_NG::RenderNodes() {
-        ImNodes::EWE::Editor::RenderNodes();
+        ImNodes::Editor::RenderNodes();
         Command::ObjectPackage* pkg;
         if(DragDropPtr::Target(pkg)) {
             if(pkg->type == Command::InstructionPackage::Type::Object){
@@ -44,18 +44,18 @@ namespace Node{
         }
     }
 
-    ImNodes::EWE::Node& RasterPackage_NG::CreateRGNode(Command::ObjectPackage* pkg) {
+    ImNodes::Node& RasterPackage_NG::CreateRGNode(Command::ObjectPackage* pkg) {
         auto& added_node = AddNode();
         added_node.payload = pkg;
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
 
     void RasterPackage_NG::RenderEditorTitle() {
-        ImNodes::EWE::Editor::RenderEditorTitle();
+        ImNodes::Editor::RenderEditorTitle();
 
         //ImGui::SameLine();
         if(ImGui::TreeNode("task config")){
@@ -89,27 +89,27 @@ namespace Node{
         return wantsClose | window_not_focused;
     }
 
-    void RasterPackage_NG::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+    void RasterPackage_NG::LinkEmptyDrop(ImNodes::Node& src_node, ImNodes::PinOffset pin_offset) {
 
         menu_pos = ImGui::GetMousePos();
         add_menu_is_open = true;
     }
 
-    void RasterPackage_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
+    void RasterPackage_NG::LinkCreated(ImNodes::NodePair& link) {
         //Log::Debug("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
-    void RasterPackage_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
+    void RasterPackage_NG::LinkDestroyed(ImNodes::NodePair& link) {
         //Log::Debug("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;
-        ImNodes::EWE::Editor::LinkDestroyed(link);
+        ImNodes::Editor::LinkDestroyed(link);
     }
 
-    void RasterPackage_NG::RenderNode(ImNodes::EWE::Node& node){
+    void RasterPackage_NG::RenderNode(ImNodes::Node& node){
         ImNodes::BeginNodeTitleBar();
         if(node.payload == nullptr){
             EWE_ASSERT(headNode == &node);
@@ -134,7 +134,7 @@ namespace Node{
         }
     }
 
-    void RasterPackage_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void RasterPackage_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
@@ -152,30 +152,30 @@ namespace Node{
                 const std::filesystem::path saved_path = *explorer.selected_file;
                 auto const proximate_path = std::filesystem::proximate(
                     saved_path,
-                    EWE::engine->assetManager.rasterTask.files.root_directory
+                    EWE::Global::assetManager->rasterTask.files.root_directory
                 );
                 {
-                    auto* pkg = engine->assetManager.rasterTask.Get(Asset::CrossPlatformPathHash(proximate_path));
+                    auto* pkg = Global::assetManager->rasterTask.Get(Asset::CrossPlatformPathHash(proximate_path));
                     if(pkg != nullptr){
-                        engine->assetManager.rasterTask.Destroy(*pkg);
+                        Global::assetManager->rasterTask.Destroy(*pkg);
                     }
                 }
 
-                RasterPackage& rt = engine->assetManager.rasterTask.ConstructInto(saved_path.string(), engine->logicalDevice, engine->renderQueue, task_config);
+                RasterPackage& rt = Global::assetManager->rasterTask.ConstructInto(saved_path.string(), engine->logicalDevice, engine->renderQueue, task_config);
                 
-                ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+                ImNodes::Node* current_node = reinterpret_cast<ImNodes::Node*>(headNode->pins[0].payload);
                 while(current_node != nullptr){
                     rt.objectPackages.push_back(reinterpret_cast<Command::ObjectPackage*>(current_node->payload));
-                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+                    current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
                 }
                 Log::Debug("writing raster ng to file - %s / %s -- %s\n", 
-                    EWE::engine->assetManager.rasterTask.files.root_directory.string().c_str(),
+                    EWE::Global::assetManager->rasterTask.files.root_directory.string().c_str(),
                     proximate_path.string().c_str(),
                     saved_path.string().c_str()
                 );
                 Asset::WriteAssetToFile(
                     rt,
-                    EWE::engine->assetManager.rasterTask.files.root_directory,
+                    EWE::Global::assetManager->rasterTask.files.root_directory,
                     proximate_path
                 );
 
@@ -199,8 +199,8 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 
-                const auto localized_path = std::filesystem::proximate(load_path, engine->assetManager.rasterTask.files.root_directory);
-                auto* rt = engine->assetManager.rasterTask.Get(localized_path);
+                const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->rasterTask.files.root_directory);
+                auto* rt = Global::assetManager->rasterTask.Get(localized_path);
                 InitFromObject(*rt);
 
                 explorer.enabled = false;
@@ -223,7 +223,7 @@ namespace Node{
         if(record.objectPackages.size() == 0){
             return;
         }
-        ImNodes::EWE::Node* last_node = nullptr;
+        ImNodes::Node* last_node = nullptr;
         {
             auto& node = CreateRGNode(record.objectPackages.front());
             last_node = &node;
@@ -232,7 +232,7 @@ namespace Node{
         }
 
         links.push_back(
-            ImNodes::EWE::NodePair{
+            ImNodes::NodePair{
                 .start{
                     .node = headNode,
                     .offset = 0
@@ -249,7 +249,7 @@ namespace Node{
             node.pins[0].payload = last_node;
 
             links.push_back(
-                ImNodes::EWE::NodePair{
+                ImNodes::NodePair{
                     .start{
                         .node = last_node,
                         .offset = 1

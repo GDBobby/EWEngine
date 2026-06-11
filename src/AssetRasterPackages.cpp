@@ -116,7 +116,7 @@ namespace Asset{
 
         for(auto* pkg : rt.objectPackages){
             AssetHash hash_buffer = GetHash(*pkg);
-            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), engine->assetManager.objPkg.files.root_directory, pkg->name);
+            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), Global::assetManager->objPkg.files.root_directory, pkg->name);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
 
@@ -146,7 +146,7 @@ namespace Asset{
             AssetHash hash_buffer;
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
             //i need to make sure this is also written to file, or it will become invalid
-            ret.objectPackages.push_back(engine->assetManager.objPkg.Get(hash_buffer));
+            ret.objectPackages.push_back(Global::assetManager->objPkg.Get(hash_buffer));
         }
 
         inFile.close();

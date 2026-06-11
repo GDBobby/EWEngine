@@ -30,10 +30,10 @@ namespace Node{
         int distanceFromHead = -1; 
     };
 
-    struct InstructionPackage_NG : ImNodes::EWE::Editor {
+    struct InstructionPackage_NG : ImNodes::Editor {
 
         ExplorerContext explorer;
-        ImNodes::EWE::Node* headNode;
+        ImNodes::Node* headNode;
         std::vector<Inst::Type> acceptable_add_instructions{};
         ImGuiTextFilter filter;
 
@@ -54,30 +54,30 @@ namespace Node{
         void InitFromFile(Command::ParamPool const& pp, Command::InstructionPackage::Type pkg_type);
         void InitFromObject(Command::InstructionPackage& pkg);
 
-        ImNodes::EWE::Node* CreateHeadNode();
-        static Inst::Type GetInstructionFromNode(ImNodes::EWE::Node& node);
-        void PrintNode(ImNodes::EWE::Node& node) const;
+        ImNodes::Node* CreateHeadNode();
+        static Inst::Type GetInstructionFromNode(ImNodes::Node& node);
+        void PrintNode(ImNodes::Node& node) const;
         void RenderEditorTitle() override final;
         void RenderNodes() override final;
-        ImNodes::EWE::Node& CreateRGNode(Inst::Type iType);
-        std::vector<Inst::Type> CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const;
+        ImNodes::Node& CreateRGNode(Inst::Type iType);
+        std::vector<Inst::Type> CollectInstructionsUpTo(ImNodes::Node* limit_node) const;
         inline std::vector<Inst::Type> CollectInstructions() const{
             return CollectInstructionsUpTo(nullptr);
         }
-        void InsertNodeToParamPool(ImNodes::EWE::Node* inserted_node);
+        void InsertNodeToParamPool(ImNodes::Node* inserted_node);
         void UpdateNodeOffsets();
         bool AddInstructionButton(Inst::Type itype);
 
-        bool InsertLink(ImNodes::EWE::Node& added_node, ImNodes::EWE::Node* node);
+        bool InsertLink(ImNodes::Node& added_node, ImNodes::Node* node);
 
-        void ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const override final;
+        void ImGuiNodeDebugPrint(ImNodes::Node& node) const override final;
         void OpenAddMenu() override final;
         bool RenderAddMenu() override final;
-        void LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) override final;
-        void LinkCreated(ImNodes::EWE::NodePair& link) override final;
-        void LinkDestroyed(ImNodes::EWE::NodePair& link) override final;
-        void RenderNode(ImNodes::EWE::Node& node) override final;
-        void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
+        void LinkEmptyDrop(ImNodes::Node& src_node, ImNodes::PinOffset pin_offset) override final;
+        void LinkCreated(ImNodes::NodePair& link) override final;
+        void LinkDestroyed(ImNodes::NodePair& link) override final;
+        void RenderNode(ImNodes::Node& node) override final;
+        void RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) override final;
         bool SaveFunc() override final;
         bool LoadFunc() override final;
     };

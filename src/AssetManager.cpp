@@ -196,7 +196,7 @@ namespace Asset{
 
         for(int i = 0; i < count; i++){
             std::filesystem::path drop_path{paths[i]};
-            engine->assetManager.DropCallback(drop_path);
+            Global::assetManager->DropCallback(drop_path);
         }
     }
 

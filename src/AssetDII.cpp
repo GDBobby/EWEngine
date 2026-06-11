@@ -127,9 +127,9 @@ namespace Asset{
             }
             if(DragDropPtr::Target(creation_params.sampler)){
                 auto rehashed = Sampler::Condense(creation_params.sampler->info);
-                auto found = engine->assetManager.sampler.association_container.find(rehashed);
-                if(found == engine->assetManager.sampler.association_container.end()){
-                    engine->assetManager.sampler.association_container.push_back(rehashed, creation_params.sampler);
+                auto found = Global::assetManager->sampler.association_container.find(rehashed);
+                if(found == Global::assetManager->sampler.association_container.end()){
+                    Global::assetManager->sampler.association_container.push_back(rehashed, creation_params.sampler);
                 }
             }
 
@@ -144,14 +144,14 @@ namespace Asset{
             Image* img_target = nullptr;
             if(DragDropPtr::Target(img_target)){
                 AssetHash img_hash = Asset::INVALID_HASH;
-                for(auto& img_kvp : engine->assetManager.image.association_container){
+                for(auto& img_kvp : Global::assetManager->image.association_container){
                     if(img_kvp.value == img_target){
                         img_hash = img_kvp.key;
                         break;
                     }
                 }
                 EWE_ASSERT(img_hash != Asset::INVALID_HASH);
-                creation_params.view = engine->assetManager.imageView.Get(img_hash);
+                creation_params.view = Global::assetManager->imageView.Get(img_hash);
             }
 
             Reflect::Enum::Imgui_Combo_Selectable("descriptor type", creation_params.type);
@@ -252,7 +252,7 @@ namespace Asset{
         AssetHash view_hash;
         streamHandler.Process(view_hash);
 
-        ImageView* view = engine->assetManager.imageView.Get(view_hash);
+        ImageView* view = Global::assetManager->imageView.Get(view_hash);
 
         Sampler* sampler = nullptr;
         uint8_t temp_buffer;
@@ -261,7 +261,7 @@ namespace Asset{
             //if we're here, and it's nullptr, we're reading. otherwise, writing
             uint64_t sampler_condensed;
             streamHandler.Process(sampler_condensed);
-            sampler = &engine->assetManager.sampler.Get(sampler_condensed);
+            sampler = &Global::assetManager->sampler.Get(sampler_condensed);
         }
 
         DescriptorType type;

@@ -94,7 +94,7 @@ namespace Asset{
             AssetHash hash_buffer;
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
             //create a gpu task from the inst package
-            Command::PackageRecord* pkgRecord = EWE::engine->assetManager.pkgRecord.Get(hash_buffer);
+            Command::PackageRecord* pkgRecord = EWE::Global::assetManager->pkgRecord.Get(hash_buffer);
 
             GPUTask* task = new GPUTask(pkgRecord->name, engine->logicalDevice, *pkgRecord, false);
             ret.tasks.push_back(task);

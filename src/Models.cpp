@@ -19,7 +19,7 @@ namespace Basic{
             .priority = 1.f
         };
 
-        return engine->assetManager.buffer.ConstructInto(
+        return Global::assetManager->buffer.ConstructInto(
             hash,
             vert_count * vert_size, 1,
             vmaAllocInfo
@@ -34,7 +34,7 @@ namespace Basic{
         const std::filesystem::path grp_path{grp_name};
         AssetHash buffer_hash = Asset::CrossPlatformPathHash(grp_path);
         
-        auto* vertex_buffer = EWE::engine->assetManager.buffer.Get(buffer_hash);
+        auto* vertex_buffer = EWE::Global::assetManager->buffer.Get(buffer_hash);
         if(vertex_buffer != nullptr){
             return *vertex_buffer;
         }

@@ -51,7 +51,7 @@ namespace EWE{
     
 
     SpriteSheet::SpriteSheet(std::filesystem::path const& _name, uint16_t _texel_width, uint16_t _texel_height, VkSamplerCreateInfo const& samplerCreateInfo)
-    : SpriteSheet{_name, _texel_width, _texel_height, engine->assetManager.sampler.Get(samplerCreateInfo)}
+    : SpriteSheet{_name, _texel_width, _texel_height, Global::assetManager->sampler.Get(samplerCreateInfo)}
     {}
     
 } //namespace EWE

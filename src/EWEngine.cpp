@@ -1,5 +1,6 @@
 #include "EWEngine/EWEngine.h"
 
+#include "EWEngine/EngineSettings.h"
 #include "EightWinds/Reflect/Enum.h"
 
 #include "EightWinds/Backend/DeviceSpecialization/Extensions.h"
@@ -277,15 +278,18 @@ namespace EWE{
 
     EWEngine* engine;
 
-    //the scheduler is unrelated, it's just the first thing I initialize, so it's packaged into this function. 
+    //the scheduler is unrelated, it's just the first thing I initialize
+    // so it's packaged into this function. 
     // im taking advantage of the construction to insert the global pointer assignment
     marl::Scheduler::Config PointlessFunctionJustToSetTheGlobalVariable(EWEngine* this_ref){
         EWE_ASSERT(engine == nullptr);
         engine = this_ref;
 
-        TimelineSemaphore::RelinquishThreadControl = [](TimelineSemaphore* sem){
+        EngineSettings::InitializeSettings();
+
+        TimelineSemaphore::RelinquishThreadControl = [](TimelineSemaphore& sem){
             marl::Event event{ marl::Event::Mode::Manual };
-            while (!sem->Check(sem->value)) {
+            while (!sem.Check(sem.value)) {
                 event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
             }
         };
@@ -293,23 +297,20 @@ namespace EWE{
         return marl::Scheduler::Config::allCores();
     }
 
-    EWEngine::EWEngine(std::string_view application_name, std::filesystem::path const& root_directory)
-    : scheduler{PointlessFunctionJustToSetTheGlobalVariable(this)},
-        frameIndex{0},
+    EWEngine::EWEngine(std::string_view application_name, std::filesystem::path const& _root_directory)
+    : root_directory{_root_directory},
+        scheduler{PointlessFunctionJustToSetTheGlobalVariable(this)},
         instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
         window{instance, 1920, 1080, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
         renderQueue{GetPresentQueue(logicalDevice)}, computeQueue{GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)}, 
         swapchain{logicalDevice, window, renderQueue},
-        assetManager{root_directory, logicalDevice, renderQueue},
         stcManager{logicalDevice, renderQueue, transferQueue, computeQueue},
-        textOverlay{},
-        soundEngine{},
-        sceneManager{},
-        imguiHandler{renderQueue, swapchain.images.Size(), VK_SAMPLE_COUNT_1_BIT},
         current_renderGraph{stcManager.current_renderGraph},
-        graphics_stc_task{assetManager.subTask.ConstructInto("graphics STC task", logicalDevice, renderQueue)},
-        compute_stc_task{assetManager.subTask.ConstructInto("compute STC task", logicalDevice, computeQueue)}
+        frameIndex{0},
+        graphics_stc_task{"graphics STC task", logicalDevice, renderQueue},
+        compute_stc_task{"compute STC task", logicalDevice, computeQueue},
+        leafSystem{"models/leaf.obj"}
     {
 
         EWE_ASSERT(std::filesystem::is_directory(root_directory));

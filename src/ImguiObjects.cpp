@@ -228,21 +228,6 @@ namespace EWE{
         ImGui::PopID();
     }
 
-    template<> void ImguiExtension::Imgui(Command::Executor& obj) {
-        
-        std::size_t current_memory_offset = 0;
-        for(auto& inst : obj.record.records){
-            
-
-            current_memory_offset += Inst::GetParamSize(inst.type);
-        }
-        /*
-        for (std::size_t i = 0; i < obj.records.size(); i++) {
-            ImGui::Text("%zu\t:%s", i, Reflect::Enum::ToString(obj.records[i].type).data());
-        }
-        */
-    }
-
     FUNC_ENTRY(GPUTask) {
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
@@ -252,16 +237,6 @@ namespace EWE{
         if(ImGui::TreeNode("resources")){
             ImguiExtension::Imgui(obj.resources);
             ImGui::TreePop();
-        }
-
-        if(obj.commandExecutor.has_value()){
-            if(ImGui::TreeNode("executor")){
-                ImguiExtension::Imgui(obj.commandExecutor.value());
-                ImGui::TreePop();
-            }
-        }
-        else{
-            ImGui::Text("executor has no value");
         }
 
         ImGui::PopID();
@@ -440,7 +415,7 @@ namespace EWE{
                 ImGui::EndTable();
             }
             if(ImGui::Button("write meta to file")){
-                obj.meta.WriteToFile(engine->assetManager.shader.files.root_directory / "meta" / obj.name);
+                obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.name);
                 Log::Debug("wrote shader meta to file\n");
             }
         }
@@ -600,12 +575,6 @@ namespace EWE{
         ImGui::DragInt("compare mask", reinterpret_cast<int*>(&obj.compareMask), 0, INT32_MAX);
         ImGui::DragInt("write mask", reinterpret_cast<int*>(&obj.compareMask), 0, INT32_MAX);
         ImGui::DragInt("reference", reinterpret_cast<int*>(&obj.reference), 0, INT32_MAX);
-    }
-
-    template<> void ImguiExtension::Imgui(Command::Record& obj) {
-        for (std::size_t i = 0; i < obj.records.size(); i++) {
-            ImGui::Text("%zu\t:%s", i, Reflect::Enum::ToString(obj.records[i].type).data());
-        }
     }
 
 	template<> void ImguiExtension::Imgui(std::array<Shader*, ShaderStage::Bits::COUNT>& obj){

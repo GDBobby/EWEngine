@@ -34,7 +34,7 @@ namespace EWE{
 
 				if(iter < push->buffer_count){
 					if(push->GetDeviceAddress(iter) != null_buffer){
-						auto& buf = *engine->assetManager.buffer.Get(engine->assetManager.buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
+						auto& buf = *Global::assetManager->buffer.Get(Global::assetManager->buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
 						ImGui::Text("%u:%s", iter, buf.name.c_str());
 						ImGui::SetItemTooltip(buf.name.c_str());
 					}
@@ -49,7 +49,7 @@ namespace EWE{
 				ImGui::TableNextColumn();
 				if(iter < push->texture_count){
 					if(push->GetTextureIndex(iter) != null_texture){
-						const AssetHash temp_hash = engine->assetManager.dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
+						const AssetHash temp_hash = Global::assetManager->dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
 #if EWE_DEBUG_BOOL
 						if(temp_hash == Asset::INVALID_HASH) {
 							Log::Warning("caught an invalid push texture index\n");
@@ -57,7 +57,7 @@ namespace EWE{
 						}
 						else{
 #endif
-							auto* dii = engine->assetManager.dii.Get(temp_hash);
+							auto* dii = Global::assetManager->dii.Get(temp_hash);
 							ImGui::Text("%u:%s", iter, dii->name.string().c_str());
 							ImGui::SetItemTooltip(dii->name.string().c_str());
 #if EWE_DEBUG_BOOL
@@ -98,7 +98,7 @@ namespace EWE{
 				if(iter < push->buffer_count){
 					
 					if(push->GetDeviceAddress(iter) != null_buffer){
-						auto& buf = *engine->assetManager.buffer.Get(engine->assetManager.buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
+						auto& buf = *Global::assetManager->buffer.Get(Global::assetManager->buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
 						ImGui::Text(buf.name.c_str());
 						ImGui::SetItemTooltip(buf.name.c_str());
 					}
@@ -120,7 +120,7 @@ namespace EWE{
 
 				if(iter < push->texture_count){
 					if(push->GetTextureIndex(iter) != null_texture){
-						const AssetHash temp_hash = engine->assetManager.dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
+						const AssetHash temp_hash = Global::assetManager->dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
 #if EWE_DEBUG_BOOL
 						if(temp_hash == Asset::INVALID_HASH) {
 							Log::Warning("caught an invalid push texture index\n");
@@ -128,7 +128,7 @@ namespace EWE{
 						}
 						else{
 #endif
-							auto* dii = engine->assetManager.dii.Get(temp_hash);
+							auto* dii = Global::assetManager->dii.Get(temp_hash);
 							ImGui::Text(dii->name.string().c_str());
 							ImGui::SetItemTooltip(dii->name.string().c_str());
 #if EWE_DEBUG_BOOL

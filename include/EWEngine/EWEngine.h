@@ -11,11 +11,9 @@
 #include "EightWinds/RenderGraph/RenderGraph.h"
 
 #include "EWEngine/EngineSettings.h"
-#include "EWEngine/TextOverlay.h"
-#include "EWEngine/Imgui/ImguiHandler.h"
-#include "EWEngine/Systems/SceneManager.h"
-#include "EWEngine/Assets/Manager.h"
-#include "EWEngine/Systems/Sound_Engine.h"
+#include "EWEngine/Systems/LeafSystem.h"
+
+#include "EWEngine/Global.h"
 
 #include "EWEngine/Data/Timing.h"
 
@@ -35,8 +33,10 @@ namespace EWE{
 
 
     struct EWEngine{
+        std::filesystem::path root_directory;
         marl::Scheduler scheduler;
-        uint8_t frameIndex;
+        LoopTimer render_loop_timer;
+        LoopTimer physics_loop_timer;
 
         Instance instance;
         Window window;
@@ -47,24 +47,17 @@ namespace EWE{
         Queue& transferQueue;
 
         Swapchain swapchain;
-
-        AssetManager assetManager;
         STC_Manager stcManager;
-        TextOverlay textOverlay;
-        SoundEngine soundEngine;
-        SceneManager sceneManager;
-
-        ImguiHandler imguiHandler;
-
-        LoopTimer render_loop_timer;
-        LoopTimer physics_loop_timer;
-
-        uint64_t totalFramesSubmitted = 0;
-
         RenderGraph*& current_renderGraph;
 
-        SubmissionTask& graphics_stc_task;
-        SubmissionTask& compute_stc_task;
+        uint8_t frameIndex;
+
+        SubmissionTask graphics_stc_task;
+        SubmissionTask compute_stc_task;
+
+        LeafSystem leafSystem;
+
+        uint64_t totalFramesSubmitted = 0;
 
         [[nodiscard]] explicit EWEngine(std::string_view application_name, std::filesystem::path const& root_directory);
 

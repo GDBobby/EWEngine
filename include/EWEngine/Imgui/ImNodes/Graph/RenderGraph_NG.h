@@ -7,10 +7,10 @@
 
 namespace EWE{
     namespace Node{
-        struct RenderGraph_NG : public ImNodes::EWE::Editor {
+        struct RenderGraph_NG : public ImNodes::Editor {
 
             ExplorerContext explorer;
-            ImNodes::EWE::Node* headNode;
+            ImNodes::Node* headNode;
 
             enum NodeType{
                 TaskGroup,
@@ -35,14 +35,14 @@ namespace EWE{
             
             void RenderEditorTitle() override final;
             
-            ImNodes::EWE::Node* CreateHeadNode();
-            ImNodes::EWE::Node& CreateRGNode(SubmissionTask* subTask);
-            ImNodes::EWE::Node& CreateRGNode(FullRenderInfo* renderInfo);
+            ImNodes::Node* CreateHeadNode();
+            ImNodes::Node& CreateRGNode(SubmissionTask* subTask);
+            ImNodes::Node& CreateRGNode(FullRenderInfo* renderInfo);
 
             void RenderNodes() override final;
             bool RenderAddMenu() override final;
-            void RenderNode(ImNodes::EWE::Node& node) override final;
-            void RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) override final;
+            void RenderNode(ImNodes::Node& node) override final;
+            void RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) override final;
 
             bool SaveFunc() override final;
             bool LoadFunc() override final;

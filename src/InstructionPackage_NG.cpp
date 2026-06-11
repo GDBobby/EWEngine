@@ -20,11 +20,11 @@ namespace EWE{
 namespace Node{
 
     InstructionPackage_NG::InstructionPackage_NG()
-    : ImNodes::EWE::Editor{true, true},
+    : ImNodes::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
+        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
         acceptable_add_instructions = std::vector<Inst::Type>{
             Command::InstructionPackage::allowed_instructions.begin(), 
             Command::InstructionPackage::allowed_instructions.end()
@@ -33,15 +33,15 @@ namespace Node{
     }
 
     InstructionPackage_NG::InstructionPackage_NG(Command::InstructionPackage& pkg)
-    : ImNodes::EWE::Editor{true, true},
+    : ImNodes::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
+        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
         InitFromObject(pkg);
     }
 
-    ImNodes::EWE::Node* InstructionPackage_NG::CreateHeadNode(){
+    ImNodes::Node* InstructionPackage_NG::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
         auto* node_payload = new InstNodePayload();
@@ -49,22 +49,22 @@ namespace Node{
         node_payload->distanceFromHead = -1; //head isn['t connected to head
         head.payload = node_payload;
         head.pos = node_editor_window_pos;
-        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        head.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
 
-    Inst::Type InstructionPackage_NG::GetInstructionFromNode(ImNodes::EWE::Node& node){
+    Inst::Type InstructionPackage_NG::GetInstructionFromNode(ImNodes::Node& node){
         return reinterpret_cast<InstNodePayload*>(node.payload)->iType;
     }
 
-    void InstructionPackage_NG::ImGuiNodeDebugPrint(ImNodes::EWE::Node& node) const {
+    void InstructionPackage_NG::ImGuiNodeDebugPrint(ImNodes::Node& node) const {
         if(node.id != 0){
             auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
             ImGui::Text("node.id[%d] : inst[%s] - pos[%.2f:%.2f]", node.id, Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), temp_pos.x, temp_pos.y);
         }
     }
 
-    void InstructionPackage_NG::PrintNode(ImNodes::EWE::Node& node) const{
+    void InstructionPackage_NG::PrintNode(ImNodes::Node& node) const{
         Log::Debug("node.id[%d] - type[%s] - node.pin[0].addr[%zu] - node.pin[1].addr[%zu]\n", 
             node.id, 
             Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), 
@@ -75,7 +75,7 @@ namespace Node{
 
     void InstructionPackage_NG::RenderEditorTitle(){
         ImGui::BulletText("param data - inst count[%zu] : param heap size[%zu] : param count[%zu]", paramPool.instructions.size(), paramPool.params[0].Size(), paramPool.param_data.size());
-        ImNodes::EWE::Editor::RenderEditorTitle();
+        ImNodes::Editor::RenderEditorTitle();
         if(packageType == Command::InstructionPackage::Object){
             auto& shaders = reinterpret_cast<Command::ObjectPackage::Payload*>(package_payload)->shaders;
             auto shader_copy = shaders;
@@ -125,7 +125,7 @@ namespace Node{
                         Command::InstructionPackage::allowed_instructions.begin(), 
                         Command::InstructionPackage::allowed_instructions.end()
                     };
-                    explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
+                    explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
                     break;
                 case Command::InstructionPackage::Object:
                     acceptable_add_instructions = std::vector<Inst::Type>{
@@ -133,7 +133,7 @@ namespace Node{
                         Command::ObjectPackage::allowed_instructions.end()
                     };
                     package_payload = new Command::ObjectPackage::Payload();
-                    explorer.acceptable_extensions = engine->assetManager.objPkg.files.acceptable_extensions;
+                    explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
                     break;
                 default: break;
             }
@@ -146,7 +146,7 @@ namespace Node{
             SetPackageType(packageType);
         }
 
-        ImNodes::EWE::Editor::RenderNodes();
+        ImNodes::Editor::RenderNodes();
         Inst::Type* inst_type;
         if(DragDropPtr::Target(inst_type)) {
             auto& added_node = CreateRGNode(*inst_type);
@@ -155,7 +155,7 @@ namespace Node{
         }
     }
 
-    ImNodes::EWE::Node& InstructionPackage_NG::CreateRGNode(Inst::Type iType) {
+    ImNodes::Node& InstructionPackage_NG::CreateRGNode(Inst::Type iType) {
         auto& added_node = AddNode();
         auto* node_payload = new InstNodePayload();
         node_payload->type = InstNodePayload::Instruction;
@@ -163,19 +163,19 @@ namespace Node{
 
         added_node.payload = node_payload;
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
 
-    std::vector<Inst::Type> InstructionPackage_NG::CollectInstructionsUpTo(ImNodes::EWE::Node* limit_node) const{
+    std::vector<Inst::Type> InstructionPackage_NG::CollectInstructionsUpTo(ImNodes::Node* limit_node) const{
         std::vector<Inst::Type> ret{};
         
-        ImNodes::EWE::Node* current_node = nullptr;
+        ImNodes::Node* current_node = nullptr;
         //the pin payload is going to be a pointer to the node, unless nullptr
         if(headNode->pins[0].payload != nullptr){
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+            current_node = reinterpret_cast<ImNodes::Node*>(headNode->pins[0].payload);
             PrintNode(*current_node);
             ret.push_back(GetInstructionFromNode(*current_node));
             if(current_node == limit_node){
@@ -187,14 +187,14 @@ namespace Node{
                 while(current_node->pins[1].payload != nullptr){
                     PrintNode(*current_node);
 
-                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+                    current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
                     auto const current_inst = GetInstructionFromNode(*current_node);
                     ret.push_back(current_inst);
                 }
             }
             else{
                 while(current_node->pins[1].payload != nullptr){
-                    current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+                    current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
                     auto const current_inst = GetInstructionFromNode(*current_node);
                     ret.push_back(current_inst);
                     if(current_node == limit_node){
@@ -214,7 +214,7 @@ namespace Node{
         return ret;
     }
 
-    void InstructionPackage_NG::InsertNodeToParamPool(ImNodes::EWE::Node* inserted_node){
+    void InstructionPackage_NG::InsertNodeToParamPool(ImNodes::Node* inserted_node){
         UpdateNodeOffsets();
         auto* node_payload = reinterpret_cast<InstNodePayload*>(inserted_node->payload);
         if(node_payload->distanceFromHead >= 0){
@@ -230,12 +230,12 @@ namespace Node{
             current_payload->distanceFromHead = -1;
         }
         
-        ImNodes::EWE::Node* current_node = nullptr;
+        ImNodes::Node* current_node = nullptr;
         //the pin payload is going to be a pointer to the node, unless nullptr
 
         std::size_t distance = 0;
         if(headNode->pins[0].payload != nullptr){
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+            current_node = reinterpret_cast<ImNodes::Node*>(headNode->pins[0].payload);
             if(current_node == nullptr){
                 //Log::Debug("early early return - %s\n", __FUNCTION__);
                 return;
@@ -247,7 +247,7 @@ namespace Node{
             while(current_node->pins[1].payload != nullptr){
                 PrintNode(*current_node);
 
-                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+                current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
                 current_payload = reinterpret_cast<InstNodePayload*>(current_node->payload);
                 current_payload->distanceFromHead = distance++;
             }
@@ -259,11 +259,11 @@ namespace Node{
         add_menu_is_open = true;
     }
 
-    bool InstructionPackage_NG::InsertLink(ImNodes::EWE::Node& added_node, ImNodes::EWE::Node* otherNode){
+    bool InstructionPackage_NG::InsertLink(ImNodes::Node& added_node, ImNodes::Node* otherNode){
         //printf("creating in between\n");
         //this is added an inst in between two connected nodes
         //first, find the link that connects those two
-        ImNodes::EWE::NodePair* existing_link = nullptr;
+        ImNodes::NodePair* existing_link = nullptr;
         for(auto& link : links){
             if((link.start == link_empty_drop || link.end == link_empty_drop) && (link.start.node == otherNode || link.end.node == otherNode)){
                 existing_link = &link;
@@ -277,12 +277,12 @@ namespace Node{
         existing_link->end.GetPin()->payload = &added_node;
         added_node.pins[0].payload = existing_link->start.node;
         added_node.pins[1].payload = existing_link->end.node;
-        ImNodes::EWE::NodePair created_link{
-            .start = ImNodes::EWE::NodeAndPin{
+        ImNodes::NodePair created_link{
+            .start = ImNodes::NodeAndPin{
                 .node = &added_node,
                 .offset = 1 - existing_link->end.offset
             },
-            .end = ImNodes::EWE::NodeAndPin{
+            .end = ImNodes::NodeAndPin{
                 .node = existing_link->end.node,
                 .offset = existing_link->end.offset
             }
@@ -302,7 +302,7 @@ namespace Node{
             if(ImGui::Button(Reflect::Enum::ToString(itype).data())){
                 auto& added_node = CreateRGNode(itype);
                 if(link_empty_drop.node != nullptr){
-                    ImNodes::EWE::Node* otherNode = reinterpret_cast<ImNodes::EWE::Node*>(link_empty_drop.GetPin()->payload);
+                    ImNodes::Node* otherNode = reinterpret_cast<ImNodes::Node*>(link_empty_drop.GetPin()->payload);
                     if(otherNode != nullptr) {
                         return InsertLink(added_node, otherNode);
                     }
@@ -312,12 +312,12 @@ namespace Node{
                     if(link_empty_drop.node == headNode){
                         LinkCreated(
                             links.emplace_back(
-                                ImNodes::EWE::NodePair{
-                                    .start = ImNodes::EWE::NodeAndPin{
+                                ImNodes::NodePair{
+                                    .start = ImNodes::NodeAndPin{
                                         .node = &added_node,
                                         .offset = 0
                                     },
-                                    .end = ImNodes::EWE::NodeAndPin{
+                                    .end = ImNodes::NodeAndPin{
                                         .node = headNode,
                                         .offset = 0
                                     }
@@ -328,8 +328,8 @@ namespace Node{
                     else if(link_empty_drop.offset == 1){
                         LinkCreated(
                             links.emplace_back(
-                                ImNodes::EWE::NodePair{
-                                    .start = ImNodes::EWE::NodeAndPin{
+                                ImNodes::NodePair{
+                                    .start = ImNodes::NodeAndPin{
                                         .node = &added_node,
                                         .offset = 1 - link_empty_drop.offset
                                     },
@@ -341,9 +341,9 @@ namespace Node{
                     else{
                         LinkCreated(
                             links.emplace_back(
-                                ImNodes::EWE::NodePair{
+                                ImNodes::NodePair{
                                     .start = link_empty_drop,
-                                    .end = ImNodes::EWE::NodeAndPin{
+                                    .end = ImNodes::NodeAndPin{
                                         .node = &added_node,
                                         .offset = 1 - link_empty_drop.offset
                                     }
@@ -388,8 +388,8 @@ namespace Node{
             if(link_empty_drop.node != nullptr){
                 //check if its linked, if so, delete the link
                 if(link_empty_drop.GetPin()->payload != nullptr){
-                    auto* otherNode = reinterpret_cast<ImNodes::EWE::Node*>(link_empty_drop.GetPin()->payload);
-                    ImNodes::EWE::NodePair* existing_link = nullptr;
+                    auto* otherNode = reinterpret_cast<ImNodes::Node*>(link_empty_drop.GetPin()->payload);
+                    ImNodes::NodePair* existing_link = nullptr;
                     for(auto& link : links){
                         if(
                             (link.start.node == link_empty_drop.node || link.end.node == link_empty_drop.node)
@@ -409,7 +409,7 @@ namespace Node{
         return wantsClose | window_not_focused;
     }
 
-    void InstructionPackage_NG::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+    void InstructionPackage_NG::LinkEmptyDrop(ImNodes::Node& src_node, ImNodes::PinOffset pin_offset) {
         //auto const& instructions = CollectInstructionsUpTo(&src_node);
 
         menu_pos = ImGui::GetMousePos();
@@ -417,16 +417,16 @@ namespace Node{
         link_empty_drop.node = &src_node;
         link_empty_drop.offset = pin_offset;
     }
-    void InstructionPackage_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
+    void InstructionPackage_NG::LinkCreated(ImNodes::NodePair& link) {
         if(link.start.node->pins[link.start.offset].payload != nullptr 
             || link.end.node->pins[link.end.offset].payload != nullptr
         ){
-            ImNodes::EWE::Editor::LinkDestroyed(link);
+            ImNodes::Editor::LinkDestroyed(link);
             return;
         }
         if(link.start.node == headNode || link.end.node == headNode){
             if(link.start.offset != 0 || link.end.offset != 0){
-                ImNodes::EWE::Editor::LinkDestroyed(link);
+                ImNodes::Editor::LinkDestroyed(link);
                 return;
             }
             if(link.end.node == headNode){
@@ -435,7 +435,7 @@ namespace Node{
         }
         else {
             if(link.start.offset == link.end.offset){
-                ImNodes::EWE::Editor::LinkDestroyed(link);
+                ImNodes::Editor::LinkDestroyed(link);
                 return;
             }
             if(link.start.offset == 0){
@@ -460,7 +460,7 @@ namespace Node{
             UpdateNodeOffsets();
         }
     }
-    void InstructionPackage_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
+    void InstructionPackage_NG::LinkDestroyed(ImNodes::NodePair& link) {
         Log::Debug("ipng::link destroyed\n");
         
         link.start.node->pins[link.start.offset].payload = nullptr;
@@ -472,10 +472,10 @@ namespace Node{
             paramPool.ShrinkToSize(end_payload->distanceFromHead);
             UpdateNodeOffsets();
         }
-        ImNodes::EWE::Editor::LinkDestroyed(link);
+        ImNodes::Editor::LinkDestroyed(link);
     }
 
-    void InstructionPackage_NG::RenderNode(ImNodes::EWE::Node& node) {
+    void InstructionPackage_NG::RenderNode(ImNodes::Node& node) {
         auto node_payload = reinterpret_cast<InstNodePayload*>(node.payload);
 
         ImNodes::BeginNodeTitleBar();
@@ -553,7 +553,7 @@ namespace Node{
         }
     }
 
-    void InstructionPackage_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void InstructionPackage_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
@@ -561,7 +561,7 @@ namespace Node{
             
         }
         //if(node.pins[pin_index].payload != nullptr){
-            //ImGui::Text("payload id : %d", reinterpret_cast<ImNodes::EWE::Node*>(node.pins[pin_index].payload)->id);
+            //ImGui::Text("payload id : %d", reinterpret_cast<ImNodes::Node*>(node.pins[pin_index].payload)->id);
         //}
         ImNodes::EndPinAttribute();
     }
@@ -573,8 +573,8 @@ namespace Node{
             explorer.Imgui();
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
-                const std::filesystem::path proximate = std::filesystem::proximate(saved_path, engine->assetManager.root_directory);
-                Asset::WriteToInstPkgFile(paramPool, package_payload, packageType, engine->assetManager.root_directory, proximate);
+                const std::filesystem::path proximate = std::filesystem::proximate(saved_path, Global::assetManager->root_directory);
+                Asset::WriteToInstPkgFile(paramPool, package_payload, packageType, Global::assetManager->root_directory, proximate);
                 explorer.enabled = false;
                 explorer.selected_file.reset();
             }
@@ -593,15 +593,15 @@ namespace Node{
         if(headNode->pins[0].payload == nullptr){
             return;
         }
-        ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+        ImNodes::Node* current_node = reinterpret_cast<ImNodes::Node*>(headNode->pins[0].payload);
 
         links.emplace_back(
-            ImNodes::EWE::NodePair{
-                .start = ImNodes::EWE::NodeAndPin{
+            ImNodes::NodePair{
+                .start = ImNodes::NodeAndPin{
                     .node = headNode,
                     .offset = 0
                 },
-                .end = ImNodes::EWE::NodeAndPin{
+                .end = ImNodes::NodeAndPin{
                     .node = current_node,
                     .offset = 0
                 }
@@ -609,18 +609,18 @@ namespace Node{
         );
         while(current_node->pins[1].payload != nullptr){
             links.emplace_back(
-                ImNodes::EWE::NodePair{
-                    .start = ImNodes::EWE::NodeAndPin{
+                ImNodes::NodePair{
+                    .start = ImNodes::NodeAndPin{
                         .node = current_node,
                         .offset = 1
                     },
-                    .end = ImNodes::EWE::NodeAndPin{
-                        .node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload),
+                    .end = ImNodes::NodeAndPin{
+                        .node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload),
                         .offset = 0
                     }
                 }
             );
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+            current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
         }
 
         UpdateNodeOffsets();
@@ -674,11 +674,11 @@ namespace Node{
         packageType = Command::InstructionPackage::Base;
         switch(pkg.type){
             case Command::InstructionPackage::Base: 
-                explorer.acceptable_extensions = engine->assetManager.instPkg.files.acceptable_extensions;
+                explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
                 InitFromFile(pkg.paramPool, pkg.type);
                 break;
             case Command::InstructionPackage::Object:
-                explorer.acceptable_extensions = engine->assetManager.objPkg.files.acceptable_extensions;
+                explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
                 package_payload = new Command::ObjectPackage::Payload();
                 memcpy(package_payload, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, sizeof(Command::ObjectPackage::Payload));
                 InitFromFile(pkg.paramPool, pkg.type);
@@ -700,11 +700,11 @@ namespace Node{
                 const std::filesystem::path load_path = *explorer.selected_file;
                 //put the record somewhere
                 
-                const auto proximate_path = std::filesystem::proximate(load_path, engine->assetManager.root_directory);
+                const auto proximate_path = std::filesystem::proximate(load_path, Global::assetManager->root_directory);
 
                 switch(packageType){
                     case Command::InstructionPackage::Base:{
-                        auto* pkg = EWE::engine->assetManager.instPkg.Get(proximate_path);
+                        auto* pkg = EWE::Global::assetManager->instPkg.Get(proximate_path);
                         if(pkg != nullptr){
                             InitFromObject(*pkg);
                             Log::Debug("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());
@@ -715,7 +715,7 @@ namespace Node{
                         break;
                     }
                     case Command::InstructionPackage::Object:{
-                        auto* pkg = EWE::engine->assetManager.objPkg.Get(proximate_path);
+                        auto* pkg = EWE::Global::assetManager->objPkg.Get(proximate_path);
                         if(pkg != nullptr){
                             InitFromObject(*pkg);
                             Log::Debug("loaded pkg instructions size - %zu : %zu\n", pkg->paramPool.instructions.size(), paramPool.instructions.size());

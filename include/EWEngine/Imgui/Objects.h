@@ -4,8 +4,10 @@
 #include "EightWinds/VulkanHeader.h"
 #include "EightWinds/Backend/ShaderStage.h"
 
-#include "imgui.h"
 #include "EightWinds/Command/Instruction.h"
+#include "EightWinds/RenderGraph/Resources.h"
+
+#include "imgui.h"
 
 #if EWE_IMGUI
 
@@ -51,24 +53,10 @@ namespace EWE{
 	template<> void ImguiExtension::Imgui(VkAttachmentLoadOp&);
 	template<> void ImguiExtension::Imgui(VkAttachmentStoreOp&);
 	template<> void ImguiExtension::Imgui(VkSamplerCreateInfo&);
-    
-
-	namespace Command {
-		struct Record;
-		struct Executor;
-	}
-
-	template<> void ImguiExtension::Imgui(Command::Executor&);
-	template<> void ImguiExtension::Imgui(Command::Record&);
 	
 	//need each param pack
 	
 	#undef FWD_DEC_IMGUI
-
-	template<typename T>
-	struct Resource;
-	template<typename T>
-	struct UsageData;
 
 	template<> void ImguiExtension::Imgui<Resource<Image>>(Resource<Image>& obj);
 	template<> void ImguiExtension::Imgui(Resource<Buffer>& obj);

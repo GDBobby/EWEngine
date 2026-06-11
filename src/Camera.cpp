@@ -29,7 +29,7 @@ namespace EWE {
 		//inverting aspect, to make it height / width instead of width / height
 		data.proj = lab::ProjectionMatrix(fovy, aspect, near, far);
 		//projection = lab::CreateProjectionMatrix(fovy * 1.1f, aspect * 1.1f, near * 1.1f, far * 1.1f);
-		//projection = glm::perspective(fovy, aspect, near, far);
+		//projection = lab::perspective(fovy, aspect, near, far);
 		conservativeProjection = lab::ProjectionMatrix(fovy * 1.1f, aspect * 1.1f, near * 1.1f, far * 1.1f);
 	}
 

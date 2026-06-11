@@ -37,7 +37,7 @@ namespace EWE {
 				Log::Debug("swapping scenes beginning \n");
 				//stop loading screen here
 			}
-			else if (render_loop.ReadyForUpdate()) {
+			else if (render_loop.ReadyForRenderUpdate()) {
 				//Log::Debug("currentScene at render : %u\n");
 				//ewEngine.camera.PrintCameraPos();
 				currentScenePtr->Render(render_loop.delta.count());

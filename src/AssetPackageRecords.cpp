@@ -73,13 +73,13 @@ namespace Asset{
             inFile.read(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
             switch(type){
                 case Command::InstructionPackage::Type::Base:
-                    ret.packages.push_back(engine->assetManager.instPkg.Get(hash_buffer));
+                    ret.packages.push_back(Global::assetManager->instPkg.Get(hash_buffer));
                     break;
                 case Command::InstructionPackage::Type::Object:
-                    ret.packages.push_back(engine->assetManager.objPkg.Get(hash_buffer));
+                    ret.packages.push_back(Global::assetManager->objPkg.Get(hash_buffer));
                     break;
                 case Command::InstructionPackage::Type::Raster:
-                    ret.packages.push_back(engine->assetManager.rasterTask.Get(hash_buffer));
+                    ret.packages.push_back(Global::assetManager->rasterTask.Get(hash_buffer));
                     break;
                 default: EWE_UNREACHABLE;
             }

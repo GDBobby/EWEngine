@@ -9,7 +9,6 @@
 
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/PackageRecord.h"
-#include "EightWinds/Command/Record.h"
 
 #include "LAB/Support/Generic.h"
 
@@ -24,14 +23,14 @@ namespace Node{
         EWE_ASSERT(record != nullptr);
         std::filesystem::path task_path = record->name;
         task_path.replace_extension("egt");
-        GPUTask* ret = engine->assetManager.gpuTask.Get(task_path);
+        GPUTask* ret = Global::assetManager->gpuTask.Get(task_path);
         if(ret == nullptr) {
-            return &engine->assetManager.gpuTask.ConstructInto(record->name, engine->logicalDevice, *record, false);
+            return &Global::assetManager->gpuTask.ConstructInto(record->name, engine->logicalDevice, *record, false);
         }
         return ret;
     }
 
-    void SubmissionTask_NG::ReadjustAttachmentPins(ImNodes::EWE::Node& node, std::size_t raster_index, bool value){
+    void SubmissionTask_NG::ReadjustAttachmentPins(ImNodes::Node& node, std::size_t raster_index, bool value){
         TaskMetaPayload& taskPayload = *reinterpret_cast<TaskMetaPayload*>(node.payload);
         GPUTask& task = *taskPayload.task;
         RasterPackage* raster_pkg = nullptr;
@@ -52,13 +51,13 @@ namespace Node{
             AttachmentSetInfo const& att_set_info = raster_pkg->task_config.attachment_info;
             float current_y = 0.2f;
             for(std::size_t i = 0; i < att_set_info.colors.Size(); i++) {
-                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.1f, current_y}, .payload{nullptr}});
-                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.9f, current_y}, .payload{nullptr}});
+                node.pins.emplace_back(ImNodes::Pin{.local_pos{0.1f, current_y}, .payload{nullptr}});
+                node.pins.emplace_back(ImNodes::Pin{.local_pos{0.9f, current_y}, .payload{nullptr}});
                 current_y += 0.1f;
             }
             if(att_set_info.using_depth){
-                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.1f, current_y}, .payload{nullptr}});
-                node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.9f, current_y}, .payload{nullptr}});
+                node.pins.emplace_back(ImNodes::Pin{.local_pos{0.1f, current_y}, .payload{nullptr}});
+                node.pins.emplace_back(ImNodes::Pin{.local_pos{0.9f, current_y}, .payload{nullptr}});
             }
         }
         else{
@@ -90,24 +89,24 @@ namespace Node{
 
 
     SubmissionTask_NG::SubmissionTask_NG()
-    : ImNodes::EWE::Editor{true, true},
+    : ImNodes::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = engine->assetManager.subTask.files.acceptable_extensions;
+        explorer.acceptable_extensions = Global::assetManager->subTask.files.acceptable_extensions;
     }
 
-    ImNodes::EWE::Node* SubmissionTask_NG::CreateHeadNode(){
+    ImNodes::Node* SubmissionTask_NG::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
 
         head.pos = node_editor_window_pos;
-        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        head.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
     
     void SubmissionTask_NG::RenderNodes() {
-        ImNodes::EWE::Editor::RenderNodes();
+        ImNodes::Editor::RenderNodes();
         {
             Command::PackageRecord* pkg;
             if(DragDropPtr::Target(pkg)) {
@@ -135,21 +134,21 @@ namespace Node{
         }
     }   
 
-    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(Command::PackageRecord* record) {
+    ImNodes::Node& SubmissionTask_NG::CreateRGNode(Command::PackageRecord* record) {
         auto& added_node = AddNode();
         added_node.payload = new TaskMetaPayload{record};
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
-    ImNodes::EWE::Node& SubmissionTask_NG::CreateRGNode(GPUTask* task) {
+    ImNodes::Node& SubmissionTask_NG::CreateRGNode(GPUTask* task) {
         auto& added_node = AddNode();
         added_node.payload = new TaskMetaPayload{task};
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
@@ -178,27 +177,27 @@ namespace Node{
         return wantsClose | window_not_focused;
     }
 
-    void SubmissionTask_NG::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+    void SubmissionTask_NG::LinkEmptyDrop(ImNodes::Node& src_node, ImNodes::PinOffset pin_offset) {
 
         menu_pos = ImGui::GetMousePos();
         add_menu_is_open = true;
     }
 
-    void SubmissionTask_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
+    void SubmissionTask_NG::LinkCreated(ImNodes::NodePair& link) {
         //Log::Debug("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
-    void SubmissionTask_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
+    void SubmissionTask_NG::LinkDestroyed(ImNodes::NodePair& link) {
         //Log::Debug("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;
-        ImNodes::EWE::Editor::LinkDestroyed(link);
+        ImNodes::Editor::LinkDestroyed(link);
     }
 
-    void SubmissionTask_NG::RenderNode(ImNodes::EWE::Node& node){
+    void SubmissionTask_NG::RenderNode(ImNodes::Node& node){
         ImNodes::BeginNodeTitleBar();
 
         //if node == &headNode
@@ -320,7 +319,7 @@ namespace Node{
         }
     }
 
-    void SubmissionTask_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void SubmissionTask_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
@@ -332,14 +331,14 @@ namespace Node{
     std::vector<GPUTask*> SubmissionTask_NG::CollectTasks(){
         std::vector<GPUTask*> ret{};
         
-        auto GetTaskFromNode = [](ImNodes::EWE::Node* node) -> GPUTask*{
+        auto GetTaskFromNode = [](ImNodes::Node* node) -> GPUTask*{
             return reinterpret_cast<TaskMetaPayload*>(node->payload)->task;
         };
 
-        ImNodes::EWE::Node* current_node = nullptr;
+        ImNodes::Node* current_node = nullptr;
         //the pin payload is going to be a pointer to the node, unless nullptr
         if(headNode->pins[0].payload != nullptr){
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+            current_node = reinterpret_cast<ImNodes::Node*>(headNode->pins[0].payload);
 
             ret.push_back(GetTaskFromNode(current_node));
             if(current_node == nullptr){
@@ -348,7 +347,7 @@ namespace Node{
 
             while(current_node->pins[1].payload != nullptr){
 
-                current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+                current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
                 auto current_task = GetTaskFromNode(current_node);
                 ret.push_back(current_task);
             }
@@ -364,10 +363,10 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                const auto temp_path = std::filesystem::proximate(saved_path, engine->assetManager.subTask.files.root_directory);
+                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
                 name = temp_path;
 
-                SubmissionTask& written = engine->assetManager.subTask.ConstructInto(name, engine->logicalDevice, engine->renderQueue);
+                SubmissionTask& written = Global::assetManager->subTask.ConstructInto(name, engine->logicalDevice, engine->renderQueue);
                 
                 auto collected_tasks = CollectTasks();
                 
@@ -375,7 +374,7 @@ namespace Node{
                     written.tasks.push_back(task);
                 }
 
-                Asset::WriteAssetToFile(written, engine->assetManager.subTask.files.root_directory, temp_path);
+                Asset::WriteAssetToFile(written, Global::assetManager->subTask.files.root_directory, temp_path);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -397,9 +396,9 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
 
-                const std::filesystem::path temp = std::filesystem::proximate(load_path, engine->assetManager.subTask.files.root_directory);
+                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
 
-                auto* subTask = engine->assetManager.subTask.Get(temp);
+                auto* subTask = Global::assetManager->subTask.Get(temp);
                 InitFromObject(*subTask);
 
                 explorer.enabled = false;
@@ -416,10 +415,10 @@ namespace Node{
 
     void SubmissionTask_NG::PopulateFromGraph(SubmissionTask& subTask){
         subTask.tasks.clear();
-        ImNodes::EWE::Node* current_node = reinterpret_cast<ImNodes::EWE::Node*>(headNode->pins[0].payload);
+        ImNodes::Node* current_node = reinterpret_cast<ImNodes::Node*>(headNode->pins[0].payload);
         while(current_node != nullptr){
             subTask.tasks.push_back(reinterpret_cast<GPUTask*>(current_node->payload));
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node->pins[1].payload);
+            current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
         }
         subTask.CollectTaskWorkloads();
     }
@@ -436,7 +435,7 @@ namespace Node{
         else{
             memcpy(explorer.file_save_buf, string_name.c_str(), string_name.size() + 1);
         }
-        ImNodes::EWE::Node* last_node = headNode;
+        ImNodes::Node* last_node = headNode;
 
         if(subTask.tasks.size() == 0){
             return;
@@ -450,7 +449,7 @@ namespace Node{
             auto& node = CreateRGNode(subTask.tasks.front());
             headNode->pins[0].payload = &node;
             links.push_back(
-                ImNodes::EWE::NodePair{
+                ImNodes::NodePair{
                     .start{
                         .node = last_node,
                         .offset = 0,
@@ -474,7 +473,7 @@ namespace Node{
             auto& node = CreateRGNode(subTask.tasks[i]);
 
             links.push_back(
-                ImNodes::EWE::NodePair{
+                ImNodes::NodePair{
                     .start{
                         .node = last_node,
                         .offset = 1,

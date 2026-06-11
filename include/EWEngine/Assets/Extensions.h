@@ -5,6 +5,7 @@
 
 namespace EWE{
 
+    struct Image;
 
 namespace Asset{
     template<typename Resource>
@@ -45,6 +46,8 @@ namespace Helper{
     static constexpr std::string_view ri_exts[] = {".eri"};
     static constexpr std::string_view g_tasks_exts[] = {".egt"};
 
+    static constexpr std::string_view img_exts[] = {".png", ".jpg", ".bmp", ".pps"};
+
 } //namespace Helper
 
 namespace Asset{
@@ -72,6 +75,9 @@ namespace Asset{
 
     template<> inline constexpr std::span<const std::string_view>
     acceptable_extensions<GPUTask> = Helper::g_tasks_exts;
+
+    template<> inline constexpr std::span<const std::string_view>
+    acceptable_extensions<Image> = Helper::img_exts;
 
 
 } //namesace Asset

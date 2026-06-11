@@ -5,6 +5,7 @@
 
 #include "EWEngine/Graphics/SpriteSheet.h"
 #include "EWEngine/Graphics/CubeMap.h"
+#include <vulkan/vulkan_core.h>
 
 #define USING_VULKAN_CONVERSION
 #include "ImageProcessor.h"
@@ -12,7 +13,8 @@
 #include <fstream>
 
 namespace EWE{
-    bool InitializeImage(Image& img, std::filesystem::path const& img_path, Queue::Type dstQueueType){
+
+    bool InitializeImage(Image& img, std::filesystem::path const& img_path, Queue::Type dstQueueType, bool async_transfer){
         std::ifstream inFile{img_path, std::ios::binary | std::ios::ate};
         if(!inFile.is_open()){
             return false;
@@ -35,6 +37,14 @@ namespace EWE{
                     img.data.extent.height = rawImg.height;
                     img.data.extent.depth = rawImg.depth;
                     img.data.format = ImageProcessor::ConvertFormatToVulkan(rawImg.format);
+                    img.data.arrayLayers = 1;
+                    img.data.mipLevels = 1;
+                    img.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+                    img.data.createFlags = 0;
+                    img.data.type = VK_IMAGE_TYPE_2D;
+                    img.data.samples = VK_SAMPLE_COUNT_1_BIT; //multi sample
+                    img.data.tiling = VK_IMAGE_TILING_OPTIMAL;
+                    img.data.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
                     /* debugging
                     ImageProcessor::BMP bmp{rawImg.width, rawImg.height, rawImg.format.alpha_width != 0};
@@ -101,7 +111,12 @@ namespace EWE{
                         }
                     );
                     EWE_ASSERT(*img.owningQueue == engine->transferQueue && "not ready for single queue uploads yet");
-                    engine->stcManager.AsyncTransfer(transferContext, dstQueueType);
+                    if(async_transfer){
+                        engine->stcManager.AsyncTransfer(transferContext, dstQueueType);
+                    }
+                    else{
+                        engine->stcManager.InlineTransfer(transferContext);
+                    }
                     //img.owningQueue = &engine->GetQueue(dstQueueType);
                     return true;
                 }

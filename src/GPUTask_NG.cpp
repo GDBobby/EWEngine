@@ -8,24 +8,24 @@
 namespace EWE{
 namespace Node{
     GPUTask_NG::GPUTask_NG()
-    : ImNodes::EWE::Editor{true, true},
+    : ImNodes::Editor{true, true},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
         explorer.acceptable_extensions.push_back(".egt");
     }
 
-    ImNodes::EWE::Node* GPUTask_NG::CreateHeadNode(){
+    ImNodes::Node* GPUTask_NG::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
 
         head.pos = node_editor_window_pos;
-        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        head.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
     
     void GPUTask_NG::RenderNodes() {
-        ImNodes::EWE::Editor::RenderNodes();
+        ImNodes::Editor::RenderNodes();
         Command::PackageRecord* pkg;
         if(DragDropPtr::Target(pkg)) {
             auto& added_node = CreateRGNode(pkg);
@@ -34,12 +34,12 @@ namespace Node{
         }
     }
 
-    ImNodes::EWE::Node& GPUTask_NG::CreateRGNode(Command::PackageRecord* pkg) {
+    ImNodes::Node& GPUTask_NG::CreateRGNode(Command::PackageRecord* pkg) {
         auto& added_node = AddNode();
         added_node.payload = pkg;
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
@@ -66,27 +66,27 @@ namespace Node{
         return wantsClose | window_not_focused;
     }
 
-    void GPUTask_NG::LinkEmptyDrop(ImNodes::EWE::Node& src_node, ImNodes::EWE::PinOffset pin_offset) {
+    void GPUTask_NG::LinkEmptyDrop(ImNodes::Node& src_node, ImNodes::PinOffset pin_offset) {
 
         menu_pos = ImGui::GetMousePos();
         add_menu_is_open = true;
     }
 
-    void GPUTask_NG::LinkCreated(ImNodes::EWE::NodePair& link) {
+    void GPUTask_NG::LinkCreated(ImNodes::NodePair& link) {
         //Log::Debug("link created\n");
         link.start.node->pins[link.start.offset].payload = link.end.node;
         link.end.node->pins[link.end.offset].payload = link.start.node;
     }
 
-    void GPUTask_NG::LinkDestroyed(ImNodes::EWE::NodePair& link) {
+    void GPUTask_NG::LinkDestroyed(ImNodes::NodePair& link) {
         //Log::Debug("link destroyed\n");
 
         link.start.node->pins[link.start.offset].payload = nullptr;
         link.end.node->pins[link.end.offset].payload = nullptr;
-        ImNodes::EWE::Editor::LinkDestroyed(link);
+        ImNodes::Editor::LinkDestroyed(link);
     }
 
-    void GPUTask_NG::RenderNode(ImNodes::EWE::Node& node){
+    void GPUTask_NG::RenderNode(ImNodes::Node& node){
         ImNodes::BeginNodeTitleBar();
         if(node.payload == nullptr){
             EWE_ASSERT(headNode == &node);
@@ -106,7 +106,7 @@ namespace Node{
         }
     }
 
-    void GPUTask_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void GPUTask_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
@@ -168,7 +168,7 @@ namespace Node{
         links.clear();
         CreateHeadNode();
 
-        ImNodes::EWE::Node* last_node = headNode;
+        ImNodes::Node* last_node = headNode;
         if(task.pkgRecord->packages.size() == 0){
             return;
         }
@@ -177,7 +177,7 @@ namespace Node{
             auto& node = CreateRGNode(subTask.tasks.front());
             headNode->pins[0].payload = &node;
             links.AddElement(
-                ImNodes::EWE::NodePair{
+                ImNodes::NodePair{
                     .start{
                         .node = last_node,
                         .offset = 0,
@@ -195,7 +195,7 @@ namespace Node{
             auto& node = CreateRGNode(subTask.tasks[i]);
 
             links.AddElement(
-                ImNodes::EWE::NodePair{
+                ImNodes::NodePair{
                     .start{
                         .node = last_node,
                         .offset = 1,
@@ -222,10 +222,10 @@ namespace Node{
         record.queue = &engine->renderQueue;
         record.packages;
 
-        ImNodes::EWE::Node* current_node = headNode->pins[0].payload;
+        ImNodes::Node* current_node = headNode->pins[0].payload;
         while(current_node != nullptr){
             record.packages.push_back(current_node->payload);
-            current_node = reinterpret_cast<ImNodes::EWE::Node*>(current_node.pins[1].payload);
+            current_node = reinterpret_cast<ImNodes::Node*>(current_node.pins[1].payload);
         }
 
         Global::gpuTasks->Create(name, Global::gpuTasks->logicalDevice, record);

@@ -25,7 +25,8 @@ namespace EWE{
         
 
         DurationType GetCurrentDelta();
-        bool ReadyForUpdate();
+        bool ReadyForRenderUpdate();
+        bool ReadyForLogicUpdate();
 
         void SetLoopDuration();
     };

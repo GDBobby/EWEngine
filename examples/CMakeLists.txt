@@ -22,5 +22,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_compile_options(${PROJECT_NAME} PRIVATE -freflection)
 
+include(cmake/python_shader_compiler.cmake)
+
 #target_compile_options(EWEngine PRIVATE -g -gdwarf-4)
 #target_compile_options(EWFramework PRIVATE -g -gdwarf-4)

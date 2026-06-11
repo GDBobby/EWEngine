@@ -15,24 +15,24 @@
 namespace EWE{
 namespace Node{
     RenderGraph_NG::RenderGraph_NG()
-        : ImNodes::EWE::Editor{},
+        : ImNodes::Editor{},
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
         name = "render graph ng";
     }
 
-    ImNodes::EWE::Node* RenderGraph_NG::CreateHeadNode(){
+    ImNodes::Node* RenderGraph_NG::CreateHeadNode(){
         auto& head = AddNode();
         head.snapToGrid = true;
 
         head.pos = node_editor_window_pos;
-        head.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        head.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
         return &head;
     } 
 
     void RenderGraph_NG::RenderNodes() {
-        ImNodes::EWE::Editor::RenderNodes();
+        ImNodes::Editor::RenderNodes();
         SubmissionTask* subTask;
         if(DragDropPtr::Target(subTask)) {
             auto& added_node = CreateRGNode(subTask);
@@ -41,19 +41,19 @@ namespace Node{
         }
     }
 
-    ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(FullRenderInfo* renderInfo){
+    ImNodes::Node& RenderGraph_NG::CreateRGNode(FullRenderInfo* renderInfo){
         auto& added_node = AddNode();
         added_node.payload = new NodePayload{
             .type = NodeType::RenderInfo,
             .payload = renderInfo
         };
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
-    ImNodes::EWE::Node& RenderGraph_NG::CreateRGNode(SubmissionTask* subTask) {
+    ImNodes::Node& RenderGraph_NG::CreateRGNode(SubmissionTask* subTask) {
         auto& added_node = AddNode();
         auto added_payload = new SubTaskPayload{
             .type = NodeType::TaskGroup,
@@ -80,15 +80,15 @@ namespace Node{
 
         added_node.pos = menu_pos;
         added_node.pos = menu_pos;
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
-        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, 0.5f}, .payload{nullptr}});
+        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, 0.5f}, .payload{nullptr}});
 
         return added_node;
     }
 
     void RenderGraph_NG::RenderEditorTitle() {
 
-        ImNodes::EWE::Editor::RenderEditorTitle();
+        ImNodes::Editor::RenderEditorTitle();
 
         /*
         if(ImGui::Button("set from current")){
@@ -111,13 +111,13 @@ namespace Node{
                     float pin_starting = 0.3f;
                     for(auto& wait : ind_sub->submitInfo[0].waitSemaphores){
                         //currently a mem leak
-                        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{0.f, pin_starting}, .payload = wait});
+                        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{0.f, pin_starting}, .payload = wait});
                         pin_starting += 0.1f;
                     }
                     pin_starting = 0.3f;
                     for(auto& signal : ind_sub->submitInfo[0].signalSemaphores){
                         //currently a mem leak
-                        added_node.pins.emplace_back(ImNodes::EWE::Pin{.local_pos{1.f, pin_starting}, .payload = &signal});
+                        added_node.pins.emplace_back(ImNodes::Pin{.local_pos{1.f, pin_starting}, .payload = &signal});
                         pin_starting += 0.1f;
                     }
                 }
@@ -163,7 +163,7 @@ namespace Node{
         return wantsClose;
     }
 
-    void RenderGraph_NG::RenderNode(ImNodes::EWE::Node& node) {
+    void RenderGraph_NG::RenderNode(ImNodes::Node& node) {
 
         ImNodes::ImNodeData& imnodes_node = context->Nodes.Pool[ImNodes::GetCurrentContext()->CurrentNodeIdx];
         if(&node == headNode){
@@ -267,7 +267,7 @@ namespace Node{
         }
     }
 
-    void RenderGraph_NG::RenderPin(ImNodes::EWE::Node& node, ImNodes::EWE::PinOffset pin_index) {
+    void RenderGraph_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
         if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
@@ -286,11 +286,11 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                const auto temp_path = std::filesystem::proximate(saved_path, engine->assetManager.subTask.files.root_directory);
+                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
                 name = temp_path;
 
                 Log::Error("saving rendergraph isn't setup yet\n");
-                //RenderGraph& written = engine->assetManager.renderGraph.ConstructInto(name, engine->logicalDevice);
+                //RenderGraph& written = Global::assetManager->renderGraph.ConstructInto(name, engine->logicalDevice);
                 
                 //auto collected_tasks = CollectTasks();
                 
@@ -298,7 +298,7 @@ namespace Node{
                 //    written.tasks.push_back(task);
                 //}
 
-                //Asset::WriteAssetToFile(written, engine->assetManager.renderGraph.files.root_directory, temp_path);
+                //Asset::WriteAssetToFile(written, Global::assetManager->renderGraph.files.root_directory, temp_path);
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -320,9 +320,9 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
 
-                const std::filesystem::path temp = std::filesystem::proximate(load_path, engine->assetManager.subTask.files.root_directory);
+                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
 
-                auto* graph = engine->assetManager.renderGraph.Get(temp);
+                auto* graph = Global::assetManager->renderGraph.Get(temp);
                 InitFromObject(*graph);
 
                 explorer.enabled = false;
