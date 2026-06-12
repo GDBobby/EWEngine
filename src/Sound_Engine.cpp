@@ -4,9 +4,9 @@
 
 #include <filesystem>
 
-#define EFFECTS_PATH "sounds/effects/"
-#define MUSIC_PATH "sounds/music/"
-#define VOICE_PATH "sounds/voice/"
+#define EFFECTS_PATH "resources/sounds/effects/"
+#define MUSIC_PATH "resources/sounds/music/"
+#define VOICE_PATH "resources/sounds/voice/"
 
 void ma_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pInput;

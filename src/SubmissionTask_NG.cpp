@@ -198,14 +198,14 @@ namespace Node{
     }
 
     void SubmissionTask_NG::RenderNode(ImNodes::Node& node){
-        ImNodes::BeginNodeTitleBar();
+        ::ImNodes::BeginNodeTitleBar();
 
         //if node == &headNode
         if(node.payload == nullptr){
             EWE_ASSERT(headNode == &node);
             //ImGui::InputText("name of package record");
             ImGui::Text("head node");
-            ImNodes::EndNodeTitleBar();
+            ::ImNodes::EndNodeTitleBar();
             ImGui::SetNextItemWidth(150.f);
             if(ImGui::InputText("name", explorer.file_save_buf, explorer.path_length, ImGuiInputTextFlags_CallbackCharFilter, ImguiInputFilters::File)){
                 //name = name_buffer;
@@ -216,7 +216,7 @@ namespace Node{
         auto* task = task_payload->task;
         ImGui::Text(task->name.c_str());
 
-        ImNodes::EndNodeTitleBar();
+        ::ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
             //open the graph for the package
             OpenGraph(Type::PackageRecord, task->pkgRecord);
@@ -322,10 +322,10 @@ namespace Node{
     void SubmissionTask_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
+        if (::ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
             //ImGui::Text("pin");
         }
-        ImNodes::EndPinAttribute();
+        ::ImNodes::EndPinAttribute();
     }
 
     std::vector<GPUTask*> SubmissionTask_NG::CollectTasks(){

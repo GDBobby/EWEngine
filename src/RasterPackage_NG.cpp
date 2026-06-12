@@ -110,12 +110,12 @@ namespace Node{
     }
 
     void RasterPackage_NG::RenderNode(ImNodes::Node& node){
-        ImNodes::BeginNodeTitleBar();
+        ::ImNodes::BeginNodeTitleBar();
         if(node.payload == nullptr){
             EWE_ASSERT(headNode == &node);
             //ImGui::InputText("name of package record");
             ImGui::Text("head node");
-            ImNodes::EndNodeTitleBar();
+            ::ImNodes::EndNodeTitleBar();
             ImGui::Text(" ");
 
             return;
@@ -123,7 +123,7 @@ namespace Node{
         auto* node_payload = reinterpret_cast<Command::ObjectPackage*>(node.payload);
         ImGui::Text(node_payload->name.c_str());
 
-        ImNodes::EndNodeTitleBar();
+        ::ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
             //open the graph for the package
             OpenGraph(Type::ObjectPackage, node_payload);
@@ -137,10 +137,10 @@ namespace Node{
     void RasterPackage_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
+        if (::ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
             //ImGui::Text("pin");
         }
-        ImNodes::EndPinAttribute();
+        ::ImNodes::EndPinAttribute();
     }
 
     bool RasterPackage_NG::SaveFunc() {

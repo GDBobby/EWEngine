@@ -59,7 +59,7 @@ namespace Node{
 
     void InstructionPackage_NG::ImGuiNodeDebugPrint(ImNodes::Node& node) const {
         if(node.id != 0){
-            auto temp_pos = ImNodes::GetNodeScreenSpacePos(node.id);
+            auto temp_pos = ::ImNodes::GetNodeScreenSpacePos(node.id);
             ImGui::Text("node.id[%d] : inst[%s] - pos[%.2f:%.2f]", node.id, Reflect::Enum::ToString(GetInstructionFromNode(node)).data(), temp_pos.x, temp_pos.y);
         }
     }
@@ -478,7 +478,7 @@ namespace Node{
     void InstructionPackage_NG::RenderNode(ImNodes::Node& node) {
         auto node_payload = reinterpret_cast<InstNodePayload*>(node.payload);
 
-        ImNodes::BeginNodeTitleBar();
+        ::ImNodes::BeginNodeTitleBar();
 
         if(node_payload->type == InstNodePayload::Type::Head){
             ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "head node");
@@ -508,7 +508,7 @@ namespace Node{
                     }
                 }
             }
-            ImNodes::EndNodeTitleBar();
+            ::ImNodes::EndNodeTitleBar();
             ImGui::Text(" "); //nodes need some abritrary filler
             return;
         }
@@ -520,7 +520,7 @@ namespace Node{
         else{
             ImGui::Text("%s", Reflect::Enum::ToString(node_payload->iType).data());
         }
-        ImNodes::EndNodeTitleBar();
+        ::ImNodes::EndNodeTitleBar();
 
         //ImGui::DebugLog("");
         //ImGui::Text("distance from head : %d", node_payload->distanceFromHead); //empty text just to populate this
@@ -556,14 +556,14 @@ namespace Node{
     void InstructionPackage_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
+        if (::ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
             //ImGui::Text("pin");
             
         }
         //if(node.pins[pin_index].payload != nullptr){
             //ImGui::Text("payload id : %d", reinterpret_cast<ImNodes::Node*>(node.pins[pin_index].payload)->id);
         //}
-        ImNodes::EndPinAttribute();
+        ::ImNodes::EndPinAttribute();
     }
 
     bool InstructionPackage_NG::SaveFunc() {

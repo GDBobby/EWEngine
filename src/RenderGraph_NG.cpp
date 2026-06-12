@@ -165,13 +165,13 @@ namespace Node{
 
     void RenderGraph_NG::RenderNode(ImNodes::Node& node) {
 
-        ImNodes::ImNodeData& imnodes_node = context->Nodes.Pool[ImNodes::GetCurrentContext()->CurrentNodeIdx];
+        ::ImNodes::ImNodeData& imnodes_node = context->Nodes.Pool[::ImNodes::GetCurrentContext()->CurrentNodeIdx];
         if(&node == headNode){
 
-            ImNodes::BeginNodeTitleBar();
+            ::ImNodes::BeginNodeTitleBar();
             ImGui::Text("head node - {%.2f:%.2f} : {%.2f:%.2f}", imnodes_node.Rect.Min.x, imnodes_node.Rect.Min.y, imnodes_node.Rect.Max.x, imnodes_node.Rect.Max.y);
             ImGui::Text("head");
-            ImNodes::EndNodeTitleBar();
+            ::ImNodes::EndNodeTitleBar();
             ImGui::Text("filler");
 
             return;
@@ -179,14 +179,14 @@ namespace Node{
 
         auto* payload = reinterpret_cast<NodePayload*>(node.payload);
 
-        ImNodes::BeginNodeTitleBar();
+        ::ImNodes::BeginNodeTitleBar();
         if(payload->type == NodeType::TaskGroup){
             ImGui::Text("task group");// - {%.2f:%.2f} : {%.2f:%.2f}", imnodes_node.Rect.Min.x, imnodes_node.Rect.Min.y, imnodes_node.Rect.Max.x, imnodes_node.Rect.Max.y);
         }
         else{
             ImGui::Text("render info");
         }
-        ImNodes::EndNodeTitleBar();
+        ::ImNodes::EndNodeTitleBar();
 
         uint16_t current_pin = 0;
 
@@ -270,13 +270,13 @@ namespace Node{
     void RenderGraph_NG::RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) {
         auto& pin = node.pins[pin_index];
 
-        if (ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
+        if (::ImNodes::BeginPinAttribute(node.id + pin_index + 1, pin.local_pos)) {
             //ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "%zu", payload->stageMask);
         }
         else {
             //ImGui::Text("%zu", static_cast<uint64_t>(payload->stageMask));
         }
-        ImNodes::EndPinAttribute();
+        ::ImNodes::EndPinAttribute();
     }
     bool RenderGraph_NG::SaveFunc() {
         explorer.enabled = save_open;
