@@ -32,7 +32,10 @@ namespace EWE{
         };
         ImGuiContext* context;
 
-        std::function<void(EWE::ImguiViewport& vp)> exec_func = nullptr;
+        //push any amount of arbitrary functionality
+        //potentially do another vector without the viewport data? 
+        //  it's only useful if the viewport will be adjusted internally
+        std::vector<std::function<void(EWE::ImguiViewport& vp)>> exec_funcs{}; 
     };  
 
     struct ImguiHandler{

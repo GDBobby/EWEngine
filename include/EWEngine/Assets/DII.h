@@ -36,8 +36,17 @@ namespace Asset{
         DescriptorImageInfo* Get(AssetHash hash);
         DescriptorImageInfo* Get(std::filesystem::path const& name);
 
-
+        //dont use this over ConstructInto, this is specifically fgor imgui and will be replaced
         DescriptorImageInfo& Get(DiiCreation const& params);
+
+        template<typename... Args>
+        requires std::constructible_from<DescriptorImageInfo, Args...>
+        DescriptorImageInfo& ConstructInto(Args&&... args) {
+            auto& ele = data_arena.AddElement(std::forward<Args>(args)...);
+            AssetHash hash = GetHash(ele);
+            association_container.push_back(hash, &ele);
+            return ele;
+        }
 
         AssetHash ConvertTextureIndexToHash(TextureIndex index) const;
 

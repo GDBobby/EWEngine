@@ -7,7 +7,7 @@
 namespace EWE{
 namespace Basic{
 
-    Buffer& CreateBuffer(AssetHash hash, std::size_t vert_count, std::size_t vert_size){
+    Buffer& CreateBuffer(std::filesystem::path const& name, std::size_t vert_count, std::size_t vert_size){
         VmaAllocationCreateInfo vmaAllocInfo{
             .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
             .usage = VMA_MEMORY_USAGE_AUTO,
@@ -20,7 +20,7 @@ namespace Basic{
         };
 
         return Global::assetManager->buffer.ConstructInto(
-            hash,
+            name,
             vert_count * vert_size, 1,
             vmaAllocInfo
         );
@@ -40,7 +40,7 @@ namespace Basic{
         }
         
         if(withUV){
-            vertex_buffer = &CreateBuffer(buffer_hash, 4, sizeof(lab::vec2) + sizeof(lab::vec2));
+            vertex_buffer = &CreateBuffer(grp_name, 4, sizeof(lab::vec2) + sizeof(lab::vec2));
             struct Vert{
                 lab::vec2 pos;
                 lab::vec2 uv;
@@ -57,7 +57,7 @@ namespace Basic{
             pos_memory[3].uv = lab::vec2{0.f, 1.f};
         }
         else{
-            vertex_buffer = &CreateBuffer(buffer_hash, 4, sizeof(lab::vec2));
+            vertex_buffer = &CreateBuffer(grp_name, 4, sizeof(lab::vec2));
             lab::vec2* pos_memory = reinterpret_cast<lab::vec2*>(vertex_buffer->Map());
             pos_memory[0] = lab::vec2{-0.5f, -0.5f};
             pos_memory[1] = lab::vec2{0.5f, -0.5f};

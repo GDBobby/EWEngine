@@ -11,6 +11,14 @@ namespace EWE{
 		T r;
 		T g;
 		T b;
+
+		operator lab::Vector<T, 3>() const {
+			return lab::Vector<T, 3>{
+				.x = r,
+				.y = g,
+				.z = b
+			};
+		}
 	};
 	template<typename T>
 	struct Color_RGBA {
@@ -18,6 +26,15 @@ namespace EWE{
 		T g;
 		T b;
 		T a;
+
+		operator lab::Vector<T, 3>() const {
+			return lab::Vector<T, 3>{
+				.x = r,
+				.y = g,
+				.z = b,
+				.w = a
+			};
+		}
 	};
 
 	template<typename RetType, typename InputType>

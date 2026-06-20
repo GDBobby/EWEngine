@@ -3,6 +3,7 @@
 #include "EightWinds/Reflect/Reflect.h"
 
 #include "EWEngine/Data/Color.h"
+#include "EWEngine/Data/Vertex.h"
 
 #include "LAB/Vector.h"
 #include "LAB/Vector/Hash.h"
@@ -10,51 +11,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
 
-namespace EWE{
-    struct VertexProperty{
-        bool position;
-        bool color;
-        bool normal;
-        bool tangent;
-        bool uv;
-        //bool bitangent?
-        //uint8_t bone?
-    };
-
-    template<VertexProperty VP>
-    struct Vertex {
-        struct Storage;
-        consteval {
-            std::vector<std::meta::info> members;
-            if constexpr (VP.position)  members.push_back(std::meta::data_member_spec(^^lab::vec3, {.name="position"}));
-            if constexpr (VP.color)     members.push_back(std::meta::data_member_spec(^^Color_RGB<float>, {.name = "color"}));
-            if constexpr (VP.normal)    members.push_back(std::meta::data_member_spec(^^lab::vec3, {.name="normal"}));
-            if constexpr (VP.tangent)   members.push_back(std::meta::data_member_spec(^^lab::vec3, {.name="tangent"}));
-            if constexpr (VP.uv)        members.push_back(std::meta::data_member_spec(^^lab::vec2, {.name="uv"}));
-            std::meta::define_aggregate(^^Storage, members);
-        }
-        Storage data;
-
-        bool operator==(Vertex const& other) const{
-            bool any_not_equal = false;
-            template for (constexpr auto Member : std::define_static_array(std::meta::nonstatic_data_members_of(^^Storage, std::meta::access_context::current()))) {
-                any_not_equal |= data.[:Member:] != other.data.[:Member:];
-            }
-            return !any_not_equal;
-        }
-    };
-} //namespace EWE
-
-template <EWE::VertexProperty VP>
-struct std::hash<EWE::Vertex<VP>> {
-    std::size_t operator()(EWE::Vertex<VP> const& vertex) const {
-        std::size_t seed = 0;
-        template for (constexpr auto Member : std::define_static_array(std::meta::nonstatic_data_members_of(^^typename EWE::Vertex<VP>::Storage, std::meta::access_context::current()))) {
-            EWE::HashCombine(seed, std::hash<decltype(vertex.data.[:Member:])>{}(vertex.data.[:Member:]));
-        }
-        return seed;
-    }
-};
 
 namespace EWE{    
     template <typename T>

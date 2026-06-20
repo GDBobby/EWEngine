@@ -12,20 +12,25 @@ layout(location = 0) out vec4 outColor;
 
 //texture descriptor set
 
+#define MAX_MERGE_COUNT 4
+
 layout(push_constant) uniform Push {
-    int texture_index[2];
+    int texture_index[MAX_MERGE_COUNT];
 } push;
 
 void main(){
 
-    vec4 first_color = texture(bindless[push.texture_index[0]], fragUV);
-    if(push.texture_index[1] < 0){
-        outColor = first_color.rgba;
+    vec4 total_color = vec4(0.0);
+    int merge_count = 0;
+    for(int i = 0; i < MAX_MERGE_COUNT; i++){
+        if(push.texture_index[i] != null_texture){
+            total_color += texture(bindless[push.texture_index[i]], fragUV);
+            merge_count++;
+        }
     }
-    else{
-        vec4 second_color = texture(bindless[push.texture_index[1]], fragUV);
+    total_color /= merge_count;
 
-        outColor = vec4(mix(first_color.rgb, second_color.rgb, second_color.a), 
-                        first_color.a + second_color.a * (1.0 - first_color.a));
-    }
+    //debug print here maybe? if merge count is still 0?
+
+    outColor = total_color; //clamp 0 to 1?
 }

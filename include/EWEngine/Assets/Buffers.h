@@ -26,14 +26,13 @@ namespace Asset{
         Buffer* Get(AssetHash hash);
         Buffer* Get(std::filesystem::path const& name);
 
-        //check if the buffer already exists before calling this function
-        Buffer& ConstructInto(AssetHash hash,
-            VkDeviceSize instanceSize, uint32_t instanceCount, 
-            VmaAllocationCreateInfo const& vmaAllocCreateInfo, 
+        Buffer& ConstructInto(std::filesystem::path const& name,
+            VkDeviceSize instanceSize, uint32_t instanceCount,
+            VmaAllocationCreateInfo const& vmaAllocCreateInfo,
             VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
         );
 
-        AssetHash ConvertBDAToHash(VkDeviceAddress addr);
+        AssetHash ConvertBDAToHash(DeviceAddress addr);
 
 #ifdef EWE_IMGUI
         void Imgui();

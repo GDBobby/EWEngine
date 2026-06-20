@@ -15,6 +15,17 @@
 namespace EWE{
 namespace Asset{
 
+    void InitializeImageFromFile(Image& img) {
+        std::filesystem::path const& root_directory = Global::assetManager->root_directory;
+        std::filesystem::path const& path = img.name;
+        std::filesystem::path full_path = root_directory / path;
+
+        //image is already constructed
+        EWE_ASSERT(std::filesystem::exists(full_path));
+        ReadMetaFile(img, root_directory, path);
+        img.readyForUsage = InitializeImage(img, full_path, Queue::Type::Graphics);
+    }
+
     template<>
     bool LoadAssetFromFile(Image* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& path){
         const auto full_path = root_directory / path;
@@ -22,12 +33,13 @@ namespace Asset{
         img.name = path;
 
         auto load_img_fiber = marl::Task{[&img, full_path, root_directory, path](){
+            Log::Debug("beginning async image load : %s\n", img.name.string().c_str());
             ReadMetaFile(img, root_directory, path);
             //auto old_extent = img.data.extent;
             //auto old_format = img.data.format;
             //auto old_miplevels = img.data.mipLevels;
             img.readyForUsage = InitializeImage(img, full_path, Queue::Type::Graphics);
-
+            Log::Debug("finished loading image : %s\n", img.name.string().c_str());
         }};
         engine->scheduler.enqueue(std::move(load_img_fiber));
         //do a comparison here on overwritten values, possibly
@@ -40,7 +52,7 @@ namespace Asset{
 
     template<>
     bool WriteMetaFile(Image const& img, std::filesystem::path const& root_directory, std::filesystem::path const& file_path){
-        const std::filesystem::path meta_path = (root_directory / img.name).replace_extension("mie");
+        const std::filesystem::path meta_path = root_directory / img.name / ".meta";
 
         std::ofstream outFile{meta_path, std::ios::binary};
         if(!outFile.is_open()){
@@ -75,10 +87,17 @@ namespace Asset{
 
     template<>
     bool ReadMetaFile(Image& meta, std::filesystem::path const& root_directory, std::filesystem::path const& path){
-        std::ifstream inFile{root_directory / path, std::ios::binary};
+        const std::filesystem::path full_path = root_directory / path / ".meta";
+        if (!std::filesystem::exists(full_path)) {
+            //Log::Debug("attempting to open a meta file that doesn't exist : %s\n", full_path.string().c_str());
+            meta.data = GetDefaultMetaData();
+            return false;
+        }
+        std::ifstream inFile{full_path, std::ios::binary};
         if(!inFile.is_open()){
-            inFile.open(root_directory / path);
+            inFile.open(full_path);
             if(!inFile.is_open()){
+                Log::Debug("double failed to open meta file : %s\n", full_path.string().c_str());
                 meta.data = GetDefaultMetaData();
                 return false;
                 //EWE_ASSERT(inFile.is_open());
@@ -87,6 +106,11 @@ namespace Asset{
         Stream::Operator in_stream{inFile};
         std::size_t v_buffer = meta_version;
         in_stream.Process(v_buffer);
+        if (v_buffer != meta_version) {
+            Log::Warning("meta version of image not current version : %s\n", full_path.string().c_str());
+            meta.data = GetDefaultMetaData();
+            return false;
+        }
         in_stream.Process(meta.data);
         inFile.close();
         return true;

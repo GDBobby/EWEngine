@@ -14,7 +14,7 @@ namespace EWE {
 		virtual void Entry() = 0;
 
 		//returns true if the window was resized, skips 1 render if it was resized
-		virtual bool Render(double dt) = 0;
+		virtual bool RenderUpdate(double dt) = 0;
 
 		//the loading screen will be called before this function
 		virtual void Exit() = 0;

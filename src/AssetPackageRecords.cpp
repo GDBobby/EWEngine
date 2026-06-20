@@ -27,7 +27,7 @@ namespace Asset{
             outFile.close();
             return false;
         }
-        auto queue_type = engine->GetQueueType(*rec.queue);
+        auto queue_type = engine->GetQueueType(rec.queue);
         outFile.write(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
 
         temp_buffer = rec.packages.size();
@@ -55,12 +55,10 @@ namespace Asset{
             inFile.close();
             return false;
         }
-        
-        auto& ret = *std::construct_at(ptr_to_raw_mem);
-        ret.name = name;
         Queue::Type queue_type;
         inFile.read(reinterpret_cast<char*>(&queue_type), sizeof(queue_type));
-        ret.queue = &engine->GetQueue(queue_type);
+        
+        auto& ret = *std::construct_at(ptr_to_raw_mem, name, engine->GetQueue(queue_type));
 
         //pkg size
         inFile.read(reinterpret_cast<char*>(&temp_buffer), sizeof(temp_buffer));

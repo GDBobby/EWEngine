@@ -7,6 +7,8 @@
 namespace EWE{
 namespace Asset{
 
+    void InitializeImageFromFile(Image& img);
+
     template<>
     //this is async
     bool LoadAssetFromFile(Image* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& path);

@@ -44,7 +44,10 @@ if(USING_ASAN)
         # Required CRT for ASan
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
 	else()
-		add_compile_options(-fsanitize=address)
+		add_compile_options(
+				-fsanitize=address
+				-fno-omit-frame-pointer
+		)
     	add_link_options(-fsanitize=address)
     endif()
 endif()

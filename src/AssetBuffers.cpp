@@ -35,18 +35,20 @@ namespace Asset{
         return Get(CrossPlatformPathHash(name));
     }
 
-
-    Buffer& Manager<Buffer>::ConstructInto(AssetHash hash,
-        VkDeviceSize instanceSize, uint32_t instanceCount, 
-        VmaAllocationCreateInfo const& vmaAllocCreateInfo, 
+    Buffer& Manager<Buffer>::ConstructInto(std::filesystem::path const& name,
+        VkDeviceSize instanceSize, uint32_t instanceCount,
+        VmaAllocationCreateInfo const& vmaAllocCreateInfo,
         VkBufferUsageFlags usageFlags
     ){
-        auto& ele = data_arena.AddElement(engine->logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
-        association_container.push_back(hash, &ele);
-        return ele;
+        const AssetHash hash = CrossPlatformPathHash(name);
+
+        auto& ret = data_arena.AddElement(engine->logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
+        association_container.push_back(hash, &ret);
+        ret.SetName(name.string());
+        return ret;
     }
 
-    AssetHash Manager<Buffer>::ConvertBDAToHash(VkDeviceAddress addr){
+    AssetHash Manager<Buffer>::ConvertBDAToHash(DeviceAddress addr){
         for(auto& kvp : association_container){
             if(kvp.value->deviceAddress == addr){
                 return kvp.key;

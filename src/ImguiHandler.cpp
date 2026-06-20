@@ -168,7 +168,7 @@ namespace EWE{
 			//im doing a index based approached because i want to allow the creation/removal of viewports from within the exec_func
 			for(std::size_t i = 0; i < viewports.size(); i++) {
 				auto& vp = viewports[i];
-				if(vp.exec_func != nullptr){
+				if(vp.exec_funcs.size() > 0){
 
 					std::string label_name = std::string("imgui[") + std::to_string(i) + "]";
 					VkDebugUtilsLabelEXT labelUtil{
@@ -226,7 +226,10 @@ namespace EWE{
 						vp.current_viewport.extent.width = ImGui::GetWindowSize().x;
 						vp.current_viewport.extent.height = ImGui::GetWindowSize().y;
 						ImGui::PushID(static_cast<int>(reinterpret_cast<std::size_t>(vp.context)));
-						vp.exec_func(vp);
+						for(auto& exec : vp.exec_funcs){
+							//vp.exec_func(vp);
+							exec(vp);
+						}
 						ImGui::PopID();
 					}
 					if(background_window != nullptr){

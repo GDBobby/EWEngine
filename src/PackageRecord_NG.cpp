@@ -182,9 +182,7 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                Command::PackageRecord record{};
-                record.queue = &engine->GetQueue(queue_type);
-                record.name = saved_path;
+                Command::PackageRecord record{saved_path, engine->GetQueue(queue_type)};
                 ImNodes::Node* current_node = reinterpret_cast<ImNodes::Node*>(headNode->pins[0].payload);
                 while(current_node != nullptr){
                     record.packages.push_back(reinterpret_cast<Command::InstructionPackage*>(current_node->payload));

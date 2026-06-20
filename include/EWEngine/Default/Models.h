@@ -49,7 +49,7 @@ namespace Basic{
         Command::ObjectPackage ret{};
         {
             ParamPack<Inst::Push> pushInst{
-                .size = sizeof(VkDeviceAddress),
+                .size = sizeof(DeviceAddress),
                 .buffer_count = 1
             };
             pushInst.GetDeviceAddress(0) = buffer->deviceAddress;

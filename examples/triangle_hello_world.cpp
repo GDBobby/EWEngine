@@ -253,12 +253,9 @@ int main(int argc, char* argv[]) {
                     ImGui::TreePop();
                 }
             }
-
             ImGui::TreePop();
         }
-
         EWE::Global::assetManager->Imgui();
-
     };
 
     auto engine_imgui_window = [&](EWE::ImguiViewport& vp){
@@ -422,236 +419,37 @@ int main(int argc, char* argv[]) {
             vertex_buffer.Unmap();
         }
 
-        EWE::AttachmentSetInfo swapSetInfo{};
-        swapSetInfo.relative_size = true;
-        swapSetInfo.width = 1.f;
-        swapSetInfo.height = 1.f;
-        swapSetInfo.renderingFlags = 0;
-        swapSetInfo.colors.ClearAndResize(1);
-        swapSetInfo.using_depth = false;
-        EWE::TaskRasterConfig merge_task_config{passConfig};
-        {
-            auto& color_back = swapSetInfo.colors[0];
-            color_back.format = engine.swapchain.swapCreateInfo.imageFormat;
-            color_back.clearValue.color.float32[0] = 0.f;
-            color_back.clearValue.color.float32[1] = 0.f;
-            color_back.clearValue.color.float32[2] = 0.f;
-            color_back.clearValue.color.float32[3] = 0.f;
-            color_back.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            color_back.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-            merge_task_config.depthStencilInfo.depthTestEnable = VK_FALSE;
-            merge_task_config.depthStencilInfo.depthWriteEnable = VK_FALSE;
-            merge_task_config.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-        }
-        auto& merge_render_info = EWE::Global::assetManager->attachment_info.ConstructInto(
-            "swap info", 
-            engine.logicalDevice, engine.renderQueue, swapSetInfo, 
-            EWE::engine->window.screenDimensions.width, EWE::engine->window.screenDimensions.height
-        );
-        merge_task_config.attachment_info = merge_render_info.full.setInfo;
-
-        EWE::Shader* merge_vert = EWE::Global::assetManager->shader.Get("merge.vert.spv");
-        EWE::Shader* merge_frag = EWE::Global::assetManager->shader.Get("merge.frag.spv");
-
-        EWE::RasterPackage& mergeRaster = EWE::Global::assetManager->rasterTask.ConstructInto(
-            "merge raster", 
-            engine.logicalDevice, engine.renderQueue, 
-            merge_task_config 
-        );
-
-        mergeRaster.scissor = EWE::engine->window.screenDimensions;
-        mergeRaster.viewport.x = 0.f;
-        mergeRaster.viewport.y = static_cast<float>(EWE::engine->window.screenDimensions.height);
-        mergeRaster.viewport.width = static_cast<float>(EWE::engine->window.screenDimensions.width);
-        mergeRaster.viewport.height = -static_cast<float>(EWE::engine->window.screenDimensions.height);
-        mergeRaster.viewport.minDepth = 0.0f;
-        mergeRaster.viewport.maxDepth = 1.f;
-
-        EWE::Command::ObjectPackage& merge_object_pkg = EWE::Global::assetManager->objPkg.ConstructInto("merge obj pkg");
-        merge_object_pkg.payload.config = triangle_rasterObj.config;
-        merge_object_pkg.payload.shaders[EWE::ShaderStage::Vertex] = merge_vert;
-        merge_object_pkg.payload.shaders[EWE::ShaderStage::Fragment] = merge_frag;
-
-        EWE::InstructionPointer<EWE::ParamPack<EWE::Inst::Push>> mergePush;
-        {
-            EWE::ParamPack<EWE::Inst::Push> push_pack{
-                .buffer_count = 0,
-                .texture_count = 2,
-            };
-            push_pack.size = push_pack.Size();
-
-            merge_object_pkg.paramPool.PushBack(push_pack);
-            EWE::ParamPack<EWE::Inst::Draw> draw_pack{
-                .vertexCount = 4,
-                .instanceCount = 1,
-                .firstVertex = 0,
-                .firstInstance = 0
-            };
-            merge_object_pkg.paramPool.PushBack(draw_pack);
-        }
-        mergePush = *reinterpret_cast<EWE::InstructionPointer<EWE::ParamPack<EWE::Inst::Push>>*>(&merge_object_pkg.paramPool.param_data[0]);
-        mergeRaster.objectPackages.push_back(&merge_object_pkg);
-
-        mergeRaster.Compile();
-        mergeRaster.Undefer(merge_render_info);
-
-        EWE::Command::PackageRecord& merge_pkgRecord = EWE::Global::assetManager->pkgRecord.ConstructInto("merge record");
-        merge_pkgRecord.queue = &engine.renderQueue;
-        merge_pkgRecord.packages.push_back(reinterpret_cast<EWE::Command::InstructionPackage*>(&mergeRaster));
-
-        EWE::GPUTask& mergeTask = EWE::Global::assetManager->gpuTask.ConstructInto(
-            "merge task",
-            logicalDevice,
-            merge_pkgRecord, false
-        );
-
-        EWE::UsageData<EWE::Image> initial_acquire_usage{
-            .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-            .accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        };
-
-        uint32_t present_img_att_index = mergeTask.resources.AddResource<EWE::Image>(initial_acquire_usage);
-        renderGraph.syncManager.AddAcquisition_Image(mergeTask, present_img_att_index);
-
-        EWE::GPUTask& imguiTask = EWE::Global::assetManager->gpuTask.ConstructInto("imgui", engine.logicalDevice, engine.renderQueue);
-
-        EWE::PerFlight<EWE::Image*> temp_att_res{};
-        temp_att_res[0] = &EWE::Global::imguiHandler->renderInfo.full.color_views[0][0]->image;
-        temp_att_res[1] = &EWE::Global::imguiHandler->renderInfo.full.color_views[0][1]->image;
-        uint32_t imgui_att_index = imguiTask.resources.AddResource(temp_att_res, initial_acquire_usage);
-        renderGraph.syncManager.AddAcquisition_Image(imguiTask, imgui_att_index);
-
-        EWE::UsageData<EWE::Image> merge_acquire_usage{
-            .stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-            .accessMask = VK_ACCESS_2_SHADER_READ_BIT,
-            .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
-        uint32_t acquire_imgui_output_index = mergeTask.resources.AddResource(temp_att_res, merge_acquire_usage);
-        renderGraph.syncManager.AddTransition_Image(imguiTask, imgui_att_index, mergeTask, acquire_imgui_output_index);
-
-        renderTask.GenerateWorkload();
-        mergeTask.GenerateWorkload();
-
-        EWE::SubmissionTask& imgui_submission = EWE::Global::assetManager->subTask.ConstructInto("imgui", EWE::engine->logicalDevice, engine.renderQueue);
-        imgui_submission.specializedSubmission = true;
-
         {
             auto& vp_back = EWE::Global::imguiHandler->viewports.emplace_back();
-            vp_back.exec_func = engine_imgui_window;
+            vp_back.exec_funcs = {engine_imgui_window};
             vp_back.context = EWE::Global::imguiHandler->InitializeContext();
             vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.8f;
             vp_back.current_viewport.extent.height = EWE::engine->window.screenDimensions.height * 0.2f;
         }
         {
             auto& vp_back = EWE::Global::imguiHandler->viewports[0];
-            vp_back.exec_func = node_imgui_vp;
+            vp_back.exec_funcs = {node_imgui_vp};
             vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.8f;
             vp_back.current_viewport.offset.y = EWE::engine->window.screenDimensions.height * 0.2f;
             vp_back.current_viewport.extent.height = EWE::engine->window.screenDimensions.height * 0.8f;
         }
         {
             auto& vp_back = EWE::Global::imguiHandler->viewports.emplace_back();
-            vp_back.exec_func = assets_imgui_window;
+            vp_back.exec_funcs = {assets_imgui_window};
             vp_back.context = EWE::Global::imguiHandler->InitializeContext();
             vp_back.current_viewport.offset.x = EWE::engine->window.screenDimensions.width * 0.8f;
             vp_back.current_viewport.extent.width = EWE::engine->window.screenDimensions.width * 0.2f;
         }
 
-        imgui_submission.packaged_tasks.push_back(
-            [&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
-#ifdef EWE_IMGUI
-                imguiTask.prefix.Execute(cmdBuf, frameIndex);
-                EWE::Global::imguiHandler->Render(cmdBuf);
-                return true;
-#endif
-                return false;
-            }
-        );
-        EWE::SubmissionTask& attachment_blit_submission = EWE::Global::assetManager->subTask.ConstructInto(
-            "attachment blit", 
-            EWE::engine->logicalDevice, engine.renderQueue
-        );
-        attachment_blit_submission.specializedSubmission = true;
-
-        VkSamplerCreateInfo samplerCreateInfo{
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0,
-            .magFilter = VK_FILTER_NEAREST,
-            .minFilter = VK_FILTER_NEAREST,
-            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-            .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-            .mipLodBias = 0.f,
-            .anisotropyEnable = VK_FALSE,
-            .maxAnisotropy = 0.f,
-            .compareEnable = VK_FALSE,
-            .compareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-            .minLod = 0.f,
-            .maxLod = 1.f,
-            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
-            .unnormalizedCoordinates = VK_FALSE
-        };
-
-        EWE::Sampler& attachmentSampler = EWE::Global::assetManager->sampler.Get(samplerCreateInfo);
-
-        EWE::Asset::DiiCreation dii_creator0{
-            &attachmentSampler,
-            EWE::Global::imguiHandler->renderInfo.full.color_views[0][0],
-            EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
-        EWE::Asset::DiiCreation dii_creator1{
-            &attachmentSampler,
-            EWE::Global::imguiHandler->renderInfo.full.color_views[0][1],
-            EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
-        EWE::PerFlight<EWE::TextureIndex> texture_indices{
-            EWE::Global::assetManager->dii.Get(dii_creator0).index,
-            EWE::Global::assetManager->dii.Get(dii_creator1).index,
-        };
-        
-        attachment_blit_submission.packaged_tasks.push_back(
-            [&, texture_indices_copy = texture_indices](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
-                auto& push = mergePush.GetRef(frameIndex);
-                push.GetTextureIndex(0) = texture_indices_copy[frameIndex];
-
-                VkRenderingAttachmentInfo presentAttachmentInfo{
-                    .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-                    .pNext = nullptr,
-                    .imageView = engine.swapchain.GetCurrentImageView(),
-                    .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .resolveMode = VK_RESOLVE_MODE_NONE,
-                    .resolveImageView = VK_NULL_HANDLE,
-                    .resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                    .clearValue = {0.f, 0.f, 0.f, 0.f}
-                };
-                auto& vri = mergeRaster.deferred_vk_render_info->GetRef(frameIndex);
-                vri.colorAttachmentCount = 1;
-                vri.pColorAttachments = &presentAttachmentInfo;
-
-                mergeTask.workload(cmdBuf, frameIndex);
-                renderGraph.presentBridge.Execute(cmdBuf);
-                return true;
-            }
-        );
-
-        renderGraph.tasks.push_back(&mergeTask);
-        renderGraph.tasks.push_back(&imguiTask);
+        EWE::Global::imguiTask->AddToRenderGraph(renderGraph);
+        EWE::Global::mergeTask->AddToRenderGraph(renderGraph);
 
         renderGraph.execution_order = {
-            std::vector<EWE::SubmissionTask*>{&imgui_submission},//, &world_render_submission},
-            std::vector<EWE::SubmissionTask*>{&attachment_blit_submission}
+            std::vector<EWE::SubmissionTask*>{&EWE::Global::imguiTask->subTask},//, &world_render_submission},
+            std::vector<EWE::SubmissionTask*>{&EWE::Global::mergeTask->subTask}
         };
-        attachment_blit_submission.uses_present_image = true;
 
         renderGraph.InitializeSemaphores();
-        renderGraph.presentBridge.final_swap_img_usage = &mergeTask.resources.images[present_img_att_index];
-        renderGraph.swap_image_instances.emplace_back(&mergeTask, present_img_att_index);
 
         finished_loading = true;
     };

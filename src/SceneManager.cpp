@@ -28,19 +28,33 @@ namespace EWE {
 
 		currentScenePtr->Entry();
 
-		while (gameRunning) {
+		while (gameRunning && !glfwWindowShouldClose(engine->window.window)) {
 			glfwPollEvents();
+
+			auto* renderGraph = engine->current_renderGraph;
 
 			if (swappingScenes) [[unlikely]] {
 				SwapScenes();
 				render_loop.delta = render_loop.duration;
 				Log::Debug("swapping scenes beginning \n");
+				renderGraph = engine->current_renderGraph;
 				//stop loading screen here
 			}
 			else if (render_loop.ReadyForRenderUpdate()) {
-				//Log::Debug("currentScene at render : %u\n");
-				//ewEngine.camera.PrintCameraPos();
-				currentScenePtr->Render(render_loop.delta.count());
+
+				if(renderGraph->Acquire(engine->frameIndex)){
+					currentScenePtr->RenderUpdate(render_loop.delta.count());
+					renderGraph->UpdateSwapImage(engine->frameIndex);
+					renderGraph->RecreateBarriers(engine->frameIndex);
+					renderGraph->Execute(engine->frameIndex);
+
+					engine->frameIndex = (engine->frameIndex + 1) % EWE::max_frames_in_flight;
+					engine->totalFramesSubmitted++;
+
+				}
+				else {
+					//recreate swapchain is handled implicitly
+				}
 				render_loop.delta = LoopTimer::DurationType{0};
 			}
 		}

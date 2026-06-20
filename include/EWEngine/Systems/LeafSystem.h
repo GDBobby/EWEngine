@@ -101,15 +101,17 @@ namespace EWE {
 		Buffer indices;
 		PerFlight<Buffer> sceneBuffer;
 
-		struct SceneBufferObject{
+		struct WorldData {
 			lab::mat4 projView;
 			lab::vec4 cameraPos;
-			
+
 			//light buffer, merged into 1 buffer
 			lab::vec4 ambientColor;
 			lab::vec4 sunDir; //w for sun power
 			lab::vec4 sunColor;
-
+		};
+		struct SceneBufferObject{
+			WorldData worldData;
 			//point lights removed for the moment
 			lab::mat4 transforms[LEAF_COUNT];
 		};

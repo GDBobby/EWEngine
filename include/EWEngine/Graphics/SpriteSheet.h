@@ -7,10 +7,11 @@ namespace EWE{
     struct SpriteSheet{
         std::filesystem::path name;
         RuntimeArray<Image*> imgs;
+        RuntimeArray<ImageView*> views;
         Sampler& sampler; //copy or reference?
         RuntimeArray<DescriptorImageInfo*> diis;
 
-        Queue* owningQueue;
+        Queue* owningQueue; //not allowed to be null, but is changeable
 
         uint16_t texel_width;
         uint16_t texel_height;

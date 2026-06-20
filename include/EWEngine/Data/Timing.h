@@ -29,5 +29,9 @@ namespace EWE{
         bool ReadyForLogicUpdate();
 
         void SetLoopDuration();
+
+        static float ToMilliseconds(DurationType d){
+            return std::chrono::duration_cast<std::chrono::duration<float, std::milli>>(d).count();
+        }
     };
 }

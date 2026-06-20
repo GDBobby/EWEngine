@@ -63,8 +63,9 @@ namespace EWE {
 			engine->graphics_stc_task, engine->compute_stc_task
 		},
 		raster_pkg{"leaf raster task", engine->logicalDevice, engine->renderQueue, GetTaskConfig()},
-		gpuTask{"leaf gpu task", engine->logicalDevice, engine->renderQueue},
-		subTask{"leaf sub task", engine->logicalDevice, engine->renderQueue},
+		pkg_record{"leafpkgrecord", engine->renderQueue},
+		gpuTask{"leafgputask", engine->logicalDevice, pkg_record, false},
+		subTask{"leafsubtask", engine->logicalDevice, engine->renderQueue},
 		renderInfo{ 
 			"leaf render info", 
 			engine->logicalDevice, engine->renderQueue, 
@@ -78,8 +79,7 @@ namespace EWE {
 		engine->current_renderGraph = &renderGraph;
 	}
 
-	LeafSystem::~LeafSystem() {
-	}
+	LeafSystem::~LeafSystem() {}
 
 	void LeafSystem::Record(){
 		obj_pkg.payload.config.SetDefaults();
@@ -87,18 +87,16 @@ namespace EWE {
 		obj_pkg.payload.shaders[ShaderStage::Fragment] = &fragShader;
 
 		raster_pkg.objectPackages.push_back(&obj_pkg);
-		raster_pkg.scissor = EWE::engine->window.screenDimensions;
+		raster_pkg.scissor = engine->window.screenDimensions;
 		raster_pkg.viewport.x = 0.f;
-		raster_pkg.viewport.y = static_cast<float>(EWE::engine->window.screenDimensions.height);
-		raster_pkg.viewport.width = static_cast<float>(EWE::engine->window.screenDimensions.width);
-		raster_pkg.viewport.height = -static_cast<float>(EWE::engine->window.screenDimensions.height);
+		raster_pkg.viewport.y = static_cast<float>(engine->window.screenDimensions.height);
+		raster_pkg.viewport.width = static_cast<float>(engine->window.screenDimensions.width);
+		raster_pkg.viewport.height = -static_cast<float>(engine->window.screenDimensions.height);
 		raster_pkg.viewport.minDepth = 0.0f;
 		raster_pkg.viewport.maxDepth = 1.f;
 		raster_pkg.Compile();
 		raster_pkg.Undefer(renderInfo);
 
-		pkg_record.name = "leaf pkg record";
-		pkg_record.queue = &engine->renderQueue;
 		pkg_record.packages.push_back(&raster_pkg);
 
 		gpuTask.pkgRecord = &pkg_record;
@@ -113,14 +111,14 @@ namespace EWE {
 			sub_group_back.push_back(&subTask);
 		}
 
-		const EWE::UsageData<EWE::Image> initial_acquire_usage{ //this is the usage after acquirement
+		const UsageData<Image> initial_acquire_usage{ //this is the usage after acquirement
 			.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.accessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 		};
 
 		subTask.packaged_tasks.push_back(
-			[&](EWE::CommandBuffer& cmdBuf, uint8_t frameIndex) {
+			[&](CommandBuffer& cmdBuf, uint8_t frameIndex) {
 
                 VkRenderingAttachmentInfo presentAttachmentInfo{
                     .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -146,8 +144,8 @@ namespace EWE {
 
 		renderGraph.tasks.push_back(&gpuTask);
 
-		present_img_att_index = gpuTask.resources.AddResource<EWE::Image>(initial_acquire_usage);
-		renderGraph.syncManager.AddAcquisition_Image(gpuTask, present_img_att_index);
+		present_img_att_index = gpuTask.resources.AddResource<Image>(initial_acquire_usage);
+		renderGraph.syncManager.AddAcquisition<Image>(gpuTask, present_img_att_index, AcquireType::Present);
 
     	renderGraph.InitializeSemaphores();
 		renderGraph.presentBridge.final_swap_img_usage = &gpuTask.resources.images[present_img_att_index];
@@ -168,7 +166,7 @@ namespace EWE {
 	////this should be a graphics queue command buffer
 	void LeafSystem::LoadLeafModel(std::filesystem::path const& filepath) {
 		static constexpr VertexProperty LeafVertProperties{
-			.position = true,
+			.position = 3,
 			.normal = true,
 			.tangent = false,
 			.uv = false
@@ -176,8 +174,8 @@ namespace EWE {
 		using LeafIndexType = uint16_t;
 		using LeafModelType = Model<LeafVertProperties, LeafIndexType>;
 		LeafModelType leafModel = LoadModelTinyObj<LeafVertProperties, LeafIndexType>(engine->root_directory / filepath);
-		vertices.Init(sizeof(Vertex<LeafVertProperties>) * leafModel.vertices.size(), 1, GetVMAInfo());
-		indices.Init(sizeof(LeafIndexType) * leafModel.indices.size(), 1, GetVMAInfo(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+		vertices.Init(sizeof(Vertex<LeafVertProperties>), leafModel.vertices.size(), GetVMAInfo());
+		indices.Init(sizeof(LeafIndexType), leafModel.indices.size(), GetVMAInfo(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
 		{
 			obj_pkg.paramPool.PushBack(Inst::Push);
@@ -231,16 +229,19 @@ namespace EWE {
 
                 glfwPollEvents();
 
-                if (renderGraph.Acquire(EWE::engine->frameIndex)) {
-                    //mouseData.UpdatePosition(EWE::engine->window.window);
-                    renderGraph.UpdateSwapImage(EWE::engine->frameIndex);
+				if (glfwWindowShouldClose(engine->window.window)) {
+					return;
+				}
+
+                if (renderGraph.Acquire(engine->frameIndex)) {
+                    //mouseData.UpdatePosition(engine->window.window);
+                    renderGraph.UpdateSwapImage(engine->frameIndex);
 
 					//it seems like the semaphore is created correctly
-                    renderGraph.RecreateBarriers(EWE::engine->frameIndex);
+                    renderGraph.RecreateBarriers(engine->frameIndex);
+                    renderGraph.Execute(engine->frameIndex);
 
-                    renderGraph.Execute(EWE::engine->frameIndex);
-
-                    EWE::engine->frameIndex = (EWE::engine->frameIndex + 1) % EWE::max_frames_in_flight;
+                    engine->frameIndex = (engine->frameIndex + 1) % max_frames_in_flight;
                     engine->totalFramesSubmitted++;
                 }
 			}

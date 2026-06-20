@@ -113,7 +113,7 @@ namespace Node{
                 Log::Debug("dropping in sub task\n");
 
 
-                auto const task_queue_type = engine->GetQueueType(*pkg->queue);
+                auto const task_queue_type = engine->GetQueueType(pkg->queue);
                 bool adding_allowed = false;
                 if(current_queue_type != task_queue_type){
                     if(headNode->pins[0].payload == nullptr){

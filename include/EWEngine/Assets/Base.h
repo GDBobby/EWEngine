@@ -32,6 +32,7 @@ namespace Asset{
     struct Manager{
         using Type = Resource;
 
+        std::mutex mut;
         FileSystem files;
         Hive<Resource, 64> data_arena;
         KeyValueContainer<AssetHash, Resource*> association_container;
@@ -69,7 +70,9 @@ namespace Asset{
                 if(path_hash_data == files.hashed_path.end()){
                     return nullptr;
                 }
+                mut.lock();
                 Resource* ret = data_arena.GetCell();
+                mut.unlock();
                 Log::Debug("loading asset - %s / %s\n", files.root_directory.string().c_str(), path_hash_data->value.string().c_str());
                 if(LoadAssetFromFile<Resource>(ret, files.root_directory, path_hash_data->value)){
                     association_container.push_back(hash, ret);
@@ -87,8 +90,7 @@ namespace Asset{
 
         template<typename... Args>
         requires std::constructible_from<Resource, Args...>
-        Resource& ConstructInto(Args&&... args)
-        {
+        Resource& ConstructInto(Args&&... args) {
             auto& ele = data_arena.AddElement(std::forward<Args>(args)...);
             AssetHash hash = GetHash(ele);
             association_container.push_back(hash, &ele);
