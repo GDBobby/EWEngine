@@ -25,6 +25,7 @@ namespace EWE {
         static constexpr uint16_t MAX_CHAR_COUNT = 4096;
 
         std::filesystem::path name;
+        const uint8_t pxSize;
 
         //implementation is hidden, it includes harfbuzz and freetype which I want separated
         FontObject* font;
@@ -45,7 +46,6 @@ namespace EWE {
         ImageView& view; //ref to graphicsPkg.view
         DescriptorImageInfo& dii;//ref to graphicsPkg.dii
 
-
         void AddText(TextStruct const& ts);
         bool ReadyForUsage() const{ return graphicsPkg.constructed; }
         float GetStringWidth(TextStruct const& ts);
@@ -58,7 +58,7 @@ namespace EWE {
         uint16_t char_instance_count = 0;
         void EndRenderUpdate();
 
-        [[nodiscard]] explicit Font(std::filesystem::path const& path, int pxSize, Sampler& _sampler);
+        [[nodiscard]] explicit Font(std::filesystem::path const& path, uint8_t pxSize, Sampler& _sampler);
         ~Font();
     };
 }//namespace EWE

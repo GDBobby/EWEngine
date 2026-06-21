@@ -14,6 +14,7 @@ namespace Asset{
     }
 
     ImageView* Manager<ImageView>::Get(AssetHash hash){
+        std::unique_lock<std::mutex> lock{mut};
         for(auto& kvp : association_container){
             if(kvp.key == hash){
                 return kvp.value;
@@ -36,6 +37,7 @@ namespace Asset{
         return &view;
     }
     ImageView* Manager<ImageView>::Get(Image& img){
+        std::unique_lock<std::mutex> lock{mut};
         AssetHash image_hash = GetHash(img);
         ImageView& view = data_arena.AddElement(img);
         association_container.push_back(image_hash, &view);
@@ -46,6 +48,7 @@ namespace Asset{
 
 #if EWE_IMGUI
     void Manager<ImageView>::Imgui(){
+        std::unique_lock<std::mutex> lock{mut};
         for(auto& kvp : association_container){
             ImguiExtension::Imgui(*kvp.value);
         }

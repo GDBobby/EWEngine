@@ -8,7 +8,6 @@
 #include "EightWinds/Command/InstructionPackage.h"
 #include "EightWinds/Command/ObjectInstructionPackage.h"
 
-#include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/ObjectRasterConfig.h"
 #include "EightWinds/Pipeline/Layout.h"
 #include "EightWinds/Preprocessor.h"

@@ -4,14 +4,29 @@
 #include <string>
 
 namespace EWE {
-    enum TextAlign : uint8_t { TA_left, TA_center, TA_right };
+
+    struct FontKey;
+    struct Font;
+
+    enum TextAlign : uint8_t { left, center, right };
     struct TextStruct {
         std::string string{""};
-        float x{ 0.f };
-        float y{ 0.f };
-        float z{1.f}; //depth buffer depth
-        TextAlign align{ TA_left };
+        lab::vec3 pos{0.f, 0.f, 1.f};
+        TextAlign align{ TextAlign::left };
         float scale{ 1.f };
+
+        Font& font; //use the key or use a Font* ptr?
+        //void AddText(); //could move this here, but not rn at least
+
+        [[nodiscard]] TextStruct(std::string_view string, lab::vec3 pos, TextAlign align, float scale, FontKey fontKey);
+        [[nodiscard]] TextStruct(std::string_view string, lab::vec3 pos, TextAlign align, float scale, Font& font);
+        [[nodiscard]] TextStruct(std::string_view string, lab::vec3 pos, TextAlign align, float scale, std::string_view font_name, uint8_t font_size);
+
+        [[nodiscard]] TextStruct(TextStruct const& copySrc);
+        [[nodiscard]] TextStruct(TextStruct&& moveSrc);
+        TextStruct& operator=(TextStruct const& copySrc);
+        TextStruct& operator=(TextStruct&& moveSrc);
+
         uint16_t GetSelectionIndex(double xpos) const;
         float GetWidth() const;
     };

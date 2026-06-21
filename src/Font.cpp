@@ -8,9 +8,9 @@
 
 namespace EWE {
 
-    void AsyncLoadFont(Font& font, std::filesystem::path const& _path, int pxSize) {
+    void AsyncLoadFont(Font& font, std::filesystem::path const& _path_ab, int pxSize) {
 
-        auto font_load = [&, path_copy = _path] {
+        auto font_load = [&, path_copy = _path_ab] {
             Log::Debug("beginning async font load\n");
             {
                 const std::string thread_name = std::string("async font load : ") + path_copy.string();
@@ -18,6 +18,7 @@ namespace EWE {
             }
 
             font.image.owningQueue = &engine->transferQueue;
+            font.image.name = path_copy;
 
             font.image.data.extent.width = static_cast<uint32_t>(font.font->atlasW);
             font.image.data.extent.height = static_cast<uint32_t>(font.font->GetHeight());
@@ -89,11 +90,10 @@ namespace EWE {
                 DescriptorType::Combined,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             );
+            font.graphicsPkg.constructed = true;
 
             for_each_frame{
                 font.pushPack.GetRef(frame).GetTextureIndex(0) = font.graphicsPkg.GetRef().dii.index;
-                int index_copy = font.pushPack.GetRef(frame).GetTextureIndex(0);
-                Log::Debug("adjusted idnex : %d\n", index_copy);
             };
             Log::Debug("end async font load\n");
 
@@ -101,8 +101,9 @@ namespace EWE {
         engine->scheduler.enqueue(marl::Task{font_load});
     }
 
-    Font::Font(std::filesystem::path const& path, int pxSize, Sampler& _sampler)
-    : name{path},
+    Font::Font(std::filesystem::path const& path, uint8_t _pxSize, Sampler& _sampler)
+    : name{path / std::to_string(_pxSize)},
+        pxSize{_pxSize},
         font{nullptr},
         objPkg{name},
         buffer{
@@ -126,11 +127,6 @@ namespace EWE {
         dii{graphicsPkg.GetRef().dii}
     {
         font = new FontObject(path, pxSize); //i need this inlined?
-        AsyncLoadFont(*this, path, pxSize);
-        objPkg.payload.shaders[ShaderStage::Vertex] = Global::assetManager->shader.Get("textoverlay.vert.spv");
-        objPkg.payload.shaders[ShaderStage::Fragment] = Global::assetManager->shader.Get("textoverlay.frag.spv");
-        objPkg.payload.config.SetDefaults();
-        objPkg.payload.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
         label_name = name;
         ParamPack<Inst::BeginLabel> labelPack{
@@ -142,23 +138,18 @@ namespace EWE {
 
         objPkg.paramPool.PushBack(Inst::If); //0
         objPkg.paramPool.PushBack(labelPack); //1
-        objPkg.paramPool.PushBack(Inst::BeginLabel);
+        //objPkg.paramPool.PushBack(Inst::BeginLabel);
         objPkg.paramPool.PushBack(Inst::Push); //2
         objPkg.paramPool.PushBack(Inst::Draw); //3
-        objPkg.paramPool.PushBack(Inst::EndLabel);
+        //objPkg.paramPool.PushBack(Inst::EndLabel);
         objPkg.paramPool.PushBack(Inst::EndLabel); //4
         objPkg.paramPool.PushBack(Inst::EndIf); //5
 
         ifPack = *objPkg.paramPool.param_data[0].CastTo<ParamPack<Inst::If>>();
-        pushPack = *objPkg.paramPool.param_data[3].CastTo<ParamPack<Inst::Push>>();
-        drawPack = *objPkg.paramPool.param_data[4].CastTo<ParamPack<Inst::Draw>>();
-
-        auto debugLabelPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::BeginLabel>>();
+        //auto debugLabelPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::BeginLabel>>();
+        pushPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::Push>>();
+        drawPack = *objPkg.paramPool.param_data[3].CastTo<ParamPack<Inst::Draw>>();
         for_each_frame{
-            debugLabelPack.GetRef(frame).red = 0.f;
-            debugLabelPack.GetRef(frame).green = 1.f;
-            debugLabelPack.GetRef(frame).blue = 0.f;
-
             pushPack.GetRef(frame).buffer_count = 1;
             pushPack.GetRef(frame).texture_count = 1;
             pushPack.GetRef(frame).size = pushPack.GetRef(frame).Size();
@@ -168,7 +159,18 @@ namespace EWE {
             drawPack.GetRef(frame).firstVertex = 0;
             drawPack.GetRef(frame).vertexCount = 4;
             drawPack.GetRef(frame).instanceCount = 0;
+
+            //debugLabelPack.GetRef(frame).red = 0.f;
+            //debugLabelPack.GetRef(frame).green = 1.f;
+            //debugLabelPack.GetRef(frame).blue = 0.f;
         }
+
+        AsyncLoadFont(*this, path, pxSize);
+
+        objPkg.payload.shaders[ShaderStage::Vertex] = Global::assetManager->shader.Get("textoverlay.vert.spv");
+        objPkg.payload.shaders[ShaderStage::Fragment] = Global::assetManager->shader.Get("textoverlay.frag.spv");
+        objPkg.payload.config.SetDefaults();
+        objPkg.payload.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
         for_each_frame{
             buffer[frame].name = name / std::to_string(frame);
@@ -183,10 +185,8 @@ namespace EWE {
         ifPack.GetRef(engine->frameIndex).enabled = char_instance_count > 0;
         drawPack.GetRef(engine->frameIndex).instanceCount = char_instance_count;
 
-        auto debugLabelPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::BeginLabel>>();
-        debugLabelPack.GetRef(engine->frameIndex).name = string_debugger[engine->frameIndex].c_str();
-
-
+        //auto debugLabelPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::BeginLabel>>();
+        //debugLabelPack.GetRef(engine->frameIndex).name = string_debugger[engine->frameIndex].c_str();
     }
 
     void Font::AddText(TextStruct const& ts) {

@@ -13,7 +13,6 @@
 #include "EightWinds/RenderGraph/RasterPackage.h"
 #include "EightWinds/RenderGraph/GPUTask.h"
 #include "EightWinds/RenderGraph/Resources.h"
-#include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/Pipeline/TaskRasterConfig.h"
 #include "EightWinds/Pipeline/Graphics.h"
 

@@ -7,6 +7,7 @@
 namespace EWE {
     template<typename T>
     struct ConstructionDelayer{
+        using underlying_type = T;
         alignas(T) std::byte data[sizeof(T)];
 
         bool constructed = false;

@@ -13,16 +13,19 @@ namespace Asset{
     }
 
     void Manager<Buffer>::Destroy(AssetHash hash){
+        std::unique_lock<std::mutex> lock{mut};
         Buffer* buf = Get(hash);
         data_arena.DestroyElement(buf);
         association_container.Remove(hash);
     }
     void Manager<Buffer>::Destroy(Buffer& buf){
+        std::unique_lock<std::mutex> lock{mut};
         //do I hash it first? idk
         AssetHash hash = GetHash(buf);
         Destroy(hash);
     }
     Buffer* Manager<Buffer>::Get(AssetHash hash){
+        std::unique_lock<std::mutex> lock{mut};
         auto iter = association_container.find(hash);
         if(iter != association_container.end()){
             return iter->value;
@@ -42,6 +45,7 @@ namespace Asset{
     ){
         const AssetHash hash = CrossPlatformPathHash(name);
 
+        std::unique_lock<std::mutex> lock{mut};
         auto& ret = data_arena.AddElement(engine->logicalDevice, instanceSize, instanceCount, vmaAllocCreateInfo, usageFlags);
         association_container.push_back(hash, &ret);
         ret.SetName(name.string());
@@ -49,6 +53,7 @@ namespace Asset{
     }
 
     AssetHash Manager<Buffer>::ConvertBDAToHash(DeviceAddress addr){
+        std::unique_lock<std::mutex> lock{mut};
         for(auto& kvp : association_container){
             if(kvp.value->deviceAddress == addr){
                 return kvp.key;
@@ -60,9 +65,10 @@ namespace Asset{
 #ifdef EWE_IMGUI
     void Manager<Buffer>::Imgui(){
         //filesystem.Imgui();
+        std::unique_lock<std::mutex> lock{mut};
         for(auto& kvp : association_container){
             if(ImGui::TreeNode(kvp.value->name.c_str())){
-                Get(kvp.key);
+                Get(kvp.key); //what is this??
                 DragDropPtr::Source(*kvp.value);
 
                 ImGui::TreePop();

@@ -3,7 +3,6 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Systems/Sound_Engine.h"
 #include "EightWinds/Data/ForwardArgConstructionHelper.h"
-#include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/Preprocessor.h"
 #include "EightWinds/VulkanHeader.h"
 

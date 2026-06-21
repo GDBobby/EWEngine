@@ -61,21 +61,21 @@ namespace EWE {
 		}
 
 		glyphs[idx] = Glyph{
-			.uv0{penX / static_cast<float>(atlasW), penY},
-			.uv1{(penX + bmp->width) / static_cast<float>(atlasW), penY + cellHeight},
-			.width = bmp->width,
-			.height = bmp->rows,
-			.bearingX = face->glyph->bitmap_left,
-			.bearingY = face->glyph->bitmap_top,
-			.advance = face->glyph->advance.x >> 6
+			.uv0{static_cast<float>(penX) / static_cast<float>(atlasW), penY},
+			.uv1{static_cast<float>(penX + bmp->width) / static_cast<float>(atlasW), penY + cellHeight},
+			.width = static_cast<float>(bmp->width) / DEFAULT_WIDTH<float>,
+			.height = static_cast<float>(bmp->rows) / DEFAULT_HEIGHT<float>,
+			.bearingX = static_cast<float>(face->glyph->bitmap_left) / DEFAULT_WIDTH<float>,
+			.bearingY = static_cast<float>(face->glyph->bitmap_top) / DEFAULT_HEIGHT<float>,
+			.advance = static_cast<float>(face->glyph->advance.x >> 6) / DEFAULT_WIDTH<float>
 		};
 
 		penX += bmp->width + 1;
 	}
 
 	void FontObject::PrebakeASCII() {
-		cellHeight = static_cast<int>((face->size->metrics.ascender - face->size->metrics.descender) >> 6);
-		baselineOffset = static_cast<int>(face->size->metrics.ascender >> 6);
+		cellHeight = static_cast<float>((face->size->metrics.ascender - face->size->metrics.descender) >> 6);
+		baselineOffset = static_cast<float>(face->size->metrics.ascender >> 6);
 
 		for (uint32_t cp = 32; cp < 127; ++cp) {
 			AddGlyph(cp);
@@ -100,60 +100,66 @@ namespace EWE {
 
 	    float totalAdvance = 0.0f;
 	    for (uint32_t i = 0; i < count; i++) {
-	        totalAdvance += (pos[i].x_advance / 64.0f) * ts.scale;
+	        totalAdvance += (static_cast<float>(pos[i].x_advance) / 64.f) * ts.scale / DEFAULT_WIDTH<float>;
 	    }
 
-	    float startX = ts.x;
+	    float startX = ts.pos.x;
 	    switch (ts.align) {
-	        case TA_center:
-	            startX = ts.x - (totalAdvance * 0.5f);
+	        case TextAlign::center:
+	            startX = ts.pos.x - (totalAdvance * 0.5f);
 	            break;
-	        case TA_right:
-	            startX = ts.x - totalAdvance;
+	        case TextAlign::right:
+	            startX = ts.pos.x - totalAdvance;
 	            break;
-	        case TA_left:
+	        case TextAlign::left:
 	        default:
 	            break;
 	    }
 
 	    float penXf = startX;
-	    float penYf = ts.y;
+	    float penYf = ts.pos.y;
 	    uint16_t vertIndex = 0;
 		uint16_t instanceCount = 0;
 
 	    for (uint32_t i = 0; i < count; i++) {
 	        uint32_t gid = info[i].codepoint;
 	        auto it = glyphs.find(gid);
+			auto& glyph_pos = pos[i];
 	        if (it == glyphs.end()) {
-	            penXf += pos[i].x_advance / 64.0f * ts.scale;
-	            penYf += pos[i].y_advance / 64.0f * ts.scale;
+	            penXf += static_cast<float>(glyph_pos.x_advance) / 64.f * ts.scale / DEFAULT_WIDTH<float>;
+	            penYf += static_cast<float>(glyph_pos.y_advance) / 64.f * ts.scale / DEFAULT_HEIGHT<float>;
 	            continue;
 	        }
 	    	instanceCount++;
 	        Glyph& g = it->second;
 
-	    	const float left   = (penXf + ((pos[i].x_offset / 64.0f) + g.bearingX) * ts.scale) / static_cast<float>(engine->window.screenDimensions.width);
-	    	const float right  = left + (g.width * ts.scale) / static_cast<float>(engine->window.screenDimensions.width);
 
-	    	const float descentPx = static_cast<float>(cellHeight - baselineOffset);
-	    	const float bottom = (penYf - (pos[i].y_offset / 64.0f) * ts.scale) / static_cast<float>(engine->window.screenDimensions.height);
-	    	const float top    = bottom - (g.height + descentPx * 4.f) * ts.scale / static_cast<float>(engine->window.screenDimensions.height);
+	    	const float left   = (penXf + ((static_cast<float>(glyph_pos.x_offset) / 64.0f / DEFAULT_WIDTH<float>) + g.bearingX) * ts.scale);
+	    	const float right  = left + (g.width * ts.scale);
 
-	    	out[vertIndex].data.position = lab::vec3{left,  bottom, ts.z};
+	    	const float descentPx = static_cast<float>(cellHeight - baselineOffset) / DEFAULT_HEIGHT<float>;
+
+            const float half_height = (g.height + descentPx * 4.f) * ts.scale / 2.f;
+			const float y_starting = penYf - (static_cast<float>(glyph_pos.y_offset) / 64.0f / DEFAULT_HEIGHT<float>) * ts.scale;
+
+	    	const float bottom = y_starting - half_height;
+	    	const float top    = y_starting + half_height;
+
+	    	out[vertIndex].data.position = lab::vec3{left,  bottom, ts.pos.z};
 	    	out[vertIndex].data.uv = lab::vec2{g.uv0.x, g.uv0.y};
 	    	vertIndex++;
-	    	out[vertIndex].data.position = lab::vec3{right, bottom, ts.z};
+	    	out[vertIndex].data.position = lab::vec3{right, bottom, ts.pos.z};
 	    	out[vertIndex].data.uv = lab::vec2{g.uv1.x, g.uv0.y};
 	    	vertIndex++;
-	    	out[vertIndex].data.position = lab::vec3{left,  top, ts.z};
+	    	out[vertIndex].data.position = lab::vec3{left,  top, ts.pos.z};
 	    	out[vertIndex].data.uv = lab::vec2{g.uv0.x, g.uv1.y};
 	    	vertIndex++;
-	    	out[vertIndex].data.position = lab::vec3{right, top, ts.z};
+	    	out[vertIndex].data.position = lab::vec3{right, top, ts.pos.z};
 	    	out[vertIndex].data.uv = lab::vec2 {g.uv1.x, g.uv1.y};
 	    	vertIndex++;
 
-	        penXf += (pos[i].x_advance / 64.0f) * ts.scale;
-	        penYf += (pos[i].y_advance / 64.0f) * ts.scale;
+	        penXf += static_cast<float>(glyph_pos.x_advance) / 64.0f * ts.scale / DEFAULT_WIDTH<float>;
+	        penYf += static_cast<float>(glyph_pos.y_advance) / 64.0f * ts.scale / DEFAULT_HEIGHT<float>;
 	    }
 	    hb_buffer_destroy(buf);
 

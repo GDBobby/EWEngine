@@ -16,7 +16,7 @@ namespace Asset{
 
         [[nodiscard]] explicit Manager(std::filesystem::path const& root_dir, Manager<Image>& images);
 
-
+        std::mutex mut{};
         Hive<ImageView, 64> data_arena;
         KeyValueContainer<AssetHash, ImageView*> association_container;
 

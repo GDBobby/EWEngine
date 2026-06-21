@@ -27,6 +27,7 @@ namespace Asset{
 
         [[nodiscard]] explicit Manager(LogicalDevice& logicalDevice);
         
+        std::mutex mut;
         Hive<DescriptorImageInfo, 64> data_arena;
         KeyValueContainer<AssetHash, DescriptorImageInfo*> association_container;
 
@@ -42,6 +43,7 @@ namespace Asset{
         template<typename... Args>
         requires std::constructible_from<DescriptorImageInfo, Args...>
         DescriptorImageInfo& ConstructInto(Args&&... args) {
+            std::unique_lock<std::mutex> lock{mut};
             auto& ele = data_arena.AddElement(std::forward<Args>(args)...);
             AssetHash hash = GetHash(ele);
             association_container.push_back(hash, &ele);

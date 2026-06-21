@@ -7,7 +7,6 @@
 
 //#extension GL_GOOGLE_include_directive : enable
 
-//this needs to match the value in EightWinds/GlobalPushConstant.h
 #define ARBITRARY_MAX_BUFFER_COUNT 8
 #define ARBITRARY_MAX_TEXTURE_COUNT 8
 

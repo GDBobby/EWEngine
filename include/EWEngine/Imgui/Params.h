@@ -3,7 +3,6 @@
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Preprocessor.h"
 #include "EightWinds/DescriptorImageInfo.h"
-#include "EightWinds/GlobalPushConstant.h"
 #include "EightWinds/VulkanHeader.h"
 
 #include "imgui.h"

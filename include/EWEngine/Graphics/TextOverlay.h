@@ -15,6 +15,8 @@
 #include "EightWinds/Command/ObjectInstructionPackage.h"
 #include "EightWinds/RenderGraph/RasterPackage.h"
 
+#include "EightWinds/Data/KeyValueContainer.h"
+
 
 #include <LAB/Vector.h>
 
@@ -23,6 +25,15 @@
 namespace EWE {
 	//Font uses harfbuzz and freetype, i want to hide it from the rest of the program
 	struct FontObject; //
+
+	struct FontKey{
+		std::string name; //no folders
+		uint8_t size;
+
+		bool operator==(FontKey const& other) const{
+			return name == other.name && size == other.size;
+		}
+	};
 
 	class TextOverlay {
 	private:
@@ -34,13 +45,29 @@ namespace EWE {
 		float framebuffer_height;
 
 		uint32_t numLetters;
+		
+		std::mutex mut;
 		Hive<Font> fonts;
-		Font* currentFont;
+		KeyValueContainer<FontKey, Font*> font_map;
+ 
+		struct FontDescriptor{
+			DeviceAddress buffer;
+			TextureIndex index;
+		};
+		static constexpr uint16_t font_limit = 256;
+		PerFlight<Buffer> draw_buffer;
+		//swap this to a mesh shader
+		Command::ObjectPackage objPackage;
+		InstructionPointer<ParamPack<Inst::Push>> pushPack;
+		InstructionPointer<ParamPack<Inst::DrawIndirect>> indirectPack;
+
+		Font& GetFont(FontKey const& font);
+		Font& GetFont(std::filesystem::path const& name, uint8_t size);
+
 		Sampler& sampler;
 
 		friend struct TextStruct;
 		friend struct FontObject;
-		void LoadConsolas24();
 
 	public:
 		bool visible = true;
@@ -50,24 +77,16 @@ namespace EWE {
 
 		void WindowResize();
 		
-		static float GetWidth(TextStruct const& ts);
+		float GetWidth(TextStruct const& ts);
 		//float addText(std::string text, float x, float y, TextAlign align, float textScale = 1.f);
-		static void AddText(TextStruct const& textStruct, const float scaleX = 1.f);
+		void AddText(TextStruct const& textStruct, const float scaleX = 1.f);
 
-		static void StaticAddText(TextStruct textStruct);
+		void AddDefaultText(LoopTimer const& timer);
+		void BeginTextUpdate();
+		void EndTextUpdate();
 
-		static void AddDefaultText(LoopTimer const& timer);
-		static void BeginTextUpdate();
-		static void EndTextUpdate();
+		bool RemoveFont(Font* font);
 
-		static Font* AddFont(std::filesystem::path const& name, int size);
-		static bool SetCurrentFont(Font*);
-		static Font* GetCurrentFont();
-		static uint16_t GetFontCount();
-		static std::filesystem::path const& GetCurrentFontName();
-
-		static bool RemoveFont(Font* font);
-
-		static void Record();
+		void Record();
 	};
 }

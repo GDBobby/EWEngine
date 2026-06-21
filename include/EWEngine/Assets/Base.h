@@ -9,7 +9,9 @@
 
 #include "EWEngine/Imgui/DragDrop.h"
 #include "EWEngine/Imgui/Objects.h"
+
 #include <type_traits>
+#include <mutex>
 
 namespace EWE{
 namespace Asset{
@@ -91,6 +93,7 @@ namespace Asset{
         template<typename... Args>
         requires std::constructible_from<Resource, Args...>
         Resource& ConstructInto(Args&&... args) {
+            std::unique_lock<std::mutex> lock{mut};
             auto& ele = data_arena.AddElement(std::forward<Args>(args)...);
             AssetHash hash = GetHash(ele);
             association_container.push_back(hash, &ele);

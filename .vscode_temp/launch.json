@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch EWEngine",
+            "type": "gdb",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": ["${workspaceFolder}/examples/common/"],
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "type category enable libstdcxx",
+
+                "type format add --format hex \"std::byte\"",
+
+                "script -- def force_path_string(valobj, internal_dict):",
+                "script --     expr = valobj.EvaluateExpression('this->c_str()')",
+                "script --     if expr.IsValid() and expr.GetSummary(): return expr.GetSummary()",
+                "script --     expr = valobj.EvaluateExpression('this->string().c_str()')",
+                "script --     if expr.IsValid() and expr.GetSummary(): return expr.GetSummary()",
+                "script --     return 'Path layout hidden'",
+
+                "type summary add -F force_path_string \"std::filesystem::path\"",
+                "type summary add -F force_path_string \"std::filesystem::__cxx11::path\"",
+                
+                "process handle SIGILL -s true -n true -p true"
+            ],
+            "expressions": "native",
+            "stopOnEntry": false
+        }
+    ]
+}

@@ -3,7 +3,6 @@
 #include "EWEngine/Assets/BaseInstPackages.h"
 #include "EightWinds/Logger.h"
 #include "EightWinds/Command/InstructionPackage.h"
-#include "EightWinds/GlobalPushConstant.h"
 
 #include "EightWinds/ObjectRasterConfig.h"
 #include "EightWinds/VulkanHeader.h"

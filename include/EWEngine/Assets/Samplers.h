@@ -13,6 +13,7 @@ namespace Asset{
     struct Manager<Sampler>{
         [[nodiscard]] explicit Manager();
         
+        std::mutex mut{};
         Hive<Sampler, 64> data_arena;
         KeyValueContainer<Sampler::CondensedType, Sampler*> association_container;
 

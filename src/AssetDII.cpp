@@ -57,6 +57,7 @@ namespace Asset{
     }
 
     DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(AssetHash hash){
+        std::unique_lock<std::mutex> lock{mut};
         for(auto kvp : association_container){
             if(kvp.key == hash){
                 return kvp.value;
@@ -83,6 +84,7 @@ namespace Asset{
     DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(DiiCreation const& params){
         //search for a match, potentially, and return the existing one
         DescriptorImageInfo* ret = nullptr;
+        std::unique_lock<std::mutex> lock{mut};
         if(params.sampler){
             ret = &data_arena.AddElement(*params.sampler, *params.view, params.type, params.layout);
             ret->name = params.view->image.name / std::to_string(Sampler::Condense(params.sampler->info)) / ".dii";
@@ -103,6 +105,7 @@ namespace Asset{
     }
 
     AssetHash Manager<DescriptorImageInfo>::ConvertTextureIndexToHash(TextureIndex index) const{
+        //std::unique_lock<std::mutex> lock{mut};
         for(auto& kvp : association_container){
             if(kvp.value->index == index){
                 return kvp.key;
@@ -117,6 +120,7 @@ namespace Asset{
 #ifdef EWE_IMGUI
     void Manager<DescriptorImageInfo>::Imgui(){
         //filesystem.Imgui();
+        std::unique_lock<std::mutex> lock{mut};
         ImGui::Checkbox("show creation", &showCreation);
         if(showCreation){
             if(creation_params.sampler != nullptr){

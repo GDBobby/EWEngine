@@ -11,6 +11,8 @@
 #include "EWEngine/Graphics/SpecializedTasks/MergeTask.h"
 #include "EWEngine/Graphics/SpecializedTasks/ImguiTask.h"
 
+#include "LAB/Vector.h"
+
 namespace EWE{
 
 namespace Global{
@@ -24,5 +26,10 @@ namespace Global{
     extern ImguiTask* imguiTask;
 
     void InitEngineGlobal(std::filesystem::path const& path);
+
+    //pixel to vulkan
+    float ConvertP2V_Width(int width);
+    float ConvertP2V_Height(int height);
+    lab::vec2 ConvertP2V(lab::ivec2 dimensions);
 } //namespace Global
 } //namepsace EWE
