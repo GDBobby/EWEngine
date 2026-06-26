@@ -39,32 +39,36 @@ namespace EWE {
 	private:
 		static constexpr uint32_t TEXTOVERLAY_MAX_CHAR_COUNT = 65536 / sizeof(Font::Vert);
 	public:
-		float scale;
-		
-		float framebuffer_width;
-		float framebuffer_height;
+		float scale; //not in use currently
 
 		uint32_t numLetters;
 		
 		std::mutex mut;
 		Hive<Font> fonts;
 		KeyValueContainer<FontKey, Font*> font_map;
- 
-		struct FontDescriptor{
+
+		Sampler& sampler;
+//#pragma pack(push, 1)
+		struct FontDraw{
 			DeviceAddress buffer;
 			TextureIndex index;
 		};
+//#pragma pack(pop)
 		static constexpr uint16_t font_limit = 256;
+
+		std::vector<FontDraw> font_draw_data{};
+		std::vector<VkDrawIndirectCommand> indirect_cmd_data{};
+
 		PerFlight<Buffer> draw_buffer;
+		PerFlight<Buffer> indirect_buffer;
 		//swap this to a mesh shader
-		Command::ObjectPackage objPackage;
+		Command::ObjectPackage objPkg;
 		InstructionPointer<ParamPack<Inst::Push>> pushPack;
 		InstructionPointer<ParamPack<Inst::DrawIndirect>> indirectPack;
 
 		Font& GetFont(FontKey const& font);
 		Font& GetFont(std::filesystem::path const& name, uint8_t size);
 
-		Sampler& sampler;
 
 		friend struct TextStruct;
 		friend struct FontObject;
@@ -74,8 +78,6 @@ namespace EWE {
 
 		[[nodiscard]] explicit TextOverlay();
 		~TextOverlay();
-
-		void WindowResize();
 		
 		float GetWidth(TextStruct const& ts);
 		//float addText(std::string text, float x, float y, TextAlign align, float textScale = 1.f);

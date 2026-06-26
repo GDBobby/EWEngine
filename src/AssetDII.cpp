@@ -116,6 +116,14 @@ namespace Asset{
 #endif
         return INVALID_HASH;
     }
+    DescriptorImageInfo const& Manager<DescriptorImageInfo>::RevertIndex(TextureIndex index) const{
+        for(auto& kvp : association_container){
+            if(kvp.value->index == index){
+                return *kvp.value;
+            }
+        }
+        EWE_UNREACHABLE;
+    }
 
 #ifdef EWE_IMGUI
     void Manager<DescriptorImageInfo>::Imgui(){

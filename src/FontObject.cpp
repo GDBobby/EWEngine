@@ -139,7 +139,10 @@ namespace EWE {
 
 	    	const float descentPx = static_cast<float>(cellHeight - baselineOffset) / DEFAULT_HEIGHT<float>;
 
-            const float half_height = (g.height + descentPx * 4.f) * ts.scale / 2.f;
+
+			static constexpr float descent_multiplier = 4.f;
+
+            const float half_height = (g.height + descentPx * descent_multiplier) * ts.scale / 2.f;
 			const float y_starting = penYf - (static_cast<float>(glyph_pos.y_offset) / 64.0f / DEFAULT_HEIGHT<float>) * ts.scale;
 
 	    	const float bottom = y_starting - half_height;

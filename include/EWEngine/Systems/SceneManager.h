@@ -21,7 +21,8 @@ namespace EWE {
 		void SetStartupScene(SceneKey sceneKey);
 
 		const SceneKey scene_exit = 255;
-	private:
+	
+	//private:
 		SceneKey currentScene;
 
 		//SceneKey 0 is reserved for the loading_scene, which isn't technically a scene. 

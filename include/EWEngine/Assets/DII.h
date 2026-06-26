@@ -51,6 +51,7 @@ namespace Asset{
         }
 
         AssetHash ConvertTextureIndexToHash(TextureIndex index) const;
+        DescriptorImageInfo const& RevertIndex(TextureIndex index) const;
 
 #ifdef EWE_IMGUI
         KeyValueContainer<DescriptorImageInfo*, ImTextureRef> imgui_texture_refs;

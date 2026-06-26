@@ -18,7 +18,7 @@ namespace EWE {
             }
 
             font.image.owningQueue = &engine->transferQueue;
-            font.image.name = path_copy;
+            font.image.name = font.name;
 
             font.image.data.extent.width = static_cast<uint32_t>(font.font->atlasW);
             font.image.data.extent.height = static_cast<uint32_t>(font.font->GetHeight());
@@ -91,10 +91,6 @@ namespace EWE {
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             );
             font.graphicsPkg.constructed = true;
-
-            for_each_frame{
-                font.pushPack.GetRef(frame).GetTextureIndex(0) = font.graphicsPkg.GetRef().dii.index;
-            };
             Log::Debug("end async font load\n");
 
         };
@@ -105,7 +101,7 @@ namespace EWE {
     : name{path / std::to_string(_pxSize)},
         pxSize{_pxSize},
         font{nullptr},
-        objPkg{name},
+        //objPkg{name},
         buffer{
             engine->logicalDevice,
             sizeof(Font::Vert), MAX_CHAR_COUNT,
@@ -128,49 +124,7 @@ namespace EWE {
     {
         font = new FontObject(path, pxSize); //i need this inlined?
 
-        label_name = name;
-        ParamPack<Inst::BeginLabel> labelPack{
-            .name = label_name.c_str(),
-            .red = 0.f,
-            .green = 1.f,
-            .blue = 0.f
-        };
-
-        objPkg.paramPool.PushBack(Inst::If); //0
-        objPkg.paramPool.PushBack(labelPack); //1
-        //objPkg.paramPool.PushBack(Inst::BeginLabel);
-        objPkg.paramPool.PushBack(Inst::Push); //2
-        objPkg.paramPool.PushBack(Inst::Draw); //3
-        //objPkg.paramPool.PushBack(Inst::EndLabel);
-        objPkg.paramPool.PushBack(Inst::EndLabel); //4
-        objPkg.paramPool.PushBack(Inst::EndIf); //5
-
-        ifPack = *objPkg.paramPool.param_data[0].CastTo<ParamPack<Inst::If>>();
-        //auto debugLabelPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::BeginLabel>>();
-        pushPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::Push>>();
-        drawPack = *objPkg.paramPool.param_data[3].CastTo<ParamPack<Inst::Draw>>();
-        for_each_frame{
-            pushPack.GetRef(frame).buffer_count = 1;
-            pushPack.GetRef(frame).texture_count = 1;
-            pushPack.GetRef(frame).size = pushPack.GetRef(frame).Size();
-            pushPack.GetRef(frame).GetDeviceAddress(0) = buffer[frame].deviceAddress;
-
-            drawPack.GetRef(frame).firstInstance = 0;
-            drawPack.GetRef(frame).firstVertex = 0;
-            drawPack.GetRef(frame).vertexCount = 4;
-            drawPack.GetRef(frame).instanceCount = 0;
-
-            //debugLabelPack.GetRef(frame).red = 0.f;
-            //debugLabelPack.GetRef(frame).green = 1.f;
-            //debugLabelPack.GetRef(frame).blue = 0.f;
-        }
-
         AsyncLoadFont(*this, path, pxSize);
-
-        objPkg.payload.shaders[ShaderStage::Vertex] = Global::assetManager->shader.Get("textoverlay.vert.spv");
-        objPkg.payload.shaders[ShaderStage::Fragment] = Global::assetManager->shader.Get("textoverlay.frag.spv");
-        objPkg.payload.config.SetDefaults();
-        objPkg.payload.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
         for_each_frame{
             buffer[frame].name = name / std::to_string(frame);
@@ -182,9 +136,13 @@ namespace EWE {
     }
 
     void Font::EndRenderUpdate() {
-        ifPack.GetRef(engine->frameIndex).enabled = char_instance_count > 0;
-        drawPack.GetRef(engine->frameIndex).instanceCount = char_instance_count;
+        //ifPack.GetRef(engine->frameIndex).enabled = char_instance_count > 0;
+        //drawPack.GetRef(engine->frameIndex).instanceCount = char_instance_count;
 
+        if (buffer[engine->frameIndex].GetMapped() != nullptr) {
+            buffer[engine->frameIndex].Flush();
+            buffer[engine->frameIndex].Unmap();
+        }
         //auto debugLabelPack = *objPkg.paramPool.param_data[2].CastTo<ParamPack<Inst::BeginLabel>>();
         //debugLabelPack.GetRef(engine->frameIndex).name = string_debugger[engine->frameIndex].c_str();
     }

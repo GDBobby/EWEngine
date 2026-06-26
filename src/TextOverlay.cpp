@@ -11,6 +11,7 @@
 
 #include <hb.h>
 #include <hb-ft.h>
+#include <vulkan/vulkan_core.h>
 
 
 namespace EWE {
@@ -41,35 +42,80 @@ namespace EWE {
 				}
 			)
 		},
-		draw_buffer{Global::assetManager->buffer.ConstructInto(
+		draw_buffer{
 			engine->logicalDevice,
-			sizeof(FontDescriptor), font_limit,
-            VmaAllocationCreateInfo{
-                .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-                .usage = VMA_MEMORY_USAGE_AUTO,
-                .requiredFlags = 0,
-                .preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                .memoryTypeBits = 0,
-                .pool = VK_NULL_HANDLE,
-                .pUserData = nullptr,
-                .priority = 1.f
-            }
-		)},
-		objPackage{"textoverlay"}
+			sizeof(FontDraw), font_limit,
+			VmaAllocationCreateInfo{
+				.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+				.usage = VMA_MEMORY_USAGE_AUTO,
+				.requiredFlags = 0,
+				.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				.memoryTypeBits = 0,
+				.pool = VK_NULL_HANDLE,
+				.pUserData = nullptr,
+				.priority = 1.f
+			}
+		},
+		indirect_buffer{
+			engine->logicalDevice,
+			sizeof(VkDrawIndirectCommand), font_limit,
+			VmaAllocationCreateInfo{
+				.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+				.usage = VMA_MEMORY_USAGE_AUTO,
+				.requiredFlags = 0,
+				.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				.memoryTypeBits = 0,
+				.pool = VK_NULL_HANDLE,
+				.pUserData = nullptr,
+				.priority = 1.f
+			},
+			VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
+		},
+		objPkg{"textoverlay"}
 	{
+		//objPkg.paramPool.PushBack(Inst::Breakpoint);
+		//objPkg.paramPool.PushBack(Inst::DebugFunction);
+		objPkg.paramPool.PushBack(Inst::Push);
+		objPkg.paramPool.PushBack(Inst::DrawIndirect);
 
+		pushPack = *objPkg.paramPool.param_data[0].CastTo<ParamPack<Inst::Push>>();
+		indirectPack = *objPkg.paramPool.param_data[1].CastTo<ParamPack<Inst::DrawIndirect>>();
+
+		//auto temp_debug_pack = *objPkg.paramPool.param_data[0].CastTo<ParamPack<Inst::DebugFunction>>();
+
+		for_each_frame{
+			//temp_debug_pack.GetRef(frame).callback = [&](EWE::Command::Exec::ExecContext& ctx){
+				//draw_buffer[frame
+			//	Log::Debug("manually inserted breakpoint\n");
+			//};
+
+			std::string buffer_name = "textoverlay_draw[" + std::to_string(frame) + ']';
+			draw_buffer[frame].SetName(buffer_name);
+			buffer_name = "textoverlay_indirect[" + std::to_string(frame) + ']';
+			indirect_buffer[frame].SetName(buffer_name);
+			
+			pushPack.GetRef(frame).buffer_count = 1;
+			pushPack.GetRef(frame).texture_count = 0;
+			pushPack.GetRef(frame).size = pushPack.GetRef(frame).Size();
+			pushPack.GetRef(frame).GetDeviceAddress(0) = draw_buffer[frame].deviceAddress;
+
+			indirectPack.GetRef(frame).buffer = indirect_buffer[frame].buffer_info.buffer;
+			indirectPack.GetRef(frame).offset = 0;
+			indirectPack.GetRef(frame).drawCount = 0;
+			indirectPack.GetRef(frame).stride = sizeof(VkDrawIndirectCommand);
+		}
+
+        objPkg.payload.shaders[ShaderStage::Vertex] = Global::assetManager->shader.Get("textoverlay.vert.spv");
+        objPkg.payload.shaders[ShaderStage::Fragment] = Global::assetManager->shader.Get("textoverlay.frag.spv");
+		objPkg.payload.config.SetDefaults();
+        objPkg.payload.config.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		/*
-		const FontKey fontKey{
-			.name{"Consolas.ttf"},
-			.size{16}
-		};
-		GetFont(fontKey);
-		*/
-		objPackage.paramPool.PushBack(Inst::Push);
-		objPackage.paramPool.PushBcck(Inst::DrawIndirect);
+		static constexpr std::size_t size_debugger = sizeof(FontDraw);
+		static constexpr std::size_t align_debugger = sizeof(VkDrawIndirectCommand);
 
-		pushPack = *objPackage.paramPool.param_data[0].CastTo<ParamPack<Inst::Push>>();
-		indirectPack = *objPackage.paramPool.param_data[1].CastTo<ParamPack<Inst::Indirect>>();
+		FontDraw debug_array[2];
+		const std::size_t offset_debugger = reinterpret_cast<std::size_t>(&debug_array[1]) - reinterpret_cast<std::size_t>(&debug_array[0]);
+        */
 	}
 
 
@@ -136,25 +182,59 @@ namespace EWE {
 	}
 
 	void TextOverlay::EndTextUpdate() {
+		font_draw_data.clear();
+		indirect_cmd_data.clear();
+		font_draw_data.resize(fonts.Size());
+		indirect_cmd_data.resize(fonts.Size());
+
+		uint32_t font_index = 0;
+		uint32_t cmd_index = 0;
+
+		uint32_t& drawCount = indirectPack.GetRef(engine->frameIndex).drawCount;
+		drawCount = 0;
+
 		for (auto& font : fonts) {
 			auto& font_buffer = font.buffer[engine->frameIndex];
-			font.ifPack.GetRef(engine->frameIndex).enabled = font.char_instance_count > 0;
-			if (font_buffer.GetMapped() != nullptr) {
-				font_buffer.Flush();
-				font_buffer.Unmap();
+			if(font.char_instance_count > 0){
+				font_draw_data[font_index].buffer = font_buffer.deviceAddress;
+				font_draw_data[font_index].index = font.dii.index;
+
+				indirect_cmd_data[cmd_index].vertexCount = 4;
+				indirect_cmd_data[cmd_index].instanceCount = font.char_instance_count;
+				indirect_cmd_data[cmd_index].firstVertex = 0;
+				indirect_cmd_data[cmd_index].firstInstance = 0;
+				
+				/*
+				Log::Debug("font[%s] draw buffer[%u] : %s : %s : %u\n", 
+					font.name.string().c_str(), drawCount, 
+					engine->logicalDevice.RevertDA(font_draw_data[font_index].buffer).name.string().c_str(), 
+					engine->logicalDevice.RevertTI(font_draw_data[font_index].index).view.image.name.string().c_str(),
+					indirect_cmd_data[cmd_index].instanceCount
+				);
+				*/
+
+				cmd_index++;
+				font_index++;
+				drawCount++;
+
+				//font.ifPack.GetRef(engine->frameIndex).enabled = font.char_instance_count > 0;
+				font.EndRenderUpdate();
 			}
-			font.EndRenderUpdate();
 		}
+		if(drawCount > 1){
+			//drawCount = 1;
+		}
+
+		memcpy(draw_buffer[engine->frameIndex].Map(), font_draw_data.data(), font_draw_data.size() * sizeof(FontDraw));
+		memcpy(indirect_buffer[engine->frameIndex].Map(), indirect_cmd_data.data(), indirect_cmd_data.size() * sizeof(VkDrawIndirectCommand));
+		draw_buffer[engine->frameIndex].Flush();
+		indirect_buffer[engine->frameIndex].Flush();
+		draw_buffer[engine->frameIndex].Unmap();
+		indirect_buffer[engine->frameIndex].Unmap();
 	}
 
 	bool TextOverlay::RemoveFont(Font* font) {
 		fonts.DestroyElement(font);
 		return true;
-	}
-
-	void TextOverlay::WindowResize() {
-		framebuffer_width = engine->window.screenDimensions.width;
-		framebuffer_height = engine->window.screenDimensions.height;
-		scale = framebuffer_width / DEFAULT_WIDTH<float>;
 	}
 }

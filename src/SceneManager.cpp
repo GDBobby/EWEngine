@@ -2,6 +2,8 @@
 
 #include "EWEngine/EWEngine.h"
 
+#include "EWEngine/Debug/RenderGraph.h"
+
 
 namespace EWE {
 	SceneManager::SceneManager() {
@@ -27,36 +29,45 @@ namespace EWE {
 		*/
 
 		currentScenePtr->Entry();
+		auto* renderGraph = engine->current_renderGraph;
 
-		while (gameRunning && !glfwWindowShouldClose(engine->window.window)) {
-			glfwPollEvents();
+		try{
+			while (gameRunning && !glfwWindowShouldClose(engine->window.window)) {
+				glfwPollEvents();
 
-			auto* renderGraph = engine->current_renderGraph;
 
-			if (swappingScenes) [[unlikely]] {
-				SwapScenes();
-				render_loop.delta = render_loop.duration;
-				Log::Debug("swapping scenes beginning \n");
-				renderGraph = engine->current_renderGraph;
-				//stop loading screen here
-			}
-			else if (render_loop.ReadyForRenderUpdate()) {
-
-				if(renderGraph->Acquire(engine->frameIndex)){
-					currentScenePtr->RenderUpdate(render_loop.delta.count());
-					renderGraph->UpdateSwapImage(engine->frameIndex);
-					renderGraph->RecreateBarriers(engine->frameIndex);
-					renderGraph->Execute(engine->frameIndex);
-
-					engine->frameIndex = (engine->frameIndex + 1) % EWE::max_frames_in_flight;
-					engine->totalFramesSubmitted++;
-
+				if (swappingScenes) [[unlikely]] {
+					SwapScenes();
+					render_loop.delta = render_loop.duration;
+					Log::Debug("swapping scenes beginning \n");
+					renderGraph = engine->current_renderGraph;
+					//stop loading screen here
 				}
-				else {
-					//recreate swapchain is handled implicitly
+				else if (render_loop.ReadyForRenderUpdate()) {
+
+					if(renderGraph->Acquire(engine->frameIndex)){
+						currentScenePtr->RenderUpdate(render_loop.delta.count());
+						renderGraph->UpdateSwapImage(engine->frameIndex);
+						renderGraph->RecreateBarriers(engine->frameIndex);
+						renderGraph->Execute(engine->frameIndex);
+
+						engine->frameIndex = (engine->frameIndex + 1) % EWE::max_frames_in_flight;
+						engine->totalFramesSubmitted++;
+
+					}
+					else {
+						//recreate swapchain is handled implicitly
+					}
+					render_loop.delta = LoopTimer::DurationType{0};
 				}
-				render_loop.delta = LoopTimer::DurationType{0};
 			}
+		}
+		catch (EWEException& except) {
+			engine->logicalDevice.HandleVulkanException(except);
+
+			Debug_RenderGraph_DEVICE_LOST(*renderGraph, except);
+
+			Log::Error("caught ewe exception\n");
 		}
 	}
 	void SceneManager::ChangeScene(SceneKey sceneKey) {

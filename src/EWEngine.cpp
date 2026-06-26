@@ -7,6 +7,8 @@
 #include "EightWinds/Backend/DeviceSpecialization/DeviceSpecialization.h"
 #include "EightWinds/Backend/DeviceSpecialization/FeatureProperty.h"
 
+#include "EWEngine/Debug/RenderGraph.h"
+
 #include "GLFW/glfw3.h"
 
 #ifdef USING_NVIDIA_AFTERMATH
@@ -18,6 +20,7 @@
 #endif
 
 #include "marl/event.h"
+#include "marl/conditionvariable.h"
 
 #include <filesystem>
 
@@ -156,6 +159,11 @@ namespace EWE{
         features2.features.samplerAnisotropy = VK_TRUE;
         features2.features.wideLines = VK_TRUE;
         features2.features.shaderInt64 = VK_TRUE;
+        features2.features.multiDrawIndirect = VK_TRUE;
+
+        auto& features11 = specDev.GetFeature<VkPhysicalDeviceVulkan11Features>();
+        features11.shaderDrawParameters = VK_TRUE;
+
         
         auto& features12 = specDev.GetFeature<VkPhysicalDeviceVulkan12Features>();
         features12.scalarBlockLayout = VK_TRUE;
@@ -168,6 +176,8 @@ namespace EWE{
         features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
         features12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
         features12.timelineSemaphore = VK_TRUE;
+        features12.drawIndirectCount = VK_TRUE;
+
 
         auto& features13 = specDev.GetFeature<VkPhysicalDeviceVulkan13Features>();
         features13.dynamicRendering = VK_TRUE;
@@ -297,6 +307,26 @@ namespace EWE{
         EngineSettings::InitializeSettings();
 
         TimelineSemaphore::RelinquishThreadControl = TimeSemaphoreRelinquisher;
+
+        STC_Manager::use_custom_yield = [&]{
+            return marl::Scheduler::get() != nullptr; 
+        };
+        STC_Manager::custom_yield_func = [&](RingBuffer<TimelineSemaphore, 8>& ringBuffer, std::mutex& mut) -> TimelineSemaphore& {
+            TimelineSemaphore* ret;
+
+            marl::Event event{ marl::Event::Mode::Manual };
+            while (true) {
+                {
+                    std::unique_lock<std::mutex> lock(mut);
+                    if (!ringBuffer.Full()) {
+                        ret = ringBuffer.GetNext();
+                        break;
+                    }
+                }
+                event.wait_for(std::chrono::microseconds(1));
+            }
+            return *ret;
+        };
 
         return marl::Scheduler::Config::allCores();
     }
@@ -435,13 +465,13 @@ namespace EWE{
     }
 
     void EWEngine::Imgui() {
+        static bool draw_demo = true;
         if (ImGui::Begin("engine")) {
 
             ImGui::Text(logicalDevice.physicalDevice.name.c_str());
             
             switch (glfwGetPlatform()) {
                 case GLFW_PLATFORM_WIN32:   ImGui::Text("glfw platform : Win32\n"); break;
-                case GLFW_PLATFORM_COCOA:   ImGui::Text("glfw platform : Cocoa (macOS)\n"); break;
                 case GLFW_PLATFORM_WAYLAND: ImGui::Text("glfw platform : Wayland\n"); break;
                 case GLFW_PLATFORM_X11:     ImGui::Text("glfw platform : X11\n"); break;
                 default:                    ImGui::Text("glfw platform : Unknown\n"); break;
@@ -455,16 +485,18 @@ namespace EWE{
             }
 
             ImGui::Text("working directory : %s", std::filesystem::current_path().string().c_str());
-
-
-            static bool draw_demo = true;
             ImGui::Checkbox("draw demo", &draw_demo);
-            if (draw_demo) {
-                ImGui::ShowDemoWindow();
+
+            if(ImGui::Button("print out rendergraph debug")){
+                EWEException ewe_except{VK_RESULT_MAX_ENUM, "fake error"};
+                Debug_RenderGraph_DEVICE_LOST(*engine->current_renderGraph, ewe_except);
             }
 
         }
         ImGui::End();
+        if (draw_demo) {
+            ImGui::ShowDemoWindow();
+        }
     }
 #endif
 

@@ -425,6 +425,7 @@ namespace EWE{
         //defualt spec constants
 
         //variable data
+        /*
         const std::string var_tree_name = std::string("Variables : [") + std::to_string(obj.variables.Size()) + ']';
         if(ImGui::TreeNode(var_tree_name.c_str())){
             for(auto& var : obj.variables){
@@ -499,6 +500,7 @@ namespace EWE{
             }
             ImGui::TreePop();
         }
+        */
         ImGui::PopID();
     }
 

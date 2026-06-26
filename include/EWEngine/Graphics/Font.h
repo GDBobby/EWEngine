@@ -30,7 +30,7 @@ namespace EWE {
         //implementation is hidden, it includes harfbuzz and freetype which I want separated
         FontObject* font;
 
-        Command::ObjectPackage objPkg;
+        //Command::ObjectPackage objPkg;
 
         PerFlight<Buffer> buffer;
         PerFlight<std::string> string_debugger;
@@ -50,11 +50,6 @@ namespace EWE {
         bool ReadyForUsage() const{ return graphicsPkg.constructed; }
         float GetStringWidth(TextStruct const& ts);
 
-        InstructionPointer<ParamPack<Inst::If>> ifPack;
-        InstructionPointer<ParamPack<Inst::Push>> pushPack;
-        InstructionPointer<ParamPack<Inst::Draw>> drawPack;
-
-        std::string label_name;
         uint16_t char_instance_count = 0;
         void EndRenderUpdate();
 
