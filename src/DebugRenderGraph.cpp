@@ -365,7 +365,22 @@ namespace EWE{
 
             auto const& value = pack.[:type_mem:];
             using MemberType = std::remove_cvref_t<decltype(value)>;
-            if constexpr(std::is_pointer_v<T>){
+            if constexpr(std::is_same_v<MemberType, VkBuffer>){
+                outFile << " : " << reinterpret_cast<std::size_t>(value) << " : ";
+                if(value == VK_NULL_HANDLE){
+                    outFile << "VK_NULL_HANDLE\n";
+                }
+                else{
+                    Buffer const* reverted_buffer = engine->logicalDevice.RevertVkBuffer(value);
+                    if(reverted_buffer == nullptr){
+                        outFile << "nullptr (failed to revert)\n";
+                    }
+                    else{
+                        outFile << reverted_buffer->name << '\n';
+                    }
+                }
+            }
+            else if constexpr(std::is_pointer_v<T>){
                 outFile << " : " << reinterpret_cast<std::size_t>(value) << '\n';
             }
             else if constexpr(std::meta::is_class_type(^^MemberType)){
@@ -399,6 +414,44 @@ namespace EWE{
             auto const& renderInfo = reinterpret_cast<VkRenderingInfo const&>(pack->GetCRef(frameIndex));
             PrintMemberAndData(file, renderInfo);
         }
+#if 1//EWE_DEBUG_BOOL
+        else if (iType == Inst::Push){
+            auto const* pack = ip.CastTo<ParamPack<Inst::Push>>();
+            auto const& push = pack->GetCRef(frameIndex);
+            for(std::size_t i = 0; i < push.buffer_count; i++){
+                file << "buffer[";
+                outFile << i << "] : ";
+                auto const& da = push.GetDeviceAddress(i);
+                if(da == null_buffer){
+                    outFile << "null buffer\n";
+                }
+                else{
+                    auto const* binded_buffer = engine->logicalDevice.RevertDA(da);
+                    if(binded_buffer == nullptr){
+                        outFile << da << " : " << "nullptr (couldnt be reversed)\n";
+                    }
+                    else{
+                        outFile << da << " : " << binded_buffer->name << '\n';
+                    }
+                }
+            }
+            for(std::size_t i = 0; i < push.texture_count; i++){
+                auto const& ti = push.GetTextureIndex(i);
+                if(ti == null_texture){
+                    outFile << "null texture\n";
+                }
+                else{
+                    auto const* binded_tex = engine->logicalDevice.RevertTI(ti);
+                    if(binded_tex != nullptr){
+                        outFile << ti << " : " << "nullptr (couldnt be reversed)\n";
+                    }
+                    else{
+                        outFile << ti << " : " << binded_tex->view.image.name << '\n';
+                    }
+                }
+            }
+        }
+#endif
         else{
             static constexpr auto type_mems = std::define_static_array(std::meta::enumerators_of(^^Inst::Type));
 #pragma GCC diagnostic push
@@ -434,7 +487,7 @@ namespace EWE{
             auto const& inst = pp.instructions[i];
             const bool has_param_data = Inst::GetParamSize(inst) > 0;
             file << i;
-            outFile << " : " << Reflect::Enum::ToString(inst) << '\n';
+            outFile << "." << Reflect::Enum::ToString(inst) << '\n';
             if(has_param_data){
                 file.tab_depth++;
                 //template for each member
@@ -500,7 +553,8 @@ namespace EWE{
         memset(time_buf, 0, 64);
         std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d_%H-%M-%S", tm);
 
-        const std::filesystem::path file_path = "Error" / std::filesystem::path(time_buf);
+        std::filesystem::path file_path = "Error" / std::filesystem::path(time_buf);
+        file_path.replace_extension(".log");
 
         if(!std::filesystem::exists(std::filesystem::current_path() / "Error")){
             std::filesystem::create_directory(std::filesystem::current_path() / "Error");
@@ -524,11 +578,26 @@ namespace EWE{
         ParamMap packageMap{};
         FileWriter file{outFile};
         file.name = file_path;
-        AddRenderGraph(file, renderGraph, engine->frameIndex, packageMap);
+
+        uint8_t previous_frame = engine->frameIndex;
+        if(previous_frame == 0){
+            previous_frame = max_frames_in_flight - 1;
+        }
+        else{
+            previous_frame--;
+        }
+
+        AddRenderGraph(file, renderGraph, previous_frame, packageMap);
 
         file.endl();
-        file << "Param Data\n";
+        file << "Param Data - previous frame[";
+        outFile << (int)previous_frame << "] : total frames[" << (int)engine->totalFramesSubmitted << "]\n";
 
+        CrackIntoParamData(file, renderGraph, previous_frame, packageMap);
+
+        file.endl();
+        file << "Param Data - current frame[";
+        outFile << (int)engine->frameIndex << "]\n";
         CrackIntoParamData(file, renderGraph, engine->frameIndex, packageMap);
     }
 } //namespace EWE
