@@ -9,14 +9,14 @@ if(DEFINED EWFRAMEWORK_PATH)
 	endif()
 else()
 	message(STATUS "EWFRAMEWORK_PATH - ${EWFRAMEWORK_PATH}")
-  	message(FATAL_ERROR "!!!!FAILED!!!! to find ewe_framework_path in .env.cmake, using FetchContent. until the framework is a git submodule, this is an error")
+  	message(WARNING "!!!!FAILED!!!! to find ewe_framework_path in .env.cmake, using FetchContent")
 	FetchContent_Declare(
 		EWFramework
 		GIT_REPOSITORY https://github.com/GDBobby/VulkanFramework
 		SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ewf"
         GIT_PROGRESS   TRUE
 		GIT_TAG main
-		
+
 		GIT_SUBMODULES_RECURSIVE TRUE
 	)
 	FetchContent_MakeAvailable(EWFramework)
