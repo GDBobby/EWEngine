@@ -143,12 +143,12 @@ target_link_directories(${PROJECT_NAME} PUBLIC
 	${Vulkan_LIB_DIR}
 	$<$<CONFIG:Debug>:${EWFramework_SOURCE_DIR}/Debug>
 	$<$<CONFIG:Release>:${EWFramework_SOURCE_DIR}/Release>
+	volk
 )
 message(STATUS "linking libs - ${EWFramework_LIB}")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
 	glfw
-	${Vulkan_LIBRARY}
 	${GLSLANG_LIBS}
 	$<$<CONFIG:Debug>:${AFTERMATH_LIBS}>
 	EWFramework

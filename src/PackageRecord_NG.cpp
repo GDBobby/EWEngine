@@ -130,13 +130,13 @@ namespace Node{
             //open the graph for the package
             switch(node_payload->type){
                 case Command::InstructionPackage::Type::Base:
-                    OpenGraph(Type::InstructionPackage, node_payload);
+                    OpenGraph(Reflect::Enum::ToString(Type::InstructionPackage), node_payload);
                     break;
                 case Command::InstructionPackage::Type::Object:
-                    OpenGraph(Type::ObjectPackage, node_payload);
+                    OpenGraph(Reflect::Enum::ToString(Type::ObjectPackage), node_payload);
                     break;
                 case Command::InstructionPackage::Type::Raster:
-                    OpenGraph(Type::RasterPackage, node_payload);
+                    OpenGraph(Reflect::Enum::ToString(Type::RasterPackage), node_payload);
                     break;
                 default: EWE_UNREACHABLE;
             }

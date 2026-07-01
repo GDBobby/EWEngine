@@ -47,7 +47,10 @@ namespace Node{
         bool SaveFunc() override final;
         bool LoadFunc() override final;
 
-        void InitFromObject(RenderGraph& _renderGraph);
+        void InitFromObject(RenderGraph& _renderGraph);        
+        void InitFromObject(void* payload) override final{
+            InitFromObject(*reinterpret_cast<RenderGraph*>(payload));
+        }
     };
 } //namespace Node
 } //namespace EWE

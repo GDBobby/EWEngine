@@ -6,7 +6,6 @@
 #include "EWEngine/Systems/TinyObjLoader.h"
 
 #include "LAB/Support/Simple.h"
-#include <vulkan/vulkan_core.h>
 
 
 namespace EWE {
@@ -176,6 +175,7 @@ namespace EWE {
 		LeafModelType leafModel = LoadModelTinyObj<LeafVertProperties, LeafIndexType>(engine->root_directory / filepath);
 		vertices.Init(sizeof(Vertex<LeafVertProperties>), leafModel.vertices.size(), GetVMAInfo());
 		indices.Init(sizeof(LeafIndexType), leafModel.indices.size(), GetVMAInfo(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+		indices.SetName("leaf index buffer");
 
 		{
 			obj_pkg.paramPool.PushBack(Inst::Push);

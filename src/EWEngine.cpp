@@ -45,14 +45,12 @@ namespace EWE{
     constexpr ConstEvalStr deviceFaultExt{ VK_EXT_DEVICE_FAULT_EXTENSION_NAME };
     //this requires the instance extension VK_EXT_debug_utils. i don't know how to make that association cleanly
     constexpr ConstEvalStr dabReportExt{ VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME };
-    constexpr ConstEvalStr scalarBlockExt{ VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME };
 
     using Example_ExtensionManager = ExtensionManager<application_wide_vk_version,
         ExtensionEntry<swapchainExt, true, 0>,
         ExtensionEntry<dynState3Ext, true, 0>,
         ExtensionEntry<meshShaderExt, false, 100000>,
-        ExtensionEntry<deviceFaultExt, false, 10000>,
-        ExtensionEntry<scalarBlockExt, true, 0>
+        ExtensionEntry<deviceFaultExt, false, 10000>
 #if EWE_DEBUG_BOOL
         , ExtensionEntry<dabReportExt, false, 0>
 #endif
@@ -170,13 +168,21 @@ namespace EWE{
         features12.bufferDeviceAddress = VK_TRUE;
         features12.bufferDeviceAddressCaptureReplay = EWE_DEBUG_BOOL ? VK_TRUE : VK_FALSE;
         features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-        features12.descriptorBindingPartiallyBound = VK_TRUE;
         features12.runtimeDescriptorArray = VK_TRUE;
         features12.descriptorBindingVariableDescriptorCount = VK_TRUE;
         features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
         features12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
         features12.timelineSemaphore = VK_TRUE;
         features12.drawIndirectCount = VK_TRUE;
+
+        //features12.descriptorBindingUniformBufferUpdateAfterBind;
+        //features12.descriptorBindingStorageBufferUpdateAfterBind;
+        features12.descriptorBindingPartiallyBound = VK_TRUE;
+
+        features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+        features12.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+        features12.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
+        features12.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
 
 
         auto& features13 = specDev.GetFeature<VkPhysicalDeviceVulkan13Features>();
@@ -301,6 +307,11 @@ namespace EWE{
     // so it's packaged into this function. 
     // im taking advantage of the construction to insert the global pointer assignment
     marl::Scheduler::Config PointlessFunctionJustToSetTheGlobalVariable(EWEngine* this_ref){
+
+        if (volkInitialize() != VK_SUCCESS) {
+            throw std::runtime_error("Failed to initialize volk or find Vulkan loader");
+        }
+
         EWE_ASSERT(engine == nullptr);
         engine = this_ref;
 

@@ -3,7 +3,6 @@
 #include "EWEngine/EWEngine.h"
 
 #include "imgui.h"
-#include <vulkan/vulkan_core.h>
 
 namespace EWE{
 namespace Asset{

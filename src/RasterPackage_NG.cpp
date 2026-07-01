@@ -126,7 +126,7 @@ namespace Node{
         ::ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
             //open the graph for the package
-            OpenGraph(Type::ObjectPackage, node_payload);
+            OpenGraph(Reflect::Enum::ToString(Type::ObjectPackage), node_payload);
         }
 
         for(auto& inst : node_payload->paramPool.instructions){

@@ -9,7 +9,6 @@
 #include "EightWinds/Sampler.h"
 
 #include "EWEngine/EWEngine.h"
-#include <vulkan/vulkan_core.h>
 
 #if EWE_IMGUI
     #include "imgui.h"
@@ -47,6 +46,22 @@ namespace Asset{
         return ImGui_ImplVulkan_AddTexture(dii.sampler != nullptr ? dii.sampler->sampler : VK_NULL_HANDLE, dii.view.view, dii.imageInfo.imageLayout);
     }
 #endif
+
+
+    void Manager<DescriptorImageInfo>::Destroy(AssetHash hash){
+        DescriptorImageInfo* res = Get(hash);
+        if(res == nullptr){
+            Log::Warning("attempting to delete non-existing object\n");
+            return;
+        }
+        data_arena.DestroyElement(res);
+        association_container.Remove(hash);
+    }
+    void Manager<DescriptorImageInfo>::Destroy(DescriptorImageInfo& dii){
+        //by routing it to hash, the object is looked up, ensuring it exists
+        AssetHash hash = GetHash(dii); 
+        Destroy(hash);
+    }
 
     Manager<DescriptorImageInfo>::Manager(
         std::filesystem::path const& root_path

@@ -101,7 +101,7 @@ namespace ImNodes{
         ImVec2 node_editor_window_size{0.f, 0.f};
 
         //payload is what will be used to initialzie the graph, most likely the object the graph edits
-        inline static std::function<void(Type, void*)> OpenGraph = nullptr;
+        inline static std::function<void(std::string_view, void*)> OpenGraph = nullptr;
 
         Node& AddNode() {
             return nodes.AddElement();
@@ -166,6 +166,8 @@ namespace ImNodes{
         //if true is returned, the func will no longer be called
         virtual bool SaveFunc() {return true;}
         virtual bool LoadFunc() {return true;}
+
+        virtual void InitFromObject(void* payload) = 0;
 
     };
 } //namespace ImNodes

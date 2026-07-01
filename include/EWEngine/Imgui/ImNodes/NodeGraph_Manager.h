@@ -12,16 +12,14 @@
 namespace EWE{
     struct NG_Manager{
 
-        struct GraphIdentifier{
-            ImNodes::Editor::Type type;
-            std::string name;
+        struct GraphData{
+            std::function<ImNodes::Editor*()> constructor;
+            std::function<ImNodes::Editor*(void* payload)> init_from_obj;
         };
         
         struct NewPage{
-            KeyValueContainer<GraphIdentifier, std::function<ImNodes::Editor*()>> potential_graphs;
-
+            KeyValueContainer<std::string, GraphData> potential_graphs;
             ImGuiTextFilter filter;
-
             uint32_t table_width = 4;
 
             uint32_t GetTableHeight() const;
@@ -44,19 +42,17 @@ namespace EWE{
         int force_selection = -1;
 
         //come back to this in a moment
-        void AddPotentialGraph(ImNodes::Editor::Type type, std::function<ImNodes::Editor*()> creation_func);
+        void AddPotentialGraph(std::string const& name, GraphData data);
         template<typename T>
-        void AddPotentialDefaultGraph(ImNodes::Editor::Type type){
-            auto default_creation_func = [&, type]() -> ImNodes::Editor* {
-                std::string_view name = Reflect::Enum::ToString(type);
-                T* temp = new T();
-                temp->name = name;
+        void AddPotentialDefaultGraph(std::string_view name){
+            auto default_creation_func = [&]() -> ImNodes::Editor* {
                 for(auto& editor : editors){
-                    if(editor.editor->name == temp->name){
-                        delete temp;
+                    if(editor.editor->name == name){
                         return nullptr;
                     }
                 }
+                T* temp = new T();
+                temp->name = std::meta::identifier_of(^^T);
                 editors.push_back(
                     TabItem{
                         .editor = static_cast<ImNodes::Editor*>(temp),
@@ -65,23 +61,41 @@ namespace EWE{
                 );
                 return temp;
             };
-            AddPotentialGraph(type, default_creation_func);
+            auto default_init_func = [&](void* payload)-> ImNodes::Editor*{
+                T* temp = static_cast<T*>(default_creation_func());
+                if(temp != nullptr){
+                    //i can use Function_Traits to deduce the type of the first argument
+                    temp->InitFromObject(payload);
+                }
+                else{
+                    Log::Debug("failed to init graph from object : %s\n", std::meta::identifier_of(^^T).data());
+                }
+                return temp;
+                
+            };
+            AddPotentialGraph(
+                name.data(), 
+                GraphData{
+                    default_creation_func,
+                    default_init_func
+                }
+            );
         }
 
 
         struct OpenGraph_LayoverStorage{
-            ImNodes::Editor::Type type;
+            std::string name;
             void* payload;
         };
         OpenGraph_LayoverStorage layover_storage;
 
-        void OpenGraphLayover(ImNodes::Editor::Type type, void* payload);
+        void OpenGraphLayover(std::string_view name, void* payload);
 
         void DefaultFillGraphs();
 
         void Render();
 
-        void OpenGraph(ImNodes::Editor::Type type, void* payload);
+        void OpenGraph(std::string_view name, void* payload);
         void SetOpenGraphFunc();
     }; 
 }

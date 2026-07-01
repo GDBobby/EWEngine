@@ -40,6 +40,10 @@ namespace Node{
         void LoadFromTask(GPUTask& task);
         void WriteIntoTask(GPUTask& task);
 
+        void InitFromObject(void* payload) override final{
+            //InitFromObject(*reinterpret_cast<GPUTask*>(payload));
+        }
+
         void CreateTask();
     };
 } //namespace Node 

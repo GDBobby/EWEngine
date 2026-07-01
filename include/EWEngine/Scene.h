@@ -6,7 +6,14 @@ namespace EWE {
 
 	class SceneBase {
 	public:
-		std::filesystem::path name;
+		std::string name;
+
+		SceneBase(std::string const& _name) : name{_name} {}
+
+		SceneBase(SceneBase const& copySrc) = delete;
+		SceneBase(SceneBase&& moveSrc) = delete;
+		SceneBase& operator=(SceneBase const& copySrc) = delete;
+		SceneBase& operator=(SceneBase&& moveSrc) = delete;
 
 		virtual ~SceneBase() = default;
 		//this is called immediately after the last scene's exit, the loading screen will be running during this function

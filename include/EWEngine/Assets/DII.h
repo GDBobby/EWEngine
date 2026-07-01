@@ -32,7 +32,7 @@ namespace Asset{
         KeyValueContainer<AssetHash, DescriptorImageInfo*> association_container;
 
         void Destroy(AssetHash hash);
-        void Destroy(DescriptorImageInfo* dii);
+        void Destroy(DescriptorImageInfo& dii);
 
         DescriptorImageInfo* Get(AssetHash hash);
         DescriptorImageInfo* Get(std::filesystem::path const& name);

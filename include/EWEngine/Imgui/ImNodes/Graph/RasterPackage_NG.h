@@ -35,6 +35,9 @@ namespace Node{
         bool LoadFunc() override final;
 
         void InitFromObject(RasterPackage& rt);
+        void InitFromObject(void* payload) override final{
+            InitFromObject(*reinterpret_cast<RasterPackage*>(payload));
+        }
     };
 } //namespace Node 
 } //namespace EWE

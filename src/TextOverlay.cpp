@@ -11,7 +11,6 @@
 
 #include <hb.h>
 #include <hb-ft.h>
-#include <vulkan/vulkan_core.h>
 
 
 namespace EWE {

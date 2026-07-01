@@ -51,8 +51,6 @@ namespace Node{
         [[nodiscard]] explicit InstructionPackage_NG(Command::InstructionPackage& pkg);
 
         void RecreateLinks();
-        void InitFromFile(Command::ParamPool const& pp, Command::InstructionPackage::Type pkg_type);
-        void InitFromObject(Command::InstructionPackage& pkg);
 
         ImNodes::Node* CreateHeadNode();
         static Inst::Type GetInstructionFromNode(ImNodes::Node& node);
@@ -80,6 +78,13 @@ namespace Node{
         void RenderPin(ImNodes::Node& node, ImNodes::PinOffset pin_index) override final;
         bool SaveFunc() override final;
         bool LoadFunc() override final;
+
+
+        void InitFromFile(Command::ParamPool const& pp, Command::InstructionPackage::Type pkg_type);
+        void InitFromObject(Command::InstructionPackage& pkg);
+        void InitFromObject(void* payload) override final{
+            InitFromObject(*reinterpret_cast<Command::InstructionPackage*>(payload));
+        }
     };
 } //namespace Node
 } //namespace EWE

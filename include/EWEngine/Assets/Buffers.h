@@ -14,7 +14,7 @@ namespace Asset{
     struct Manager<Buffer>{
         //FileSystem files; //no files for the buffers, yet at least
 
-        std::mutex mut{};
+        std::recursive_mutex mut{};
         Hive<Buffer, 64> data_arena;
         KeyValueContainer<AssetHash, Buffer*> association_container{};
 

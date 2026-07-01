@@ -10,3 +10,9 @@ FetchContent_Declare(
 	GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(marl)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_include_directories(marl BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/win32)
+endif()
+
+message(STATUS "source dir : ${CMAKE_SOURCE_DIR}")

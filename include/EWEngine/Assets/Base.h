@@ -34,7 +34,7 @@ namespace Asset{
     struct Manager{
         using Type = Resource;
 
-        std::mutex mut;
+        std::recursive_mutex mut;
         FileSystem files;
         Hive<Resource, 64> data_arena;
         KeyValueContainer<AssetHash, Resource*> association_container;
@@ -93,7 +93,7 @@ namespace Asset{
         template<typename... Args>
         requires std::constructible_from<Resource, Args...>
         Resource& ConstructInto(Args&&... args) {
-            std::unique_lock<std::mutex> lock{mut};
+            std::unique_lock lock{mut};
             auto& ele = data_arena.AddElement(std::forward<Args>(args)...);
             AssetHash hash = GetHash(ele);
             association_container.push_back(hash, &ele);
@@ -116,6 +116,13 @@ namespace Asset{
                 else{
                     if(ImGui::TreeNode(found->value->name.string().c_str())) {
                         DragDropPtr::Source(*found->value);
+
+                        ImGui::PushID(found->value);
+                        if(ImGui::Button("unload")){
+                            Destroy(*found->value);
+                        }
+                        ImGui::PopID();
+
                         if constexpr (std::meta::is_complete_type(^^WriteAssetToFile<decltype(*found->value)>)){
                             WriteAssetToFile(*found->value);
                         }

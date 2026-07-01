@@ -36,7 +36,10 @@ namespace Node{
         bool SaveFunc() override final;
         bool LoadFunc() override final;
 
-        void InitFromObject(Command::PackageRecord& record);
+        void InitFromObject(Command::PackageRecord& record);        
+        void InitFromObject(void* payload) override final{
+            InitFromObject(*reinterpret_cast<Command::PackageRecord*>(payload));
+        }
     };
 } //namespace Node 
 } //namespace EWE

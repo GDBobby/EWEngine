@@ -9,7 +9,6 @@
 #include "EightWinds/Data/KeyValueContainer.h"
 #include "EightWinds/Data/StreamHelper.h"
 #include "imgui.h"
-#include <vulkan/vulkan_core.h>
 
 
 namespace EWE{

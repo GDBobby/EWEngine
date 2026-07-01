@@ -22,13 +22,10 @@ namespace EWE{
         return static_cast<uint32_t>(std::ceil(static_cast<float>(potential_graphs.size()) / 4.f));
     }
 
-    void NG_Manager::AddPotentialGraph(ImNodes::Editor::Type type, std::function<ImNodes::Editor*()> creation_func){
+    void NG_Manager::AddPotentialGraph(std::string const& name, GraphData data){
         new_page.potential_graphs.push_back(
-            GraphIdentifier{
-                .type = type,
-                .name{Reflect::Enum::ToString(type)}
-            }, 
-            creation_func
+            name,
+            data
         );
     }
 
@@ -55,7 +52,7 @@ namespace EWE{
             for(auto& graph : potential_graphs){
                 ImGui::TableNextColumn();
 
-                const bool passed_filter = filter.PassFilter(graph.key.name.c_str());
+                const bool passed_filter = filter.PassFilter(graph.key.c_str());
 
                 if (!passed_filter) { 
                     auto style_color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
@@ -65,8 +62,8 @@ namespace EWE{
                     style_color.w *= 0.5f;
                     ImGui::PushStyleColor(ImGuiCol_Text, style_color);
                 }
-                if(ImGui::Button(graph.key.name.c_str())){
-                    graph.value();
+                if(ImGui::Button(graph.key.c_str())){
+                    graph.value.constructor();
                 }
                 if (!passed_filter) { 
                     ImGui::PopStyleColor();
@@ -78,18 +75,17 @@ namespace EWE{
     }
 
     void NG_Manager::DefaultFillGraphs() {
-        AddPotentialDefaultGraph<Node::InstructionPackage_NG>(ImNodes::Editor::Type::InstructionPackage);
+        AddPotentialDefaultGraph<Node::InstructionPackage_NG>("InstructionPackage");
         auto obj_graph_creation_func = [&]() -> ImNodes::Editor* {
-            std::string_view name = Reflect::Enum::ToString(ImNodes::Editor::Type::ObjectPackage);
-            Node::InstructionPackage_NG* temp = new Node::InstructionPackage_NG();
-            temp->SetPackageType(Command::InstructionPackage::Object);
-            temp->name = name;
             for(auto& editor : editors){
-                if(editor.editor->name == temp->name){
-                    delete temp;
+                if(editor.editor->name == "Object Package"){
                     return nullptr;
                 }
             }
+            Node::InstructionPackage_NG* temp = new Node::InstructionPackage_NG();
+            temp->SetPackageType(Command::InstructionPackage::Object);
+            temp->name = "Object Package";
+
             editors.push_back(
                 TabItem{
                     .editor = static_cast<ImNodes::Editor*>(temp),
@@ -98,13 +94,31 @@ namespace EWE{
             );
             return temp;
         };
-        AddPotentialGraph(ImNodes::Editor::Type::ObjectPackage, obj_graph_creation_func);
+        AddPotentialGraph(
+            "ObjectPackage",
+            GraphData{
+                obj_graph_creation_func,
+            
+                [&](void* payload)-> ImNodes::Editor*{
+                    Node::InstructionPackage_NG* temp = static_cast<Node::InstructionPackage_NG*>(obj_graph_creation_func());
+                    if(temp != nullptr){
+                        //i can use Function_Traits to deduce the type of the first argument
+                        temp->InitFromObject(*reinterpret_cast<Command::ObjectPackage*>(payload));
+                    }
+                    else{
+                        Log::Debug("failed to init graph from object : object package\n");
+                    }
+                    return temp;
+                    
+                }
+            }
+        );
 
 
-        AddPotentialDefaultGraph<Node::PackageRecord_NG>(ImNodes::Editor::Type::PackageRecord);
-        AddPotentialDefaultGraph<Node::SubmissionTask_NG>(ImNodes::Editor::Type::SubmissionTask);
-        AddPotentialDefaultGraph<Node::RenderGraph_NG>(ImNodes::Editor::Type::RenderGraph);
-        AddPotentialDefaultGraph<Node::RasterPackage_NG>(ImNodes::Editor::Type::RasterPackage);
+        AddPotentialDefaultGraph<Node::PackageRecord_NG>("PackageRecord");
+        AddPotentialDefaultGraph<Node::SubmissionTask_NG>("SubmissionTask");
+        AddPotentialDefaultGraph<Node::RenderGraph_NG>("RenderGraph");
+        AddPotentialDefaultGraph<Node::RasterPackage_NG>("RasterPackage");
     }
 
     void NG_Manager::Render(){
@@ -164,64 +178,29 @@ namespace EWE{
             ImGui::EndTabBar();
         }
         if(layover_storage.payload != nullptr){
-            OpenGraph(layover_storage.type, layover_storage.payload);
+            OpenGraph(layover_storage.name, layover_storage.payload);
 
             layover_storage.payload = nullptr;
         }
     }
 
-    void NG_Manager::OpenGraph(ImNodes::Editor::Type type, void* payload){
+    void NG_Manager::OpenGraph(std::string_view name, void* payload){
         for(auto& pot_graph : new_page.potential_graphs){
-            if(pot_graph.key.type == type){
-                ImNodes::Editor* created = pot_graph.value();
-                switch(type){   
-                    case ImNodes::Editor::Type::InstructionPackage: {
-                        Node::InstructionPackage_NG* temp = static_cast<Node::InstructionPackage_NG*>(created);
-                        temp->packageType = Command::InstructionPackage::Type::Base;
-                        temp->InitFromObject(*reinterpret_cast<Command::InstructionPackage*>(payload));
-                        break;
-                    }
-                    case ImNodes::Editor::Type::ObjectPackage: {
-                        Node::InstructionPackage_NG* temp = static_cast<Node::InstructionPackage_NG*>(created);
-                        temp->packageType = Command::InstructionPackage::Type::Object;
-                        temp->InitFromObject(*reinterpret_cast<Command::ObjectPackage*>(payload));
-                        break;
-                    }
-                    case ImNodes::Editor::Type::PackageRecord:{
-                        Node::PackageRecord_NG* temp = static_cast<Node::PackageRecord_NG*>(created);
-                        temp->InitFromObject(*reinterpret_cast<Command::PackageRecord*>(payload));
-                        break;
-                    }
-                    case ImNodes::Editor::Type::SubmissionTask: {
-                        Node::SubmissionTask_NG* temp = static_cast<Node::SubmissionTask_NG*>(created);
-                        temp->InitFromObject(*reinterpret_cast<SubmissionTask*>(payload));
-                        break;
-                    }
-                    case ImNodes::Editor::Type::RenderGraph: {
-                        Node::RenderGraph_NG* temp = static_cast<Node::RenderGraph_NG*>(created);
-                        temp->InitFromObject(*reinterpret_cast<RenderGraph*>(payload));
-                        break;
-                    }
-                    case ImNodes::Editor::Type::RasterPackage:{
-                        Node::RasterPackage_NG* temp = static_cast<Node::RasterPackage_NG*>(created);
-                        temp->InitFromObject(*reinterpret_cast<RasterPackage*>(payload));
-                        break;
-                    }
-                    default: EWE_UNREACHABLE;
-                }
-                break;
+            if(pot_graph.key == name){
+                ImNodes::Editor* created = pot_graph.value.init_from_obj(payload);
+                return;
             }
         }
     }
 
-    void NG_Manager::OpenGraphLayover(ImNodes::Editor::Type type, void* payload){
-        layover_storage.type = type;
+    void NG_Manager::OpenGraphLayover(std::string_view name, void* payload){
+        layover_storage.name = name;
         layover_storage.payload = payload;
     }
 
     void NG_Manager::SetOpenGraphFunc() {
-        ImNodes::Editor::OpenGraph = [&](ImNodes::Editor::Type type, void* payload){
-            this->OpenGraphLayover(type, payload);
+        ImNodes::Editor::OpenGraph = [&](std::string_view name, void* payload){
+            this->OpenGraphLayover(name, payload);
         };
         //using OpenGraphFunc = void(*)(std::string_view name, void* payload);
     }

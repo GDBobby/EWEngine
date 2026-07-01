@@ -143,7 +143,6 @@ namespace EWE{
         return false;
     }
 
-
     bool InitializeSpriteSheet(SpriteSheet& sheet, Queue::Type dstQueueType){
         const std::filesystem::path file_name = engine->root_directory / "textures" / sheet.name;
         std::ifstream inFile{file_name, std::ios::binary | std::ios::ate};
@@ -208,15 +207,19 @@ namespace EWE{
                         .generatingMipMaps = false
                     };
 
+                    const uint8_t bytes_per_texel = rawImg.format.BytesPerTexel();
+                    const uint32_t sprite_byte_width = sheet.texel_width * bytes_per_texel;
+                    const uint32_t sprite_size = sheet.texel_width * sheet.texel_height;
+                    const uint32_t full_row_byte_size = sprite_size * sprites_per_row * bytes_per_texel;
+
                     for(std::size_t i = 0; i < sheet.imgs.Size(); i++) {
-                        //const uint32_t sprite_column = i % sprites_per_row;
-                        //const uint32_t sprite_row = i / sprites_per_row;
+                        const uint32_t sprite_column = i % sprites_per_row;
+                        const uint32_t sprite_row = i / sprites_per_row;
 
                         auto& img = *sheet.imgs[i];
                         transferContext.images[i] = &img;
-                        const uint32_t sprite_size = sheet.texel_width * sheet.texel_height;
                         transferContext.regions[i] = VkBufferImageCopy{
-                            .bufferOffset = 0,
+                            .bufferOffset = sprite_byte_width * sprite_column + sprite_row * full_row_byte_size,
                             .bufferRowLength = sprites_per_row * sheet.texel_width,
                             .bufferImageHeight = sprites_per_col * sheet.texel_height,
                             .imageSubresource{
@@ -235,7 +238,7 @@ namespace EWE{
                                 sheet.texel_height,
                                 1
                             }
-                        };//calc region
+                        };
                         img.data.extent.width = sheet.texel_width;
                         img.data.extent.height = sheet.texel_height;
                         img.data.extent.depth = rawImg.depth;

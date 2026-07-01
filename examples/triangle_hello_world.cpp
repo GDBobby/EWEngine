@@ -41,7 +41,6 @@
 #include <chrono>
 #include <array>
 #include <thread>
-#include <vulkan/vulkan_core.h>
 
 #if EWE_DEBUG_BOOL
 void PrintAllExtensions(VkPhysicalDevice physicalDevice) {

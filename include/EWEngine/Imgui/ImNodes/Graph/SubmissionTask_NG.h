@@ -58,6 +58,10 @@ namespace Node{
 
         std::vector<GPUTask*> CollectTasks();
         void ReadjustAttachmentPins(ImNodes::Node& node, std::size_t raster_index, bool value);
+
+        void InitFromObject(void* payload) override final{
+            InitFromObject(*reinterpret_cast<SubmissionTask*>(payload));
+        }
     };
 } //namespace Node 
 } //namespace EWE

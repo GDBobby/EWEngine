@@ -11,7 +11,6 @@
 
 #include "EightWinds/Reflect/Enum.h"
 
-
 #include <filesystem>
 #include <chrono>
 #include <ctime>
@@ -403,7 +402,7 @@ namespace EWE{
         auto& outFile = file.outFile;
 
         if(iType == Inst::Ext_Pool){
-            file.Flush();
+            //file.Flush();
 
             auto const* poolPack = ip.CastTo<ParamPack<Inst::Ext_Pool>>();
             Command::ParamPool const& child_pool = *poolPack->GetCRef(frameIndex).pool;
@@ -543,6 +542,70 @@ namespace EWE{
         file.tab_depth--;
     }
 
+    void DumpBuffers(FileWriter& file){
+        auto& outFile = file.outFile;
+
+        file << "dumped buffers-\n";
+        file.tab_depth++;
+
+        for(auto& buf_addr : engine->logicalDevice.buffers.resources){
+            Buffer const& buf = buf_addr.CastToRef<Buffer>();
+            file << buf.name;
+            outFile << " : ";
+            if(buf.usageFlags == VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT){
+                if(buf.deviceAddress == null_buffer){
+                    outFile << "null_buffer addr\n";
+                }
+                else{
+                    outFile << static_cast<std::size_t>(buf.deviceAddress) << '\n';
+                }
+            }
+            else{
+
+                static constexpr auto usage_data = Reflect::Enum::enum_data<VkBufferUsageFlagBits>;
+
+                bool already_have_one = false;
+                for(std::size_t i = 0; i < usage_data.size(); i++){
+                    if(buf.usageFlags & usage_data[i].value){
+                        if(already_have_one){
+                            outFile << " | ";
+                        }
+                        already_have_one = true;
+                        outFile << usage_data[i].name;
+                    }
+                }
+
+                outFile << '\n';
+            }
+        }
+        file.tab_depth--;
+    }
+    void DumpTextures(FileWriter& file){
+        auto& outFile = file.outFile;
+
+        file << "dumped textures-\n";
+        file.tab_depth++;
+
+        for(auto& kvp : engine->logicalDevice.bindlessDescriptor.tracker){
+            DescriptorImageInfo const& dii = *kvp.key;
+
+            if(dii.name == ""){
+                file << dii.view.image.name;
+            }
+            else{
+                file << dii.name;
+            }
+
+            if(kvp.value == null_texture){
+                outFile << " : null_texture\n";
+            }
+            else{
+                outFile << " : " << kvp.value << '\n';
+            }
+        }
+        file.tab_depth--;
+    }
+
     void Debug_RenderGraph_DEVICE_LOST(RenderGraph const& renderGraph, EWEException const& except){
 
         auto now = std::chrono::system_clock::now();
@@ -587,13 +650,20 @@ namespace EWE{
             previous_frame--;
         }
 
+        DumpBuffers(file);
+        DumpTextures(file);
+
         AddRenderGraph(file, renderGraph, previous_frame, packageMap);
 
         file.endl();
         file << "Param Data - previous frame[";
         outFile << (int)previous_frame << "] : total frames[" << (int)engine->totalFramesSubmitted << "]\n";
 
+        file.Flush();
+
         CrackIntoParamData(file, renderGraph, previous_frame, packageMap);
+
+        file.Flush();
 
         file.endl();
         file << "Param Data - current frame[";

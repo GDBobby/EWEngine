@@ -22,5 +22,6 @@ namespace EWE{
 
         [[nodiscard]] explicit SpriteSheet(std::filesystem::path const& name, uint16_t texel_width, uint16_t texel_height, VkSamplerCreateInfo const& samplerCreateInfo);
         [[nodiscard]] explicit SpriteSheet(std::filesystem::path const& name, uint16_t texel_width, uint16_t texel_height, Sampler& sampler);
-    };
-}
+        ~SpriteSheet();
+    }; 
+} //namespace EWE

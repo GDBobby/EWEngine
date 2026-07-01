@@ -32,5 +32,19 @@ namespace EWE{
     SpriteSheet::SpriteSheet(std::filesystem::path const& _name, uint16_t _texel_width, uint16_t _texel_height, VkSamplerCreateInfo const& samplerCreateInfo)
     : SpriteSheet{_name, _texel_width, _texel_height, Global::assetManager->sampler.Get(samplerCreateInfo)}
     {}
+
+    SpriteSheet::~SpriteSheet(){
+        for(std::size_t i = 0; i < imgs.Size(); i++){
+            if(diis[i] != nullptr){
+                Global::assetManager->dii.Destroy(*diis[i]);
+            }
+            if(views[i] != nullptr){
+                Global::assetManager->imageView.Destroy(*views[i]);
+            }
+            if(imgs[i] != nullptr){
+                Global::assetManager->image.Destroy(*imgs[i]);
+            }
+        }
+    }
     
 } //namespace EWE

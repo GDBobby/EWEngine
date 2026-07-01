@@ -204,17 +204,17 @@ namespace EWE{
         Reflect::Enum::Imgui_Combo_Selectable("topology", obj.topology);
         ImGui::Checkbox("primitive restart", &obj.primitiveRestart);
 
-        if(obj.blendAttachment.blendEnable){
-            ImGui::SetNextItemOpen(obj.blendAttachment.blendEnable);
+        if(obj.blendAttachments[0].blendEnable){
+            ImGui::SetNextItemOpen(obj.blendAttachments[0].blendEnable);
             if(ImGui::TreeNode("blend attachment")){
-                ImguiExtension::Imgui(obj.blendAttachment);
+                ImguiExtension::Imgui(obj.blendAttachments[0]);
                 ImGui::TreePop();
             }
         }
         else{
-            bool temp_enable = obj.blendAttachment.blendEnable;
+            bool temp_enable = obj.blendAttachments[0].blendEnable;
             ImGui::Checkbox("blend enabled", &temp_enable);
-            obj.blendAttachment.blendEnable = temp_enable;
+            obj.blendAttachments[0].blendEnable = temp_enable;
         }
             
         ImGui::PopID();

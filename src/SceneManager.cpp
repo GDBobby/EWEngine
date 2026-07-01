@@ -22,12 +22,6 @@ namespace EWE {
 		render_loop.last_time = std::chrono::high_resolution_clock::now();
 		render_loop.SetLoopDuration();
 
-		/*
-		do { //having a simple while() may cause a race condition
-			EWE_VK(vkDeviceWaitIdle, engine->logicalDevice.device);
-		} while (ewEngine.GetLoadingScreenProgress());
-		*/
-
 		currentScenePtr->Entry();
 		auto* renderGraph = engine->current_renderGraph;
 

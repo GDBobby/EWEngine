@@ -219,7 +219,7 @@ namespace Node{
         ::ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
             //open the graph for the package
-            OpenGraph(Type::PackageRecord, task->pkgRecord);
+            OpenGraph(Reflect::Enum::ToString(Type::PackageRecord), task->pkgRecord);
         }
 
         if(task->pkgRecord->packages.size() == 0){
@@ -273,15 +273,15 @@ namespace Node{
             const std::string tree_obj_name = "object : " + obj_pkg.name.string();
             if(ImGui::TreeNode(tree_obj_name.c_str())){
                 if(ImGui::Button("open object")){
-                    OpenGraph(Type::ObjectPackage, &obj_pkg);
+                    OpenGraph(Reflect::Enum::ToString(Type::ObjectPackage), &obj_pkg);
                 }
                 const std::string raster_button_name = std::string("raster pkg") + raster_pkg.name.string();
                 if(ImGui::Button(raster_button_name.c_str())){
-                    OpenGraph(Type::RasterPackage, &raster_pkg);
+                    OpenGraph(Reflect::Enum::ToString(Type::RasterPackage), &raster_pkg);
                 }
                 const std::string record_button_name = std::string("record") + record.name.string();
                 if(ImGui::Button(record_button_name.c_str())){
-                    OpenGraph(Type::PackageRecord, &record);
+                    OpenGraph(Reflect::Enum::ToString(Type::PackageRecord), &record);
                 }
 
                 if(ImGui::BeginTable("push expose", 2, ImGuiTableFlags_Borders)){
