@@ -16,6 +16,8 @@ else()
 		SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ewf"
         GIT_PROGRESS   TRUE
 		GIT_TAG main
+		
+		GIT_SUBMODULES_RECURSIVE TRUE
 	)
 	FetchContent_MakeAvailable(EWFramework)
 
