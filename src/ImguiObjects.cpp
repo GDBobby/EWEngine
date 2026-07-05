@@ -76,15 +76,11 @@ namespace EWE{
         ImGui::Text("create flags : %d", obj.data.createFlags);
         //ImGui::Text("usage : %d", obj.data.usage);
         if(ImGui::BeginListBox("create flags")){
-            auto temp_buffer = static_cast<VkImageCreateFlagBits>(obj.data.createFlags);
-            Reflect::Enum::Imgui_ForEach_Check(temp_buffer);
-            obj.data.createFlags = temp_buffer;
+            Reflect::Enum::Imgui_ForEach_Check<VkImageCreateFlagBits>(obj.data.createFlags);
             ImGui::EndListBox();
         }
         if(ImGui::BeginListBox("usage")){
-            VkImageUsageFlagBits temp_buffer = static_cast<VkImageUsageFlagBits>(obj.data.usage);
-            Reflect::Enum::Imgui_ForEach_Check(temp_buffer);
-            obj.data.usage = temp_buffer;
+            Reflect::Enum::Imgui_ForEach_Check<VkImageCreateFlagBits>(obj.data.usage);
             ImGui::EndListBox();
         }
 
