@@ -310,9 +310,9 @@ namespace EWE{
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
 
-        ImGui::Text(obj.resource[0]->name.c_str());
+        ImGui::Text(obj.resource[0]->name.string().c_str());
         if (obj.resource[1]) {
-            ImGui::Text(obj.resource[1]->name.c_str());
+            ImGui::Text(obj.resource[1]->name.string().c_str());
         }
 
         ImguiExtension::Imgui(obj.usage);
@@ -323,9 +323,9 @@ namespace EWE{
         int temp_id = static_cast<int>(reinterpret_cast<std::size_t>(&obj)); //im fine with the inaccuracy imposed by the reduction in bits
         ImGui::PushID(temp_id);
 
-        ImGui::Text(obj.resource[0]->name.c_str());
+        ImGui::Text(obj.resource[0]->name.string().c_str());
         if (obj.resource[1]) {
-            ImGui::Text(obj.resource[1]->name.c_str());
+            ImGui::Text(obj.resource[1]->name.string().c_str());
         }
 
         ImguiExtension::Imgui(obj.usage);
@@ -654,7 +654,7 @@ namespace EWE{
                     ImGui::TableNextColumn();
                     if(view[frame] != nullptr){
                         auto& img = view[frame]->image;
-                        ImGui::Button(img.name.c_str());
+                        ImGui::Button(img.name.string().c_str());
                     }
                     else{
                         ImGui::Button("null color");

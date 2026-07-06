@@ -136,7 +136,7 @@ namespace EWE {
 	Font& TextOverlay::GetFont(std::filesystem::path const& name, uint8_t pxSize) {
 		return GetFont(
 			FontKey{
-				name,
+				name.string(),
 				pxSize
 			}
 		);

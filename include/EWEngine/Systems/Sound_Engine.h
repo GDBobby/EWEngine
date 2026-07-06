@@ -25,7 +25,7 @@ namespace EWE {
 	class SoundEngine {
 
 	public:
-		SoundEngine();
+		[[nodiscard]] SoundEngine();
 		//~RigidRenderingSystem() = default;
 		SoundEngine(const SoundEngine&) = delete;
 		SoundEngine& operator=(const SoundEngine&) = delete;
@@ -50,7 +50,7 @@ namespace EWE {
 		//void loadEffects(std::unordered_map<uint16_t, std::string>& loadEffects);
 		void LoadSoundMap(std::unordered_map<uint16_t, std::filesystem::path>& loadSounds, SoundVolume soundType);
 
-		int16_t AddMusicToBack(std::string const& musicLocation);
+		int16_t AddMusicToBack(std::filesystem::path const& musicLocation);
 
 		std::vector<std::string> deviceNames;
 		uint16_t GetSelectedDevice() {

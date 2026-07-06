@@ -206,7 +206,7 @@ namespace Asset{
 
         for(auto& kvp : association_container){
             ImGui::PushID(kvp.key);
-            if(ImGui::TreeNode(kvp.value->name.c_str())){
+            if(ImGui::TreeNode(kvp.value->name.string().c_str())){
                 DragDropPtr::Source(*kvp.value);
                 auto found_image = imgui_texture_refs.find(kvp.value);
                 if(found_image != imgui_texture_refs.end() && found_image->key->view.image.data.layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL){

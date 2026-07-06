@@ -117,16 +117,22 @@ namespace EWE{
             VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME
         };
 
+#if _WIN32
+        if (!glfwInit()) {
+            Log::Debug("failed to init glfw on windows\n");
+        }
+#else
         glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
         if (!glfwInit()) {
-    #if EWE_DEBUG_BOOL
+#if EWE_DEBUG_BOOL
             Log::Debug("failed to init glfw wayland\n");
-    #endif
+#endif
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
             if(!glfwInit()){
-                throw std::runtime_error("failed to init glfw x11 or glfw");
+                throw std::runtime_error("failed to init glfw x11 or glfw WAYLAND on linux");
             }
         }
+#endif
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -346,7 +352,7 @@ namespace EWE{
     : root_directory{_root_directory},
         scheduler{PointlessFunctionJustToSetTheGlobalVariable(this)},
         instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
-        window{instance, 1920, 1080, application_name},
+        window{instance, 1280, 720, application_name},
         logicalDevice{CreateLogicalDevice(instance, window)},
         renderQueue{GetPresentQueue(logicalDevice)}, computeQueue{GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)}, 
         swapchain{logicalDevice, window, renderQueue},

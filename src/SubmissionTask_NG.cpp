@@ -214,7 +214,7 @@ namespace Node{
         }
         auto* task_payload = reinterpret_cast<TaskMetaPayload*>(node.payload);
         auto* task = task_payload->task;
-        ImGui::Text(task->name.c_str());
+        ImGui::Text(task->name.string().c_str());
 
         ::ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
@@ -364,7 +364,7 @@ namespace Node{
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
                 const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
-                name = temp_path;
+                name = temp_path.string();
 
                 SubmissionTask& written = Global::assetManager->subTask.ConstructInto(name, engine->logicalDevice, engine->renderQueue);
                 
@@ -427,7 +427,7 @@ namespace Node{
         nodes.Clear();
         CreateHeadNode();
         links.clear();
-        name = subTask.name;
+        name = subTask.name.string();
         const std::string string_name = subTask.name.string();
         if(string_name.size() > ExplorerContext::path_length) {
             memcpy(explorer.file_save_buf, string_name.substr(0, ExplorerContext::path_length - 1).c_str(), ExplorerContext::path_length);

@@ -21,14 +21,14 @@ namespace Global{
 
     ConstructionDelayer<GlobalEngineObj> globalObj{};
 
-    AssetManager* assetManager;
-    TextOverlay* textOverlay;
-    SoundEngine* soundEngine;
-    SceneManager* sceneManager;
-    ImguiHandler* imguiHandler;
+    AssetManager* assetManager = nullptr;
+    TextOverlay* textOverlay = nullptr;
+    SoundEngine* soundEngine = nullptr;
+    SceneManager* sceneManager = nullptr;
+    ImguiHandler* imguiHandler = nullptr;
 
-    MergeTask* mergeTask;
-    ImguiTask* imguiTask;
+    MergeTask* mergeTask = nullptr;
+    ImguiTask* imguiTask = nullptr;
 
 
     void InitEngineGlobal(std::filesystem::path const& root_directory){

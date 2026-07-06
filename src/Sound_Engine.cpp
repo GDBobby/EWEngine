@@ -404,7 +404,7 @@ namespace EWE {
 				switch (soundType) {
 					case SoundVolume::effect: {
 						if (std::filesystem::exists(soundPath.second)) {
-							result = ma_sound_init_from_file(&engines[selectedEngine], soundPath.second.c_str(),
+							result = ma_sound_init_from_file(&engines[selectedEngine], soundPath.second.string().c_str(),
 								MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE | MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_ASYNC | MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_STREAM,
 								NULL, NULL, &sounds->at(soundPath.first));
 							ma_sound_set_volume(&sounds->at(soundPath.first), volumes[(uint8_t)SoundVolume::effect]);
@@ -422,7 +422,7 @@ namespace EWE {
 					case SoundVolume::voice:
 					case SoundVolume::music: {
 
-						result = ma_sound_init_from_file(&engines[selectedEngine], soundPath.second.c_str(), MA_SOUND_FLAG_STREAM, NULL, NULL, &sounds->at(soundPath.first));
+						result = ma_sound_init_from_file(&engines[selectedEngine], soundPath.second.string().c_str(), MA_SOUND_FLAG_STREAM, NULL, NULL, &sounds->at(soundPath.first));
 
 						ma_sound_set_volume(&sounds->at(soundPath.first), volumes[(uint8_t)SoundVolume::music]);
 						if (result != MA_SUCCESS) {
@@ -440,12 +440,9 @@ namespace EWE {
 
 	}
 
-	int16_t SoundEngine::AddMusicToBack(std::string const& musicLocation)
-	{
-		for (auto& loc : musicLocations)
-		{
-			if (loc.second == musicLocation)
-			{
+	int16_t SoundEngine::AddMusicToBack(std::filesystem::path const& musicLocation) {
+		for (auto& loc : musicLocations) {
+			if (loc.second == musicLocation) {
 				return loc.first;
 			}
 		}
@@ -454,11 +451,11 @@ namespace EWE {
 
 		ma_result result;
 		music[selectedEngine].emplace(ret, ma_sound{});
-		result = ma_sound_init_from_file(&engines[selectedEngine], musicLocation.c_str(), MA_SOUND_FLAG_STREAM, NULL, NULL, &music[selectedEngine].at(ret));
+		result = ma_sound_init_from_file(&engines[selectedEngine], musicLocation.string().c_str(), MA_SOUND_FLAG_STREAM, NULL, NULL, &music[selectedEngine].at(ret));
 
 		ma_sound_set_volume(&music[selectedEngine].at(ret), volumes[(uint8_t)SoundVolume::music]);
 		if (result != MA_SUCCESS) {
-			Log::Warning("Failed to load music or voice \"%s\"", musicLocation.c_str());
+			Log::Warning("Failed to load music or voice \"%s\"", musicLocation.string().c_str());
 			throw std::runtime_error("failed to load sound");
 			return -1;
 		}
@@ -473,7 +470,7 @@ namespace EWE {
 		Log::Debug("before reloading effects \n");
 		for (auto& effectPath : effectLocations) {
 			effects.at(selectedEngine).emplace(effectPath.first, ma_sound{});
-			result = ma_sound_init_from_file(&engines[selectedEngine], effectPath.second.c_str(),
+			result = ma_sound_init_from_file(&engines[selectedEngine], effectPath.second.string().c_str(),
 				MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE | MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_ASYNC | MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_STREAM,
 				NULL, NULL, &effects.at(selectedEngine).at(effectPath.first));
 
@@ -487,7 +484,7 @@ namespace EWE {
 		for (auto& musicPath : musicLocations) {
 			music.at(selectedEngine).emplace(musicPath.first, ma_sound{});
 			Log::Debug("imemdiately befroe : %s \n", musicPath.second.c_str());
-			result = ma_sound_init_from_file(&engines[selectedEngine], musicPath.second.c_str(), MA_SOUND_FLAG_STREAM, NULL, NULL, &music.at(selectedEngine).at(musicPath.first));
+			result = ma_sound_init_from_file(&engines[selectedEngine], musicPath.second.string().c_str(), MA_SOUND_FLAG_STREAM, NULL, NULL, &music.at(selectedEngine).at(musicPath.first));
 			if (currentSong == musicPath.first) {
 				ma_sound_seek_to_pcm_frame(&music.at(selectedEngine).at(musicPath.first), currentPCMFrames);
 				if (!ma_sound_at_end(&music.at(selectedEngine).at(musicPath.first))) {
@@ -497,7 +494,7 @@ namespace EWE {
 			}
 
 			if (result != MA_SUCCESS) {
-				Log::Warning("Failed to load music \"%s\"", musicPath.second.c_str());
+				Log::Warning("Failed to load music \"%s\"", musicPath.second.string().c_str());
 				throw std::runtime_error("failed to load sound");
 			}
 		}

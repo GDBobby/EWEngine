@@ -36,7 +36,7 @@ namespace EWE{
 					if(push->GetDeviceAddress(iter) != null_buffer){
 						auto& buf = *Global::assetManager->buffer.Get(Global::assetManager->buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
 						ImGui::Text("%u:%s", iter, buf.name.c_str());
-						ImGui::SetItemTooltip(buf.name.c_str());
+						ImGui::SetItemTooltip(buf.name.string().c_str());
 					}
 					else{
 						ImGui::Text("%u:null", iter);
@@ -99,8 +99,8 @@ namespace EWE{
 					
 					if(push->GetDeviceAddress(iter) != null_buffer){
 						auto& buf = *Global::assetManager->buffer.Get(Global::assetManager->buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
-						ImGui::Text(buf.name.c_str());
-						ImGui::SetItemTooltip(buf.name.c_str());
+						ImGui::Text(buf.name.string().c_str());
+						ImGui::SetItemTooltip(buf.name.string().c_str());
 					}
 					else{
 						ImGui::Text("null");

@@ -1,0 +1,80 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "26",
+        "CMAKE_CXX_EXTENSIONS": "OFF"
+      }
+    },
+    {
+      "name": "shaderpretarget",
+      "hidden": true,
+      "cacheVariables": {
+        "PRE_TARGET_SHADER": "TRUE"
+      }
+    },
+    {
+      "name": "gcc-base",
+      "inherits": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_STANDARD": "26",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "gcc-debug",
+      "inherits": "gcc-base",
+      "binaryDir": "${sourceDir}/debugbuild",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-DEWE_DEBUG",
+        "OUTPUT_POSTFIX": "-d"
+      }
+    },
+    {
+      "name": "gcc-release",
+      "inherits": "gcc-base",
+      "binaryDir": "${sourceDir}/releasebuild",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc-debug-asan",
+      "inherits": "gcc-debug",
+      "binaryDir": "${sourceDir}/asanbuild",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "USING_ASAN": true,
+        "OUTPUT_POSTFIX": "-da",
+        "CMAKE_CXX_FLAGS": "-DEWE_DEBUG"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "gcc-debug",
+      "configurePreset": "gcc-debug"
+    },
+    {
+      "name": "gcc-debug-asan",
+      "configurePreset": "gcc-debug-asan"
+    },
+    {
+      "name": "gcc-release",
+      "configurePreset": "gcc-release"
+    }
+  ]
+}

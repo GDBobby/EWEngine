@@ -115,11 +115,13 @@ namespace EWE{
         }
         //write swapchain data?
 
-        if(Global::sceneManager->currentScenePtr != nullptr){
-            outFile << "current scene : " << Global::sceneManager->currentScenePtr->name << '\n';
-        }
-        else{
-            outFile << "not currently in a scene\n";
+        if (Global::sceneManager != nullptr){
+            if (Global::sceneManager->currentScenePtr != nullptr) {
+                outFile << "current scene : " << Global::sceneManager->currentScenePtr->name << '\n';
+            }
+            else {
+                outFile << "not currently in a scene\n";
+            }
         }
     }
     void AddException(std::ofstream& outFile, EWEException const& except){
@@ -632,6 +634,7 @@ namespace EWE{
                 return;
             }
         }
+        Log::Debug("dumping render graph to : %s / %s\n", std::filesystem::current_path().string().c_str(), file_path.string().c_str());
 
         AddHeader(outFile);
         outFile << '\n';
@@ -669,5 +672,7 @@ namespace EWE{
         file << "Param Data - current frame[";
         outFile << (int)engine->frameIndex << "]\n";
         CrackIntoParamData(file, renderGraph, engine->frameIndex, packageMap);
+
+        outFile.close();
     }
 } //namespace EWE

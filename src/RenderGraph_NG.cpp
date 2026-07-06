@@ -287,7 +287,7 @@ namespace Node{
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
                 const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
-                name = temp_path;
+                name = temp_path.string();
 
                 Log::Error("saving rendergraph isn't setup yet\n");
                 //RenderGraph& written = Global::assetManager->renderGraph.ConstructInto(name, engine->logicalDevice);

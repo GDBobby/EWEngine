@@ -67,7 +67,7 @@ namespace Asset{
         //filesystem.Imgui();
         std::unique_lock lock{mut};
         for(auto& kvp : association_container){
-            if(ImGui::TreeNode(kvp.value->name.c_str())){
+            if(ImGui::TreeNode(kvp.value->name.string().c_str())) {
                 Get(kvp.key); //what is this??
                 DragDropPtr::Source(*kvp.value);
 

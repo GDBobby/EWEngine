@@ -123,7 +123,7 @@ namespace Node{
             return;
         }
         auto* node_payload = reinterpret_cast<Command::InstructionPackage*>(node.payload);
-        ImGui::Text(node_payload->name.c_str());
+        ImGui::Text(node_payload->name.string().c_str());
 
         ::ImNodes::EndNodeTitleBar();
         if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()){
