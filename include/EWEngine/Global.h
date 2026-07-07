@@ -27,9 +27,8 @@ namespace Global{
 
     void InitEngineGlobal(std::filesystem::path const& path);
 
-    //pixel to vulkan
-    float ConvertP2V_Width(int width);
-    float ConvertP2V_Height(int height);
-    lab::vec2 ConvertP2V(lab::ivec2 dimensions);
+    constexpr float DefaultHeight_PixelRatio(uint32_t pixel){
+        return (0.5f - (static_cast<float>(pixel) / 1080.f)) * 2.f;
+    }
 } //namespace Global
 } //namepsace EWE

@@ -125,8 +125,9 @@ namespace EWE{
         }
     }
     void AddException(std::ofstream& outFile, EWEException const& except){
-        outFile << Reflect::Enum::ToString(except.result) << '\n';
-        outFile << except.stacktrace;
+        outFile << Reflect::Enum::ToString(except.result) << "\n\n";
+        outFile << except.msg << "\n\n";
+        outFile << except.stacktrace << '\n';
     }
 
     void AddParamPoolInstructions(FileWriter& file, Command::ParamPool const& pp){

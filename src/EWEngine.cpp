@@ -302,11 +302,11 @@ namespace EWE{
 
     void TimeSemaphoreRelinquisher(TimelineSemaphore& sem){
         marl::Event event{ marl::Event::Mode::Manual };
-        Log::Debug("marl wait for sem begin - %zu:%zu\n", sem.value, sem.GetCurrentValue());
+        //Log::Debug("marl wait for sem begin - %zu:%zu\n", sem.value, sem.GetCurrentValue());
         while (!sem.Check(sem.value)) {
             event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
         }
-        Log::Debug("marl wait for sem end\n");
+        //Log::Debug("marl wait for sem end\n");
     }
 
     //the scheduler is unrelated, it's just the first thing I initialize
