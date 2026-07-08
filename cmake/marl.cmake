@@ -4,10 +4,11 @@ set(MARL_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
 	marl
-	GIT_REPOSITORY https://github.com/google/marl.git
+	GIT_REPOSITORY https://github.com/GDBobby/marl.git
 	GIT_TAG main
 	SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/marl"
 	GIT_PROGRESS   TRUE
+	GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(marl)
 

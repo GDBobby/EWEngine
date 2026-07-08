@@ -42,19 +42,5 @@ namespace Global{
         mergeTask = std::construct_at(&gref.mergeTask);
         imguiTask = std::construct_at(&gref.imguiTask);
     }
-
-
-    float ConvertP2V_Width(int width){
-        return ((static_cast<float>(width) / engine->window.screenDimensions.width) - 0.5f) * 2.f;
-    }
-    float ConvertP2V_Height(int height){
-        return (0.5f - (static_cast<float>(height) / engine->window.screenDimensions.height)) * 2.f;
-    }
-    lab::vec2 ConvertP2V(lab::ivec2 dimensions){
-        return lab::vec2{
-            ConvertP2V_Width(dimensions.x),
-            ConvertP2V_Height(dimensions.y)
-        };
-    }
 } //namespace Global
 } //namespace EWE
