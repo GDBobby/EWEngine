@@ -5,6 +5,7 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/GDBobby/xxHash-constexpr.git
 	GIT_TAG        dev
 	GIT_PROGRESS   TRUE
+  	SOURCE_SUBDIR  build/cmake
 )
 FetchContent_MakeAvailable(xxhash)
 

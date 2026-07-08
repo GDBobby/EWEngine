@@ -116,8 +116,9 @@ if(EWE_IMGUI)
     target_compile_definitions(${PROJECT_NAME} PUBLIC EWE_IMGUI)
 endif()
 
+#message(STATUS "including directories : ${LinearAlgebra_SOURCE_DIR}")
+message(STATUS "PROJECT_NAME here is: ${PROJECT_NAME}")
 
-message(STATUS "including directories : ${LinearAlgebra_SOURCE_DIR}")
 target_include_directories(${PROJECT_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${Vulkan_INCLUDE_DIR}
@@ -127,6 +128,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${EWFramework_SOURCE_DIR}/include
 	${imgui_SOURCE_DIR}
 	${ImageProcessor_SOURCE_DIR}/include
+	${xxhash_SOURCE_DIR}
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
