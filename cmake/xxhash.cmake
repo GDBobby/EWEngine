@@ -8,6 +8,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(xxhash)
 
+message(STATUS "xxhash_SOURCE_DIR : ${xxhash_SOURCE_DIR}")
+message(STATUS "xxhash_BINARY_DIR : ${xxhash_BINARY_DIR}")
+message(STATUS "xxhash_POPULATED  : ${xxhash_POPULATED}")
+
 
 #i dont currently have time to make xxHash constexpr compatible
 #if(DEFINED XXHASH_PATH)
