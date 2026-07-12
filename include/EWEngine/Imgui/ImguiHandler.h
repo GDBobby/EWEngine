@@ -11,11 +11,13 @@
 #include "EightWinds/Backend/Semaphore.h"
 #include "EightWinds/Backend/SubmitInfo.h"
 
+#include "EightWinds/Window.h"
+#include "EightWinds/Pipeline/Graphics.h"
+
 //#include "imgui/imgui.h"
 
 #include "LAB/Vector.h"
 
-#include "EightWinds/Window.h"
 
 #include <cstdint>
 
@@ -62,6 +64,10 @@ namespace EWE{
 
         void Begin();
         void End();
+
+
+        PipeLayout* pipeLayout;
+        GraphicsPipeline* pipe;
 
         void TakeCallbackControl(GLFWwindow* window);
         static void WindowFocusCallback(GLFWwindow* window, int focused);        // Since 1.84

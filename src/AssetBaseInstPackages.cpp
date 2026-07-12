@@ -67,7 +67,7 @@ namespace Asset{
                         for(uint8_t j = 0; j < temp_push->buffer_count; j++){
                             //EWE_ASSERT(bda_array[j] != null_buffer);
                             auto const device_addr = temp_push->GetDeviceAddress(j);
-                            if(device_addr == null_buffer){
+                            if(device_addr.IsNull()){
                                 Log::Warning("invalid push buffer being writen to file\n");
                                 hash_buffer = INVALID_HASH;
                             }
@@ -77,7 +77,7 @@ namespace Asset{
                             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
                         }
                         for(uint8_t j = 0; j < temp_push->texture_count; j++){
-                            if(temp_push->GetTextureIndex(j) == null_texture){
+                            if(temp_push->GetTextureIndex(j).IsNull()){
                                 Log::Warning("invalid push texture being writen to file\n");
                                 hash_buffer = INVALID_HASH;
                             }

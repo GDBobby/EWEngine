@@ -1,5 +1,4 @@
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/")
-    set(imgui_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui" CACHE PATH "")
+if(DEFINED IMGUI_PATH)
 else()
     FetchContent_Declare(
         imgui
@@ -10,4 +9,5 @@ else()
         GIT_PROGRESS   TRUE
     )
     FetchContent_MakeAvailable(imgui)
+    set(IMGUI_PATH ${imgui_SOURCE_DIR} CACHE PATH "")
 endif()

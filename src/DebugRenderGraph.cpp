@@ -424,7 +424,7 @@ namespace EWE{
                 file << "buffer[";
                 outFile << i << "] : ";
                 auto const& da = push.GetDeviceAddress(i);
-                if(da == null_buffer){
+                if(!da.IsNull()){
                     outFile << "null buffer\n";
                 }
                 else{
@@ -439,7 +439,7 @@ namespace EWE{
             }
             for(std::size_t i = 0; i < push.texture_count; i++){
                 auto const& ti = push.GetTextureIndex(i);
-                if(ti == null_texture){
+                if(!ti.IsNull()){
                     outFile << "null texture\n";
                 }
                 else{
@@ -556,7 +556,7 @@ namespace EWE{
             file << buf.name;
             outFile << " : ";
             if(buf.usageFlags == VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT){
-                if(buf.deviceAddress == null_buffer){
+                if(!buf.deviceAddress.IsNull()){
                     outFile << "null_buffer addr\n";
                 }
                 else{
@@ -599,7 +599,7 @@ namespace EWE{
                 file << dii.name;
             }
 
-            if(kvp.value == null_texture){
+            if(!kvp.value.IsNull()){
                 outFile << " : null_texture\n";
             }
             else{

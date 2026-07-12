@@ -75,13 +75,13 @@ option(EWE_IMGUI "imgui" ON)
 if(EWE_IMGUI)
 	include(cmake/imgui.cmake)
 	set(IMGUI_SOURCES
-		${imgui_SOURCE_DIR}/imgui.cpp
-		${imgui_SOURCE_DIR}/imgui_draw.cpp
-		${imgui_SOURCE_DIR}/imgui_tables.cpp
-		${imgui_SOURCE_DIR}/imgui_widgets.cpp
-		${imgui_SOURCE_DIR}/imgui_demo.cpp
-		${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
-		${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+		${IMGUI_PATH}/imgui.cpp
+		${IMGUI_PATH}/imgui_draw.cpp
+		${IMGUI_PATH}/imgui_tables.cpp
+		${IMGUI_PATH}/imgui_widgets.cpp
+		${IMGUI_PATH}/imgui_demo.cpp
+		${IMGUI_PATH}/backends/imgui_impl_vulkan.cpp
+		${IMGUI_PATH}/backends/imgui_impl_glfw.cpp
 	)
 else()
 	set(IMGUI_SOURCES)
@@ -126,7 +126,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/external/include
 	${LinearAlgebra_SOURCE_DIR}
     ${EWFramework_SOURCE_DIR}/include
-	${imgui_SOURCE_DIR}
+	${IMGUI_PATH}
 	${ImageProcessor_SOURCE_DIR}/include
 	${xxhash_SOURCE_DIR}
 )

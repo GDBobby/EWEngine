@@ -33,7 +33,7 @@ namespace EWE{
 				ImGui::TableNextColumn();
 
 				if(iter < push->buffer_count){
-					if(push->GetDeviceAddress(iter) != null_buffer){
+					if(!push->GetDeviceAddress(iter).IsNull()){
 						auto& buf = *Global::assetManager->buffer.Get(Global::assetManager->buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
 						ImGui::Text("%u:%s", iter, buf.name.c_str());
 						ImGui::SetItemTooltip(buf.name.string().c_str());
@@ -48,7 +48,7 @@ namespace EWE{
 				}
 				ImGui::TableNextColumn();
 				if(iter < push->texture_count){
-					if(push->GetTextureIndex(iter) != null_texture){
+					if(!push->GetTextureIndex(iter).IsNull()){
 						const AssetHash temp_hash = Global::assetManager->dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
 #if EWE_DEBUG_BOOL
 						if(temp_hash == Asset::INVALID_HASH) {
@@ -97,7 +97,7 @@ namespace EWE{
 
 				if(iter < push->buffer_count){
 					
-					if(push->GetDeviceAddress(iter) != null_buffer){
+					if(!push->GetDeviceAddress(iter).IsNull()){
 						auto& buf = *Global::assetManager->buffer.Get(Global::assetManager->buffer.ConvertBDAToHash(push->GetDeviceAddress(iter)));
 						ImGui::Text(buf.name.string().c_str());
 						ImGui::SetItemTooltip(buf.name.string().c_str());
@@ -119,7 +119,7 @@ namespace EWE{
 				ImGui::TableNextColumn();
 
 				if(iter < push->texture_count){
-					if(push->GetTextureIndex(iter) != null_texture){
+					if(!push->GetTextureIndex(iter).IsNull()){
 						const AssetHash temp_hash = Global::assetManager->dii.ConvertTextureIndexToHash(push->GetTextureIndex(iter));
 #if EWE_DEBUG_BOOL
 						if(temp_hash == Asset::INVALID_HASH) {

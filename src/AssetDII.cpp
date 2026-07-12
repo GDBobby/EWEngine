@@ -4,11 +4,13 @@
 #include "EWEngine/Assets/Hash.h"
 #include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/DragDrop.h"
+
+#include "EWEngine/EWEngine.h"
+
 #include "EightWinds/Reflect/Enum.h"
 #include "EightWinds/DescriptorImageInfo.h"
 #include "EightWinds/Sampler.h"
-
-#include "EWEngine/EWEngine.h"
+#include "EightWinds/Data/StreamHelper.h"
 
 #if EWE_IMGUI
     #include "imgui.h"
@@ -37,13 +39,6 @@ namespace Asset{
             return true;
         }
         return false;
-    }
-
-    ImTextureRef GetTextureRef(DescriptorImageInfo const& dii){
-        if(!CanAttemptImguiRef(dii)){
-            return ImTextureID_Invalid;
-        }
-        return ImGui_ImplVulkan_AddTexture(dii.sampler != nullptr ? dii.sampler->sampler : VK_NULL_HANDLE, dii.view.view, dii.imageInfo.imageLayout);
     }
 #endif
 
@@ -109,12 +104,6 @@ namespace Asset{
             ret->name = params.view->image.name / ".dii";
         }
         association_container.push_back(CrossPlatformPathHash(ret->name), ret);
-#if EWE_IMGUI
-        auto tex_ref = GetTextureRef(*ret);
-        if(tex_ref != ImTextureID_Invalid){
-            imgui_texture_refs.push_back(ret, tex_ref);
-        }
-#endif
         
         return *ret;
     }
@@ -208,21 +197,13 @@ namespace Asset{
             ImGui::PushID(kvp.key);
             if(ImGui::TreeNode(kvp.value->name.string().c_str())){
                 DragDropPtr::Source(*kvp.value);
-                auto found_image = imgui_texture_refs.find(kvp.value);
-                if(found_image != imgui_texture_refs.end() && found_image->key->view.image.data.layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL){
+
+                if(kvp.value->view.image.data.layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && kvp.value->sampler != nullptr){
                     ImVec2 image_size{
-                        static_cast<float>(found_image->key->view.image.data.extent.width),
-                        static_cast<float>(found_image->key->view.image.data.extent.height)
+                        static_cast<float>(kvp.value->view.image.data.extent.width),
+                        static_cast<float>(kvp.value->view.image.data.extent.height)
                     };
-                    ImGui::Image(found_image->value, image_size);
-                }
-                else if(CanAttemptImguiRef(*kvp.value)){
-                    if(ImGui::Button("attempt to load preview")){
-                        auto tex_ref = GetTextureRef(*kvp.value);
-                        if(tex_ref != ImTextureID_Invalid){
-                            imgui_texture_refs.push_back(kvp.value, tex_ref);
-                        }
-                    }
+                    ImGui::Image(kvp.value->index, image_size);
                 }
 
                 if(kvp.value->sampler != nullptr){

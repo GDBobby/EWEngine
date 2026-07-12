@@ -10,7 +10,6 @@
 namespace EWE{
 
     //what about ShaderMeta??? Shader.h line 19
-
     struct GPUTaskMeta_Helper{
         struct PushHelper{
             ParamPointerChain pointer_chain;

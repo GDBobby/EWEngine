@@ -111,33 +111,87 @@ namespace EWE{
 
 
         ImGui_ImplVulkan_InitInfo vulkan_init_info{
-			.ApiVersion = engine->instance.api_version,
-			.Instance = engine->logicalDevice.instance,
-			.PhysicalDevice = engine->logicalDevice.physicalDevice.device,
-			.Device = engine->logicalDevice.device,
-			.QueueFamily = queue.family.index,
-			.Queue = queue,
-			.DescriptorPoolSize = 1024,
-			.MinImageCount = image_count,
+			.logicalDevice = &engine->logicalDevice,
+			.renderQueue = &engine->renderQueue,
 			.ImageCount = image_count,
-			.PipelineCache = nullptr,
-			.PipelineInfoMain = ImGui_ImplVulkan_PipelineInfo{
-				.RenderPass = VK_NULL_HANDLE,
-				.MSAASamples = sample_count,
-				.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
-					.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-					.pNext = nullptr,
-					.viewMask = 0,
-					.colorAttachmentCount = 1,
-					.pColorAttachmentFormats = colorFormats.data(),
-					.depthAttachmentFormat = VK_FORMAT_D16_UNORM,
-					.stencilAttachmentFormat = VK_FORMAT_UNDEFINED
-				}
-			},
-			.UseDynamicRendering = true,
 			.Allocator = nullptr,
 			.CheckVkResultFn = EWE_VK_RESULT,
 		};
+
+		ObjectRasterConfig objConfig;
+		objConfig.depthClamp = VK_FALSE;
+		objConfig.rasterizerDiscard = VK_FALSE;
+		objConfig.polygonMode = VK_POLYGON_MODE_FILL;
+		objConfig.cullMode = VK_CULL_MODE_NONE;
+		objConfig.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		objConfig.depthBias.enable = VK_FALSE;
+		objConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		objConfig.primitiveRestart = VK_FALSE;
+		objConfig.blendAttachments.ClearAndResize(1);
+		objConfig.blendConstants[0] = 0.f; objConfig.blendConstants[1] = 0.f;
+		objConfig.blendConstants[2] = 0.f; objConfig.blendConstants[3] = 0.f;
+		objConfig.blendAttachments[0] = VkPipelineColorBlendAttachmentState{
+			.blendEnable = VK_TRUE,
+			.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+			.colorBlendOp = VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+			.alphaBlendOp = VK_BLEND_OP_ADD,
+			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+		};
+
+		AttachmentInfo attInfo[1] = {
+			AttachmentInfo{
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.clearValue{
+					.color{
+						.float32{0.f, 0.f, 0.f, 0.f}
+					}
+				}
+			}
+		};
+
+		TaskRasterConfig taskConfig{
+			.viewportCount = 1,
+			.scissorCount = 1,
+			.rastSamples = VK_SAMPLE_COUNT_1_BIT,
+			.enable_sampleShading = false,
+			.minSampleShading = 0.f,
+			.alphaToCoverageEnable = false,
+			.alphaToOneEnable = false,
+			.dynamicState{
+				VK_DYNAMIC_STATE_VIEWPORT,
+				VK_DYNAMIC_STATE_SCISSOR
+			},
+			.depthStencilInfo{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO
+			},
+			.attachment_info{
+				1, 1,
+				VkRenderingFlags{0},
+				attInfo,
+				AttachmentInfo{
+					VK_FORMAT_D16_UNORM,
+					VK_ATTACHMENT_LOAD_OP_CLEAR,
+					VK_ATTACHMENT_STORE_OP_STORE,
+					VkClearValue{
+						.depthStencil{
+							.depth{0.f} // 1 or 0?
+						}
+					}
+				}
+			}
+		};
+
+		std::initializer_list<Shader*> shaders = {
+			Global::assetManager->shader.Get("imgui.vert.spv"),
+			Global::assetManager->shader.Get("imgui.frag.spv")
+		};
+		pipeLayout = new PipeLayout(engine->logicalDevice, shaders);
+		pipe = new GraphicsPipeline(engine->logicalDevice, pipeLayout, taskConfig, objConfig);
 
 
 		auto* prev_context = ImGui::GetCurrentContext();
@@ -149,7 +203,11 @@ namespace EWE{
 		ImGui::StyleColorsDark();
 	
 		ImGui_ImplGlfw_InitForVulkan(engine->window.window, false);
-		ImGui_ImplVulkan_Init(&vulkan_init_info);
+		
+		vulkan_init_info.provided_pipeline = pipe->pipe;
+		vulkan_init_info.provided_pipeLayout = pipe->layout->layout;
+
+		ImGui_ImplVulkan_Init(vulkan_init_info);
 
 		if(prev_context != nullptr){
 			ImGui::SetCurrentContext(prev_context);

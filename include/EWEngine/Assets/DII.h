@@ -54,7 +54,6 @@ namespace Asset{
         DescriptorImageInfo const& RevertIndex(TextureIndex index) const;
 
 #ifdef EWE_IMGUI
-        KeyValueContainer<DescriptorImageInfo*, ImTextureRef> imgui_texture_refs;
         DiiCreation creation_params;
         bool showCreation = false;
         void Imgui();
