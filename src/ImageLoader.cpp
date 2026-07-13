@@ -186,9 +186,9 @@ namespace EWE{
                         sheet.owningQueue = &engine->transferQueue;
                     }
 
-                    const uint32_t sprites_per_row = rawImg.width / sheet.texel_width;
-                    const uint32_t sprites_per_col = rawImg.height / sheet.texel_height;
-                    sheet.imgs.ClearAndResize(sprites_per_row * sprites_per_col);
+                    sheet.width_in_sprites = rawImg.width / sheet.texel_width;
+                    sheet.height_in_sprites = rawImg.height / sheet.texel_height;
+                    sheet.imgs.ClearAndResize(sheet.width_in_sprites * sheet.height_in_sprites);
                     for (std::size_t i = 0; i < sheet.imgs.Size(); i++) {
                         sheet.imgs[i] = &Global::assetManager->image.ConstructInto(engine->logicalDevice);
                         sheet.imgs[i]->name = sheet.name;
@@ -210,18 +210,18 @@ namespace EWE{
                     const uint8_t bytes_per_texel = rawImg.format.BytesPerTexel();
                     const uint32_t sprite_byte_width = sheet.texel_width * bytes_per_texel;
                     const uint32_t sprite_size = sheet.texel_width * sheet.texel_height;
-                    const uint32_t full_row_byte_size = sprite_size * sprites_per_row * bytes_per_texel;
+                    const uint32_t full_row_byte_size = sprite_size * sheet.width_in_sprites * bytes_per_texel;
 
                     for(std::size_t i = 0; i < sheet.imgs.Size(); i++) {
-                        const uint32_t sprite_column = i % sprites_per_row;
-                        const uint32_t sprite_row = i / sprites_per_row;
+                        const uint32_t sprite_column = i % sheet.width_in_sprites;
+                        const uint32_t sprite_row = i / sheet.width_in_sprites;
 
                         auto& img = *sheet.imgs[i];
                         transferContext.images[i] = &img;
                         transferContext.regions[i] = VkBufferImageCopy{
                             .bufferOffset = sprite_byte_width * sprite_column + sprite_row * full_row_byte_size,
-                            .bufferRowLength = sprites_per_row * sheet.texel_width,
-                            .bufferImageHeight = sprites_per_col * sheet.texel_height,
+                            .bufferRowLength = sheet.width_in_sprites * sheet.texel_width,
+                            .bufferImageHeight = sheet.height_in_sprites * sheet.texel_height,
                             .imageSubresource{
                                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                                 .mipLevel = 0,

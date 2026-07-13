@@ -159,6 +159,29 @@ namespace Asset{
                 }
             }
         }
+
+        Resource* Imgui_Select(){
+
+            if(ImGui::Button("refresh files")){
+                files.RefreshFiles();
+            }
+
+            for(auto& kvp : files.hashed_path){
+                auto found = association_container.find(kvp.key);
+                if(found == association_container.end()) {
+                    if(ImGui::Button(kvp.value.string().c_str())){
+                        return Get(kvp.key);
+                    }
+                }
+                else{
+                    if(ImGui::Button(kvp.value.string().c_str())){
+                        return found->value;
+                    }
+                }
+            }
+
+            return nullptr;
+        }
 #endif
     };
 } //namespace Asset

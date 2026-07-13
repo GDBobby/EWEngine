@@ -226,7 +226,7 @@ namespace EWE{
 			//im doing a index based approached because i want to allow the creation/removal of viewports from within the exec_func
 			for(std::size_t i = 0; i < viewports.size(); i++) {
 				auto& vp = viewports[i];
-				if(vp.exec_funcs.size() > 0){
+				if(vp.exec_funcs.size() > 0 && vp.currently_drawn){
 
 					std::string label_name = std::string("imgui[") + std::to_string(i) + "]";
 					VkDebugUtilsLabelEXT labelUtil{

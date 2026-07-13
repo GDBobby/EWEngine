@@ -34,6 +34,8 @@ namespace EWE{
         };
         ImGuiContext* context;
 
+        bool currently_drawn = true;
+
         //push any amount of arbitrary functionality
         //potentially do another vector without the viewport data? 
         //  it's only useful if the viewport will be adjusted internally

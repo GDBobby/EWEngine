@@ -15,6 +15,9 @@ namespace EWE{
 
         uint16_t texel_width;
         uint16_t texel_height;
+        
+        uint16_t width_in_sprites;
+        uint16_t height_in_sprites;
 
         TextureIndex GetIndex(uint16_t sprite_index) const{
             return diis[sprite_index]->index;
