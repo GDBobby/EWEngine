@@ -63,6 +63,7 @@ namespace Asset{
 
         //optional return?
         Resource* Get(AssetHash hash){
+            std::unique_lock lock{mut}; //recursive lock?
             auto iter = association_container.find(hash);
             if(iter != association_container.end()){
                 return iter->value;
@@ -72,9 +73,7 @@ namespace Asset{
                 if(path_hash_data == files.hashed_path.end()){
                     return nullptr;
                 }
-                mut.lock();
                 Resource* ret = data_arena.GetCell();
-                mut.unlock();
                 Log::Debug("loading asset - %s / %s\n", files.root_directory.string().c_str(), path_hash_data->value.string().c_str());
                 if(LoadAssetFromFile<Resource>(ret, files.root_directory, path_hash_data->value)){
                     association_container.push_back(hash, ret);
