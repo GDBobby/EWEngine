@@ -180,6 +180,8 @@ namespace EWE{
         features12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
         features12.timelineSemaphore = VK_TRUE;
         features12.drawIndirectCount = VK_TRUE;
+        features12.shaderInt8 = VK_TRUE;
+        features12.storageBuffer8BitAccess = VK_TRUE;
 
         //features12.descriptorBindingUniformBufferUpdateAfterBind;
         //features12.descriptorBindingStorageBufferUpdateAfterBind;

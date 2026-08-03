@@ -19,11 +19,15 @@ namespace EWE{
 		: current_path{path}
 	{
 		memset(path_buffer, 0, path_length);
+		auto lower_size = lab::Min(path_length - 1, path.size());
+		strncpy(path_buffer, path.data(), lower_size);
 	}
 	ExplorerContext::ExplorerContext(std::filesystem::path path)
 		: current_path{path}
 	{
 		memset(path_buffer, 0, path_length);
+		auto lower_size = lab::Min(path_length - 1, current_path.string().size());
+		strncpy(path_buffer, current_path.string().c_str(), lower_size);
 	}
 
 	std::filesystem::path ExplorerContext::CreateFullFilePath(std::string_view extension){

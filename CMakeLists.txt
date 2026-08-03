@@ -69,6 +69,7 @@ include(cmake/rapidjson.cmake)
 include(cmake/tinyobj.cmake)
 include(cmake/xxhash.cmake)
 include(cmake/imageprocessor.cmake)
+include(cmake/gltf.cmake)
 
 option(EWE_IMGUI "imgui" ON)
 
@@ -129,6 +130,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 	${IMGUI_PATH}
 	${ImageProcessor_SOURCE_DIR}/include
 	${xxhash_SOURCE_DIR}
+	${gltf2cpp_SOURCE_DIR}
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
@@ -159,6 +161,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	freetype
 	xxhash
 	ImageProcessor
+	gltf2cpp
 )
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)

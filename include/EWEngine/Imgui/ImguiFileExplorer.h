@@ -50,7 +50,7 @@ namespace EWE{
 		[[nodiscard]] explicit ExplorerContext(std::string_view path);
 		[[nodiscard]] explicit ExplorerContext(std::filesystem::path path);
 		
-		static constexpr std::size_t path_length = 128;
+		static constexpr std::size_t path_length = 256;
 		char path_buffer[path_length];
 		
 		ImGuiTableFlags table_flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;

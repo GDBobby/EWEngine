@@ -16,13 +16,6 @@
       }
     },
     {
-      "name": "shaderpretarget",
-      "hidden": true,
-      "cacheVariables": {
-        "PRE_TARGET_SHADER": "TRUE"
-      }
-    },
-    {
       "name": "gcc-base",
       "inherits": "base",
       "hidden": true,
