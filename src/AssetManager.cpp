@@ -116,7 +116,8 @@ namespace Asset{
     template<typename T>
     bool CheckExtension(T& container, std::filesystem::path const& dropped_ext, std::filesystem::path const& path){
         if constexpr(requires{container.files;}){
-            auto const& extensions = container.files.acceptable_extensions;
+            for(auto& file_pack : container.files){
+                auto const& extensions = file_pack.acceptable_extensions;
                 for(auto const& ext : extensions){
                     if(dropped_ext == ext){
                         auto* temp = container.Get(path);
@@ -142,6 +143,7 @@ namespace Asset{
                         return true;
                     }
                 }
+            }
         }
         return false;
     }

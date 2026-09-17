@@ -19,7 +19,10 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->rasterTask.files.acceptable_extensions;
+        if(Global::assetManager->rasterTask.files.size() > 0){
+            explorer.acceptable_extensions = Global::assetManager->rasterTask.files[0].acceptable_extensions;
+        }
+
         task_config.SetDefaults();
     }
 
@@ -150,12 +153,18 @@ namespace Node{
             explorer.Imgui();
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
-                auto const proximate_path = std::filesystem::proximate(
-                    saved_path,
-                    EWE::Global::assetManager->rasterTask.files.root_directory
-                );
+
+
+
+                //auto const proximate_path = std::filesystem::proximate(
+                //    saved_path,
+                //    EWE::Global::assetManager->rasterTask.files.root_directory
+                //);
+
+
+
                 {
-                    auto* pkg = Global::assetManager->rasterTask.Get(Asset::CrossPlatformPathHash(proximate_path));
+                    auto* pkg = Global::assetManager->rasterTask.Get(Asset::CrossPlatformPathHash(saved_path.filename()));
                     if(pkg != nullptr){
                         Global::assetManager->rasterTask.Destroy(*pkg);
                     }
@@ -168,15 +177,14 @@ namespace Node{
                     rt.objectPackages.push_back(reinterpret_cast<Command::ObjectPackage*>(current_node->payload));
                     current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
                 }
-                Log::Debug("writing raster ng to file - %s / %s -- %s\n", 
-                    EWE::Global::assetManager->rasterTask.files.root_directory.string().c_str(),
-                    proximate_path.string().c_str(),
-                    saved_path.string().c_str()
+                Log::Debug("writing raster ng to file - %s / %s\n", 
+                    saved_path.parent_path(),
+                    saved_path.filename()
                 );
                 Asset::WriteAssetToFile(
                     rt,
-                    EWE::Global::assetManager->rasterTask.files.root_directory,
-                    proximate_path
+                    saved_path.parent_path(),
+                    saved_path.filename()
                 );
 
                 explorer.enabled = false;
@@ -199,9 +207,11 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 
-                const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->rasterTask.files.root_directory);
-                auto* rt = Global::assetManager->rasterTask.Get(localized_path);
-                InitFromObject(*rt);
+                //const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->rasterTask.files.root_directory);
+                auto* rt = Global::assetManager->rasterTask.Get(load_path.filename());
+                if(rt != nullptr){
+                    InitFromObject(*rt);
+                }
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();

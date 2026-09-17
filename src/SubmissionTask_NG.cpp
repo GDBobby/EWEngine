@@ -93,7 +93,9 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->subTask.files.acceptable_extensions;
+        if(Global::assetManager->subTask.files.size() > 0){
+            explorer.acceptable_extensions = Global::assetManager->subTask.files[0].acceptable_extensions;
+        }
     }
 
     ImNodes::Node* SubmissionTask_NG::CreateHeadNode(){
@@ -363,8 +365,8 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
-                name = temp_path.string();
+                //const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
+                name = saved_path.filename().string();
 
                 SubmissionTask& written = Global::assetManager->subTask.ConstructInto(name, engine->logicalDevice, engine->renderQueue);
                 
@@ -374,7 +376,7 @@ namespace Node{
                     written.tasks.push_back(task);
                 }
 
-                Asset::WriteAssetToFile(written, Global::assetManager->subTask.files.root_directory, temp_path);
+                Asset::WriteAssetToFile(written, saved_path.parent_path(), saved_path.filename());
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();
@@ -396,10 +398,12 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
 
-                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
+                //const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
 
-                auto* subTask = Global::assetManager->subTask.Get(temp);
-                InitFromObject(*subTask);
+                auto* subTask = Global::assetManager->subTask.Get(load_path.filename());
+                if(subTask != nullptr){
+                    InitFromObject(*subTask);
+                }
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();

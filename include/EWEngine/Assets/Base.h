@@ -35,16 +35,20 @@ namespace Asset{
         using Type = Resource;
 
         std::recursive_mutex mut;
-        FileSystem files;
+        std::vector<FileSystem> files;
+
         Hive<Resource, 64> data_arena;
         KeyValueContainer<AssetHash, Resource*> association_container;
 
 
         [[nodiscard]] explicit Manager(std::filesystem::path const& root_path)
-        : files{root_path, acceptable_extensions<Resource>},
+        : files{},
             data_arena{},
             association_container{}
-        {}
+        {
+            files.emplace_back(root_path, acceptable_extensions<Resource>);
+
+        }
 
         void Destroy(AssetHash hash){
             Resource* res = Get(hash);
@@ -69,13 +73,31 @@ namespace Asset{
                 return iter->value;
             }
             else{
-                const auto path_hash_data = files.hashed_path.find(hash);
-                if(path_hash_data == files.hashed_path.end()){
+                if(files.size() == 0){
                     return nullptr;
                 }
+
+                std::filesystem::path root_dir = files[0].root_directory;
+                auto path_hash_data = files[0].hashed_path.find(hash);
+                if(path_hash_data == files[0].hashed_path.end()){
+                    uint8_t iter = 1;
+                    while(iter != files.size()){
+                        root_dir = files[iter].root_directory;
+                        path_hash_data = files[iter].hashed_path.find(hash);
+                        if(path_hash_data != files[iter].hashed_path.end()){
+                            root_dir = files[iter].root_directory;
+                            break;
+                        }
+                        iter++;
+                    }
+
+                    if(iter >= files.size()) {
+                        return nullptr;
+                    }
+                }
                 Resource* ret = data_arena.GetCell();
-                Log::Debug("loading asset - %s / %s\n", files.root_directory.string().c_str(), path_hash_data->value.string().c_str());
-                if(LoadAssetFromFile<Resource>(ret, files.root_directory, path_hash_data->value)){
+                Log::Debug("loading asset - %s / %s\n", root_dir.string().c_str(), path_hash_data->value.string().c_str());
+                if(LoadAssetFromFile<Resource>(ret, root_dir, path_hash_data->value)){
                     association_container.push_back(hash, ret);
                     return ret;
                 }
@@ -101,59 +123,64 @@ namespace Asset{
 
 #ifdef EWE_IMGUI
         void Imgui(){
-            if(ImGui::Button("refresh files")){
-                files.RefreshFiles();
+            for(auto& file_dir : files){
+                std::string refresh_name = "refresh dir : [";
+                refresh_name += file_dir.root_directory.string() + ']';
+                if(ImGui::Button(refresh_name.c_str())){
+                    file_dir.RefreshFiles();
+                }
             }
 
-            for(auto& kvp : files.hashed_path){
-                auto found = association_container.find(kvp.key);
-                if(found == association_container.end()){
-                    if(ImGui::Button(kvp.value.string().c_str())){
-                        Get(kvp.key);
-                    }
-                }
-                else{
-                    if(ImGui::TreeNode(found->value->name.string().c_str())) {
-                        DragDropPtr::Source(*found->value);
-
-                        ImGui::PushID(found->value);
-                        if(ImGui::Button("unload")){
-                            Destroy(*found->value);
+            for(auto& file_pack : files) {
+                for(auto& kvp : file_pack.hashed_path){
+                    auto found = association_container.find(kvp.key);
+                    if(found == association_container.end()){
+                        if(ImGui::Button(kvp.value.string().c_str())){
+                            Get(kvp.key);
                         }
-                        ImGui::PopID();
-
-                        if constexpr (std::meta::is_complete_type(^^WriteAssetToFile<decltype(*found->value)>)){
-                            WriteAssetToFile(*found->value);
-                        }
-                        if constexpr(std::meta::is_complete_type(^^ImguiExtension::Imgui<decltype(*found->value)>)){
-                            ImguiExtension::Imgui(*found->value);
-                        }
-                        ImGui::TreePop();
                     }
                     else{
-                        DragDropPtr::Source(*found->value);
+                        if(ImGui::TreeNode(found->value->name.string().c_str())) {
+                            DragDropPtr::Source(*found->value);
+
+                            ImGui::PushID(found->value);
+                            if(ImGui::Button("unload")){
+                                Destroy(*found->value);
+                            }
+                            ImGui::PopID();
+
+                            if constexpr (std::meta::is_complete_type(^^WriteAssetToFile<decltype(*found->value)>)){
+                                WriteAssetToFile(*found->value);
+                            }
+                            if constexpr(std::meta::is_complete_type(^^ImguiExtension::Imgui<decltype(*found->value)>)){
+                                ImguiExtension::Imgui(*found->value);
+                            }
+                            ImGui::TreePop();
+                        }
+                        else{
+                            DragDropPtr::Source(*found->value);
+                        }
                     }
                 }
             }
 
-            bool has_non_file = false;
+
+            
             for(auto& kvp : association_container){
-                auto found = files.hashed_path.find(kvp.key);
-                if(found == files.hashed_path.end()){
-                    if(!has_non_file){
-                        has_non_file = true;
-                        ImGui::SeparatorText("doesnt have file");
-                    }
-                    bool tree_open = ImGui::TreeNode(kvp.value->name.string().c_str());
-                    DragDropPtr::Source(*kvp.value);
-                    if(tree_open){
-                        if constexpr (std::meta::is_complete_type(^^WriteAssetToFile<decltype(*kvp.value)>)){
-                            WriteAssetToFile(*kvp.value);
+                for(auto& file_pack : files){
+                    auto found = file_pack.hashed_path.find(kvp.key);
+                    if(found == file_pack.hashed_path.end()){
+                        bool tree_open = ImGui::TreeNode(kvp.value->name.string().c_str());
+                        DragDropPtr::Source(*kvp.value);
+                        if(tree_open){
+                            if constexpr (std::meta::is_complete_type(^^WriteAssetToFile<decltype(*kvp.value)>)){
+                                WriteAssetToFile(*kvp.value);
+                            }
+                            if constexpr(std::meta::is_complete_type(^^ImguiExtension::Imgui<decltype(*kvp.value)>)){
+                                ImguiExtension::Imgui(*kvp.value);
+                            }
+                            ImGui::TreePop();
                         }
-                        if constexpr(std::meta::is_complete_type(^^ImguiExtension::Imgui<decltype(*kvp.value)>)){
-                            ImguiExtension::Imgui(*kvp.value);
-                        }
-                        ImGui::TreePop();
                     }
                 }
             }
@@ -161,20 +188,26 @@ namespace Asset{
 
         Resource* Imgui_Select(){
 
-            if(ImGui::Button("refresh files")){
-                files.RefreshFiles();
+            for(auto& file_dir : files){
+                std::string refresh_name = "refresh dir : [";
+                refresh_name += file_dir.root_directory.string() + ']';
+                if(ImGui::Button(refresh_name.c_str())){
+                    file_dir.RefreshFiles();
+                }
             }
 
-            for(auto& kvp : files.hashed_path){
-                auto found = association_container.find(kvp.key);
-                if(found == association_container.end()) {
-                    if(ImGui::Button(kvp.value.string().c_str())){
-                        return Get(kvp.key);
+            for(auto& file_pack : files){
+                for(auto& kvp : file_pack.hashed_path){
+                    auto found = association_container.find(kvp.key);
+                    if(found == association_container.end()) {
+                        if(ImGui::Button(kvp.value.string().c_str())){
+                            return Get(kvp.key);
+                        }
                     }
-                }
-                else{
-                    if(ImGui::Button(kvp.value.string().c_str())){
-                        return found->value;
+                    else{
+                        if(ImGui::Button(kvp.value.string().c_str())){
+                            return found->value;
+                        }
                     }
                 }
             }

@@ -45,12 +45,14 @@ namespace EWE{
     constexpr ConstEvalStr deviceFaultExt{ VK_EXT_DEVICE_FAULT_EXTENSION_NAME };
     //this requires the instance extension VK_EXT_debug_utils. i don't know how to make that association cleanly
     constexpr ConstEvalStr dabReportExt{ VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME };
+    //constexpr ConstEvalStr workgraphExt{VK_AMDX_SHADER_ENQUEUE_EXTENSION_NAME};
 
     using Example_ExtensionManager = ExtensionManager<application_wide_vk_version,
         ExtensionEntry<swapchainExt, true, 0>,
         ExtensionEntry<dynState3Ext, true, 0>,
         ExtensionEntry<meshShaderExt, false, 100000>,
         ExtensionEntry<deviceFaultExt, false, 10000>
+        //, ExtensionEntry<workgraphExt, true, 0>
 #if EWE_DEBUG_BOOL
         , ExtensionEntry<dabReportExt, false, 0>
 #endif

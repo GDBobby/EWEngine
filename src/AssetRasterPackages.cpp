@@ -116,7 +116,7 @@ namespace Asset{
 
         for(auto* pkg : rt.objectPackages){
             AssetHash hash_buffer = GetHash(*pkg);
-            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), Global::assetManager->objPkg.files.root_directory, pkg->name);
+            WriteAssetToFile(static_cast<Command::InstructionPackage&>(*pkg), root_directory, pkg->name);
             outFile.write(reinterpret_cast<char*>(&hash_buffer), sizeof(AssetHash));
         }
 

@@ -19,7 +19,7 @@ namespace Asset{
     //this is a litle specialized, so I'll leave it as is
     template<>
     struct Manager<DescriptorImageInfo>{
-        FileSystem files;
+        std::vector<FileSystem> files;
 
         [[nodiscard]] explicit Manager(
             std::filesystem::path const& root_path

@@ -279,25 +279,26 @@ namespace EWE{
 			0.f, 100.f
 		);
 		skinPush.camera.view = lab::ViewDirection<
-			CoordinateSystem{}
+			lab::CoordinateSystem<lab::Direction::XDir<true>, lab::Direction::YDir<true>, lab::Direction::ZDir<true>>
 		>(
 			lab::vec3{skinPush.camera.camPos}, 
 			skinPush.cam_forward
 		);
 		skinPush.camera.projView = skinPush.camera.proj * skinPush.camera.view;
 
-		skinPush.lights.ambientColor = Color_RGBA<flaot>{1.f, 1.f, 1.f, 1.f};
+		skinPush.lights.ambientColor = Color_RGBA<float>{1.f, 1.f, 1.f, 1.f};
 		skinPush.lights.sunDir = lab::vec3(0.f, 0.f, 1.f);
 		skinPush.lights.sunColor = Color_RGBA<float>{1.f, 0.f, 0.f, 1.f};
-		skinPush.point_count = 0;
+		skinPush.lights.point_count = 0;
 
 		skinPush.material.albedo = Color_RGB<float>{0.04f, 0.04f, 0.04f};
 		skinPush.material.rough_val = 0.5f;
 		skinPush.material.metal_val = 0.5f;
 
-		skinPush.instance_data.transform.translation = lab::vec3{0.f};
-		skinPush.instance_data.transform.scale = lab::vec3{1.f};
-		skinPush.instance_data.transform.rotation = lab::vec3{0.f};
+		skinPush.instances.resize(1);
+		skinPush.instances[0].transform.translation = lab::vec3{0.f};
+		skinPush.instances[0].transform.scale = lab::vec3{1.f};
+		skinPush.instances[0].transform.rotation = lab::vec3{0.f};
 	}
 
     bool SkeletonScene::RenderUpdate(double dt){

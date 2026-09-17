@@ -61,9 +61,9 @@ namespace Asset{
     Manager<DescriptorImageInfo>::Manager(
         std::filesystem::path const& root_path
     )
-    : files{root_path, acceptable_extensions<DescriptorImageInfo>}
+    : files{}
     {
-
+        files.emplace_back(root_path, acceptable_extensions<DescriptorImageInfo>);
     }
 
     DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(AssetHash hash){
@@ -74,17 +74,22 @@ namespace Asset{
             }
         }
         //wasnt found, break into the file system
-        auto found_file = files.hashed_path.find(hash);
-        EWE_ASSERT(found_file != files.hashed_path.end());
-        auto* ret = data_arena.GetCell();
-        if(LoadAssetFromFile(ret, files.root_directory, found_file->value)){
-            ret->name = found_file->value;
-            association_container.push_back(found_file->key, ret);
+        for(auto& file_pack : files){
+            auto found_file = file_pack.hashed_path.find(hash);
+            if(found_file == file_pack.hashed_path.end()){
+                continue;
+            }
+            auto* ret = data_arena.GetCell();
+            if(LoadAssetFromFile(ret, file_pack.root_directory, found_file->value)){
+                ret->name = found_file->value;
+                association_container.push_back(found_file->key, ret);
+            }
+            else{
+                data_arena.ReturnCell(ret);
+            }
+            return ret;
         }
-        else{
-            data_arena.ReturnCell(ret);
-        }
-        return ret;
+        return nullptr;
     }
     DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(std::filesystem::path const& name){
         auto hash = CrossPlatformPathHash(name);
@@ -184,11 +189,13 @@ namespace Asset{
             ImGui::Separator();
         }
 
-        for(auto& kvp : files.hashed_path){
-            if(association_container.find(kvp.key) == association_container.end()){
-                if(ImGui::Button(kvp.value.string().c_str())){
-                    Get(kvp.value.string());
-                    Log::Debug("created dii : %s\n", kvp.value.string().c_str());
+        for(auto& file_pack : files) {
+            for(auto& kvp : file_pack.hashed_path){
+                if(association_container.find(kvp.key) == association_container.end()){
+                    if(ImGui::Button(kvp.value.string().c_str())){
+                        Get(kvp.value.string());
+                        Log::Debug("created dii : %s\n", kvp.value.string().c_str());
+                    }
                 }
             }
         }
@@ -223,9 +230,13 @@ namespace Asset{
                 ImGui::Text("descriptor type : %s", Reflect::Enum::ToString(kvp.value->type).data());
                 ImGui::Text("layout : %s", Reflect::Enum::ToString(kvp.value->imageInfo.imageLayout).data());
                 
-                if(ImGui::Button("write to file")) {
-                    WriteAssetToFile(*kvp.value, files.root_directory, kvp.value->name);
-                    Log::Debug("wrote [%s] to file[%s]\n", kvp.value->name.c_str(), files.root_directory.string().c_str());
+                for(auto& file_pack : files){
+                    std::string folder_name = "write file to folder[";
+                    folder_name += file_pack.root_directory.string() + ']';
+                    if(ImGui::Button(folder_name.c_str())) {
+                        WriteAssetToFile(*kvp.value, file_pack.root_directory, kvp.value->name);
+                        Log::Debug("wrote [%s] to file[%s]\n", kvp.value->name.c_str(), file_pack.root_directory.string().c_str());
+                    }
                 }
                 
                 ImGui::TreePop();

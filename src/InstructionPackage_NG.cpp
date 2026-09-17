@@ -23,7 +23,9 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+        if(Global::assetManager->instPkg.files.size() > 0){
+            explorer.acceptable_extensions = Global::assetManager->instPkg.files[0].acceptable_extensions;
+        }
         acceptable_add_instructions = std::vector<Inst::Type>{
             Command::InstructionPackage::allowed_instructions.begin(), 
             Command::InstructionPackage::allowed_instructions.end()
@@ -36,7 +38,9 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+        if(Global::assetManager->instPkg.files.size() > 0){
+            explorer.acceptable_extensions = Global::assetManager->instPkg.files[0].acceptable_extensions;
+        }
         InitFromObject(pkg);
     }
 
@@ -124,7 +128,9 @@ namespace Node{
                         Command::InstructionPackage::allowed_instructions.begin(), 
                         Command::InstructionPackage::allowed_instructions.end()
                     };
-                    explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+                    if(Global::assetManager->instPkg.files.size() > 0){
+                        explorer.acceptable_extensions = Global::assetManager->instPkg.files[0].acceptable_extensions;
+                    }
                     break;
                 case Command::InstructionPackage::Object:
                     acceptable_add_instructions = std::vector<Inst::Type>{
@@ -132,7 +138,9 @@ namespace Node{
                         Command::ObjectPackage::allowed_instructions.end()
                     };
                     package_payload = new Command::ObjectPackage::Payload();
-                    explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
+                    if(Global::assetManager->objPkg.files.size() > 0){
+                        explorer.acceptable_extensions = Global::assetManager->objPkg.files[0].acceptable_extensions;
+                    }
                     break;
                 default: break;
             }
@@ -673,11 +681,16 @@ namespace Node{
         packageType = Command::InstructionPackage::Base;
         switch(pkg.type){
             case Command::InstructionPackage::Base: 
-                explorer.acceptable_extensions = Global::assetManager->instPkg.files.acceptable_extensions;
+                if(Global::assetManager->instPkg.files.size() > 0){
+                    explorer.acceptable_extensions = Global::assetManager->instPkg.files[0].acceptable_extensions;
+                }
                 InitFromFile(pkg.paramPool, pkg.type);
                 break;
             case Command::InstructionPackage::Object:
-                explorer.acceptable_extensions = Global::assetManager->objPkg.files.acceptable_extensions;
+                if(Global::assetManager->objPkg.files.size() > 0){
+                    explorer.acceptable_extensions = Global::assetManager->objPkg.files[0].acceptable_extensions;
+                }
+
                 package_payload = new Command::ObjectPackage::Payload();
                 memcpy(package_payload, &reinterpret_cast<Command::ObjectPackage&>(pkg).payload, sizeof(Command::ObjectPackage::Payload));
                 InitFromFile(pkg.paramPool, pkg.type);

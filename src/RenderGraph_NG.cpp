@@ -286,8 +286,8 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path saved_path = *explorer.selected_file;
 
-                const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
-                name = temp_path.string();
+                //const auto temp_path = std::filesystem::proximate(saved_path, Global::assetManager->subTask.files.root_directory);
+                //name = temp_path.string();
 
                 Log::Error("saving rendergraph isn't setup yet\n");
                 //RenderGraph& written = Global::assetManager->renderGraph.ConstructInto(name, engine->logicalDevice);
@@ -320,10 +320,12 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
 
-                const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
+                //const std::filesystem::path temp = std::filesystem::proximate(load_path, Global::assetManager->subTask.files.root_directory);
 
-                auto* graph = Global::assetManager->renderGraph.Get(temp);
-                InitFromObject(*graph);
+                auto* graph = Global::assetManager->renderGraph.Get(load_path.filename());
+                if(graph != nullptr){
+                    InitFromObject(*graph);
+                }
 
                 explorer.enabled = false;
                 explorer.selected_file.reset();

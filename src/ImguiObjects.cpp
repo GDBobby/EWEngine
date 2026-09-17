@@ -410,7 +410,8 @@ namespace EWE{
                 ImGui::EndTable();
             }
             if(ImGui::Button("write meta to file")){
-                obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.name);
+                Log::Error("is shader meta still a thing?\n");
+                //obj.meta.WriteToFile(Global::assetManager->shader.files.root_directory / "meta" / obj.name);
                 Log::Debug("wrote shader meta to file\n");
             }
         }

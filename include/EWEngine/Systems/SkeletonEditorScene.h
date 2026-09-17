@@ -42,7 +42,7 @@ namespace EWE{
 
     struct MeshInstanceData{
         lab::Transform3 transform;
-        std::optional<Buffer> bone_matrices; //bone mat4s
+        std::size_t offset_into_bone_buffer;
     };
 
     struct CameraBufferObject{
@@ -54,7 +54,7 @@ namespace EWE{
 
     struct LightBufferObject{
         Color_RGBA<float> ambientColor;
-        Color_RGBA<float> sunDir;
+        lab::vec3 sunDir;
         Color_RGBA<float> sunColor;
         static constexpr std::size_t point_limit = 16;
         uint point_count = 0;

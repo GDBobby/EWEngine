@@ -16,7 +16,9 @@ namespace Node{
         explorer{std::filesystem::current_path()},
         headNode{CreateHeadNode()}
     {
-        explorer.acceptable_extensions = Global::assetManager->pkgRecord.files.acceptable_extensions;
+        if(Global::assetManager->pkgRecord.files.size() > 0){
+            explorer.acceptable_extensions = Global::assetManager->pkgRecord.files[0].acceptable_extensions;
+        }
     }
 
     ImNodes::Node* PackageRecord_NG::CreateHeadNode(){
@@ -188,18 +190,21 @@ namespace Node{
                     record.packages.push_back(reinterpret_cast<Command::InstructionPackage*>(current_node->payload));
                     current_node = reinterpret_cast<ImNodes::Node*>(current_node->pins[1].payload);
                 }
-                const auto proximate_path = std::filesystem::proximate(
-                    saved_path,
-                    EWE::Global::assetManager->pkgRecord.files.root_directory
-                );
+
+                std::filesystem::path file_name = saved_path.filename();
+
+                //const auto proximate_path = std::filesystem::proximate(
+                //    saved_path,
+                //    EWE::Global::assetManager->pkgRecord.files.root_directory
+                //);
                 Log::Debug("writing package record to file : %s / %s\n",
-                    EWE::Global::assetManager->pkgRecord.files.root_directory.string().c_str(), 
-                    proximate_path.string().c_str()
+                    saved_path.parent_path().string().c_str(), 
+                    file_name.string().c_str()
                 );
                 Asset::WriteAssetToFile(
                     record, 
-                    EWE::Global::assetManager->pkgRecord.files.root_directory, 
-                    proximate_path
+                    saved_path.parent_path(), 
+                    file_name
                 );
 
                 explorer.enabled = false;
@@ -222,10 +227,10 @@ namespace Node{
             if(explorer.selected_file.has_value()){
                 const std::filesystem::path load_path = *explorer.selected_file;
                 
-                const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->pkgRecord.files.root_directory);
-                auto* record = Global::assetManager->pkgRecord.Get(localized_path);
+                //const auto localized_path = std::filesystem::proximate(load_path, Global::assetManager->pkgRecord.files.root_directory);
+                auto* record = Global::assetManager->pkgRecord.Get(load_path.filename());
                 if(record == nullptr){
-                    Log::Warning("failed to read record from file : %s\n", localized_path.string().c_str());
+                    Log::Warning("failed to read record from file : %s\n", load_path.string().c_str());
                 }
                 else{
                     InitFromObject(*record);
