@@ -3,8 +3,8 @@
 #include "EWEngine/EngineSettings.h"
 #include "EightWinds/Reflect/Enum.h"
 
-#include "EightWinds/Backend/DeviceSpecialization/Extensions.h"
 #include "EightWinds/Backend/DeviceSpecialization/DeviceSpecialization.h"
+#include "EightWinds/Backend/DeviceSpecialization/Extensions.h"
 #include "EightWinds/Backend/DeviceSpecialization/FeatureProperty.h"
 
 #include "EWEngine/Debug/RenderGraph.h"
@@ -19,17 +19,15 @@
 #include "imgui.h"
 #endif
 
-#include "marl/event.h"
 #include "marl/conditionvariable.h"
+#include "marl/event.h"
 
 #include <filesystem>
 
-
-
-namespace EWE{
+namespace EWE {
 
     std::thread::id mainThreadID;
-    void SetMainThread(){
+    void SetMainThread() {
         mainThreadID = std::this_thread::get_id();
     }
 
@@ -37,29 +35,31 @@ namespace EWE{
         return std::this_thread::get_id() == mainThreadID;
     }
 
+    constexpr ConstEvalStr swapchainExt{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    // https://docs.vulkan.org/refpages/latest/refpages/source/VK_EXT_extended_dynamic_state3.html
+    constexpr ConstEvalStr dynState3Ext{VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME};
+    constexpr ConstEvalStr meshShaderExt{VK_EXT_MESH_SHADER_EXTENSION_NAME};
+    constexpr ConstEvalStr deviceFaultExt{VK_EXT_DEVICE_FAULT_EXTENSION_NAME};
+    // this requires the instance extension VK_EXT_debug_utils. i don't know how to
+    // make that association cleanly
+    constexpr ConstEvalStr dabReportExt{VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME};
+    // constexpr ConstEvalStr workgraphExt{VK_AMDX_SHADER_ENQUEUE_EXTENSION_NAME};
 
-    constexpr ConstEvalStr swapchainExt{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-    //https://docs.vulkan.org/refpages/latest/refpages/source/VK_EXT_extended_dynamic_state3.html
-    constexpr ConstEvalStr dynState3Ext{ VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME };
-    constexpr ConstEvalStr meshShaderExt{ VK_EXT_MESH_SHADER_EXTENSION_NAME };
-    constexpr ConstEvalStr deviceFaultExt{ VK_EXT_DEVICE_FAULT_EXTENSION_NAME };
-    //this requires the instance extension VK_EXT_debug_utils. i don't know how to make that association cleanly
-    constexpr ConstEvalStr dabReportExt{ VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME };
-    //constexpr ConstEvalStr workgraphExt{VK_AMDX_SHADER_ENQUEUE_EXTENSION_NAME};
-
-    using Example_ExtensionManager = ExtensionManager<application_wide_vk_version,
+    using Example_ExtensionManager = ExtensionManager<
+        application_wide_vk_version,
         ExtensionEntry<swapchainExt, true, 0>,
         ExtensionEntry<dynState3Ext, true, 0>,
         ExtensionEntry<meshShaderExt, false, 100000>,
         ExtensionEntry<deviceFaultExt, false, 10000>
-        //, ExtensionEntry<workgraphExt, true, 0>
+//, ExtensionEntry<workgraphExt, true, 0>
 #if EWE_DEBUG_BOOL
-        , ExtensionEntry<dabReportExt, false, 0>
+        ,
+        ExtensionEntry<dabReportExt, false, 0>
 #endif
-    >;
+        >;
 
-
-    using Example_FeatureManager = EWE::Backend::FeatureManager<rounded_down_vulkan_version,
+    using Example_FeatureManager = EWE::Backend::FeatureManager<
+        rounded_down_vulkan_version,
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT,
         VkPhysicalDeviceMeshShaderFeaturesEXT,
         VkPhysicalDeviceFaultFeaturesEXT
@@ -68,18 +68,16 @@ namespace EWE{
         ,
         VkPhysicalDeviceAddressBindingReportFeaturesEXT
 #endif
-    >;
+        >;
 
-    using Example_PropertyManager = EWE::Backend::PropertyManager<rounded_down_vulkan_version,
-        VkPhysicalDeviceMeshShaderPropertiesEXT
-    >;
+    using Example_PropertyManager =
+        EWE::Backend::PropertyManager<rounded_down_vulkan_version, VkPhysicalDeviceMeshShaderPropertiesEXT>;
 
     using DeviceSpec = EWE::DeviceSpecializer<
         rounded_down_vulkan_version,
         Example_ExtensionManager,
         Example_FeatureManager,
-        Example_PropertyManager
-    >;
+        Example_PropertyManager>;
 
     struct SwapChainSupportDetails {
         VkSurfaceCapabilitiesKHR capabilities;
@@ -101,21 +99,26 @@ namespace EWE{
 
             if (presentModeCount != 0) {
                 presentModes.resize(presentModeCount);
-                EWE::EWE_VK(vkGetPhysicalDeviceSurfacePresentModesKHR, device, surface, &presentModeCount, presentModes.data());
+                EWE::EWE_VK(
+                    vkGetPhysicalDeviceSurfacePresentModesKHR,
+                    device,
+                    surface,
+                    &presentModeCount,
+                    presentModes.data()
+                );
             }
         }
-
 
         [[nodiscard]] bool Adequate() const { return !formats.empty() && !presentModes.empty(); }
     };
 
-    std::vector<const char*> GetGLFWExtensions(){
+    std::vector<const char*> GetGLFWExtensions() {
 
         std::vector<const char*> requiredExtensions{
-    #if EWE_DEBUG_BOOL
+#if EWE_DEBUG_BOOL
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 
-    #endif
+#endif
             VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME
         };
 
@@ -130,7 +133,7 @@ namespace EWE{
             Log::Debug("failed to init glfw wayland\n");
 #endif
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
-            if(!glfwInit()){
+            if (!glfwInit()) {
                 throw std::runtime_error("failed to init glfw x11 or glfw WAYLAND on linux");
             }
         }
@@ -148,7 +151,7 @@ namespace EWE{
         return requiredExtensions;
     }
 
-    LogicalDevice CreateLogicalDevice(Instance& instance, Window& window){
+    LogicalDevice CreateLogicalDevice(Instance& instance, Window& window) {
         DeviceSpec specDev{};
 
         auto& dynState3 = specDev.GetFeature<VkPhysicalDeviceExtendedDynamicState3FeaturesEXT>();
@@ -170,7 +173,6 @@ namespace EWE{
         auto& features11 = specDev.GetFeature<VkPhysicalDeviceVulkan11Features>();
         features11.shaderDrawParameters = VK_TRUE;
 
-        
         auto& features12 = specDev.GetFeature<VkPhysicalDeviceVulkan12Features>();
         features12.scalarBlockLayout = VK_TRUE;
         features12.bufferDeviceAddress = VK_TRUE;
@@ -185,15 +187,14 @@ namespace EWE{
         features12.shaderInt8 = VK_TRUE;
         features12.storageBuffer8BitAccess = VK_TRUE;
 
-        //features12.descriptorBindingUniformBufferUpdateAfterBind;
-        //features12.descriptorBindingStorageBufferUpdateAfterBind;
+        // features12.descriptorBindingUniformBufferUpdateAfterBind;
+        // features12.descriptorBindingStorageBufferUpdateAfterBind;
         features12.descriptorBindingPartiallyBound = VK_TRUE;
 
         features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
         features12.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
         features12.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
         features12.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
-
 
         auto& features13 = specDev.GetFeature<VkPhysicalDeviceVulkan13Features>();
         features13.dynamicRendering = VK_TRUE;
@@ -216,7 +217,7 @@ namespace EWE{
 #if EWE_DEBUG_BOOL
         Log::Debug("evaluated %zu devices\n", evaluatedDevices.size());
         Log::Debug("if the first device failed, none are available\n");
-        for(auto& dev : evaluatedDevices){
+        for (auto& dev : evaluatedDevices) {
             Log::Debug("device name : %s\n", dev.name.c_str());
             Log::Debug("\trequirements : score : %d:%zu\n", dev.passedRequirements, dev.score);
             auto& props12 = dev.properties.properties.Get<VkPhysicalDeviceVulkan12Properties>();
@@ -228,19 +229,20 @@ namespace EWE{
             const uint32_t variant_version = dev.api_version >> 29;
             const uint32_t major_version = (dev.api_version - (variant_version << 29)) >> 22;
             const uint32_t minor_version = (dev.api_version - (variant_version << 29) - (major_version << 22)) >> 12;
-            const uint32_t patch_version = (dev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
+            const uint32_t patch_version =
+                (dev.api_version - (variant_version << 29) - (major_version << 22) - (minor_version << 12));
 
             Log::Debug("api version - %d.%d.%d.%d\n", variant_version, major_version, minor_version, patch_version);
-            if (dev.failureReport.size() > 0){
+            if (dev.failureReport.size() > 0) {
                 Log::Debug("\tfailure report-\n");
-                for(auto& fp : dev.failureReport){
+                for (auto& fp : dev.failureReport) {
                     Log::Debug("\t\tfp - %s\n", fp.c_str());
                 }
             }
         }
 #endif
 
-        EWE::PhysicalDevice physicalDevice{ instance, evaluatedDevices[0].device, window.surface };
+        EWE::PhysicalDevice physicalDevice{instance, evaluatedDevices[0].device, window.surface};
         VkBaseInStructure* pNextChain = reinterpret_cast<VkBaseInStructure*>(&specDev.features.base);
 #ifdef USING_NVIDIA_AFTERMATH
         InitializeAftermath();
@@ -249,12 +251,10 @@ namespace EWE{
             .sType = VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV,
             .pNext = pNextChain,
             .flags = VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV |
-                VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
-                VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV,
+                     VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
+                     VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV,
         };
 #endif
-
-
 
         return specDev.ConstructDevice(
             evaluatedDevices[0],
@@ -269,7 +269,7 @@ namespace EWE{
         );
     }
 
-    Queue& GetPresentQueue(LogicalDevice& logicalDevice){    
+    Queue& GetPresentQueue(LogicalDevice& logicalDevice) {
         for (auto& queue : logicalDevice.queues) {
             if (queue.family.SupportsSurfacePresent() && queue.family.SupportsGraphics()) {
                 return queue;
@@ -278,45 +278,51 @@ namespace EWE{
         EWE_UNREACHABLE;
     }
 
-	Queue& GetComputeQueue(LogicalDevice& logicalDevice, Queue& renderQueue) {
-		for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
-			if (logicalDevice.queues[i].family.SupportsCompute() && (logicalDevice.queues[i] != renderQueue)) {
-				return logicalDevice.queues[i];
-			}
-		}
-		EWE_ASSERT(renderQueue.family.SupportsCompute());
-		return renderQueue;
-	}
-	Queue& GetTransferQueue(LogicalDevice& logicalDevice, Queue& renderQueue, Queue& computeQueue) {
-		for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
-			if (logicalDevice.queues[i].family.SupportsTransfer() && (logicalDevice.queues[i] != computeQueue) && (logicalDevice.queues[i] != renderQueue)) {
-				return logicalDevice.queues[i];
-			}
-		}
-		if (computeQueue.family.SupportsTransfer()) {
-			return computeQueue;
-		}
-		EWE_ASSERT(renderQueue.family.SupportsTransfer());
-		return renderQueue;
-	}
+    Queue& GetComputeQueue(LogicalDevice& logicalDevice, Queue& renderQueue) {
+        for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
+            if (logicalDevice.queues[i].family.SupportsCompute() && (logicalDevice.queues[i] != renderQueue)) {
+                return logicalDevice.queues[i];
+            }
+        }
+        EWE_ASSERT(renderQueue.family.SupportsCompute());
+        return renderQueue;
+    }
+    Queue& GetTransferQueue(LogicalDevice& logicalDevice, Queue& renderQueue, Queue& computeQueue) {
+        for (std::size_t i = 0; i < logicalDevice.queues.Size(); i++) {
+            if (logicalDevice.queues[i].family.SupportsTransfer() && (logicalDevice.queues[i] != computeQueue) &&
+                (logicalDevice.queues[i] != renderQueue)) {
+                return logicalDevice.queues[i];
+            }
+        }
+        if (computeQueue.family.SupportsTransfer()) {
+            return computeQueue;
+        }
+        EWE_ASSERT(renderQueue.family.SupportsTransfer());
+        return renderQueue;
+    }
 
     std::unordered_map<std::string, bool> optionalExtensions{};
 
     EWEngine* engine;
 
-    void TimeSemaphoreRelinquisher(TimelineSemaphore& sem){
-        marl::Event event{ marl::Event::Mode::Manual };
-        //Log::Debug("marl wait for sem begin - %zu:%zu\n", sem.value, sem.GetCurrentValue());
+    void TimeSemaphoreRelinquisher(TimelineSemaphore& sem) {
+        marl::Event event{marl::Event::Mode::Manual};
+        // Log::Debug("marl wait for sem begin - %zu:%zu\n", sem.value,
+        // sem.GetCurrentValue());
         while (!sem.Check(sem.value)) {
-            event.wait_for(std::chrono::microseconds(1)); //the poitn is to just relinquish control, we don't want to wait for a long time
+            event.wait_for(
+                std::chrono::microseconds(1)
+            ); // the poitn is to just relinquish control, we don't want to wait
+            // for a long time
         }
-        //Log::Debug("marl wait for sem end\n");
+        // Log::Debug("marl wait for sem end\n");
     }
 
-    //the scheduler is unrelated, it's just the first thing I initialize
-    // so it's packaged into this function. 
-    // im taking advantage of the construction to insert the global pointer assignment
-    marl::Scheduler::Config PointlessFunctionJustToSetTheGlobalVariable(EWEngine* this_ref){
+    // the scheduler is unrelated, it's just the first thing I initialize
+    //  so it's packaged into this function.
+    //  im taking advantage of the construction to insert the global pointer
+    //  assignment
+    marl::Scheduler::Config PointlessFunctionJustToSetTheGlobalVariable(EWEngine* this_ref) {
 
         if (volkInitialize() != VK_SUCCESS) {
             throw std::runtime_error("Failed to initialize volk or find Vulkan loader");
@@ -329,13 +335,12 @@ namespace EWE{
 
         TimelineSemaphore::RelinquishThreadControl = TimeSemaphoreRelinquisher;
 
-        STC_Manager::use_custom_yield = [&]{
-            return marl::Scheduler::get() != nullptr; 
-        };
-        STC_Manager::custom_yield_func = [&](RingBuffer<TimelineSemaphore, 8>& ringBuffer, std::mutex& mut) -> TimelineSemaphore& {
+        STC_Manager::use_custom_yield = [&] { return marl::Scheduler::get() != nullptr; };
+        STC_Manager::custom_yield_func = [&](RingBuffer<TimelineSemaphore, 8>& ringBuffer,
+                                             std::mutex& mut) -> TimelineSemaphore& {
             TimelineSemaphore* ret;
 
-            marl::Event event{ marl::Event::Mode::Manual };
+            marl::Event event{marl::Event::Mode::Manual};
             while (true) {
                 {
                     std::unique_lock<std::mutex> lock(mut);
@@ -353,20 +358,21 @@ namespace EWE{
     }
 
     EWEngine::EWEngine(std::string_view application_name, std::filesystem::path const& _root_directory)
-    : root_directory{_root_directory},
-        scheduler{PointlessFunctionJustToSetTheGlobalVariable(this)},
-        instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions },
-        window{instance, 1280, 720, application_name},
-        logicalDevice{CreateLogicalDevice(instance, window)},
-        renderQueue{GetPresentQueue(logicalDevice)}, computeQueue{GetComputeQueue(logicalDevice, renderQueue)}, transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)}, 
-        swapchain{logicalDevice, window, renderQueue},
-        stcManager{logicalDevice, renderQueue, transferQueue, computeQueue},
-        current_renderGraph{stcManager.current_renderGraph},
-        frameIndex{0},
-        graphics_stc_task{"graphics STC task", logicalDevice, renderQueue},
-        compute_stc_task{"compute STC task", logicalDevice, computeQueue},
-        leafSystem{"models/leaf.obj"}
-    {
+        : root_directory{_root_directory},
+          scheduler{PointlessFunctionJustToSetTheGlobalVariable(this)},
+          instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions},
+          window{instance, 1920, 1080, application_name},
+          logicalDevice{CreateLogicalDevice(instance, window)},
+          renderQueue{GetPresentQueue(logicalDevice)},
+          computeQueue{GetComputeQueue(logicalDevice, renderQueue)},
+          transferQueue{GetTransferQueue(logicalDevice, renderQueue, computeQueue)},
+          swapchain{logicalDevice, window, renderQueue},
+          stcManager{logicalDevice, renderQueue, transferQueue, computeQueue},
+          current_renderGraph{stcManager.current_renderGraph},
+          frameIndex{0},
+          graphics_stc_task{"graphics STC task", logicalDevice, renderQueue},
+          compute_stc_task{"compute STC task", logicalDevice, computeQueue},
+          leafSystem{"models/leaf.obj"} {
 
         EWE_ASSERT(std::filesystem::is_directory(root_directory));
 
@@ -375,22 +381,23 @@ namespace EWE{
 
         glfwSetDropCallback(window.window, GLFW_Drop_Callback);
 
-		renderQueue.SetName("render queue");
-		if(computeQueue == transferQueue){
-			computeQueue.SetName("C&T queue, compute handle");
-			transferQueue.SetName("C&T queue, transfer handle");
-		}
-		else{
-			computeQueue.SetName("compute queue");
-			transferQueue.SetName("transfer queue");
-		}
+        renderQueue.SetName("render queue");
+        if (computeQueue == transferQueue) {
+            computeQueue.SetName("C&T queue, compute handle");
+            transferQueue.SetName("C&T queue, transfer handle");
+        }
+        else {
+            computeQueue.SetName("compute queue");
+            transferQueue.SetName("transfer queue");
+        }
     }
 
 #if EWE_IMGUI
 
     bool DrawPresentModes(Swapchain& swapchain) {
 
-        //std::string_view currentName = Reflect::Enum::ToString(swapchain.swapCreateInfo.presentMode);
+        // std::string_view currentName =
+        // Reflect::Enum::ToString(swapchain.swapCreateInfo.presentMode);
 
         static std::vector<const char*> available_presents{};
         if (available_presents.size() == 0) {
@@ -435,9 +442,8 @@ namespace EWE{
         }
 
         for (; index < swapchain.available_surface_formats.size(); index++) {
-            if (swapchain.surface_format.format == swapchain.available_surface_formats[index].format
-                && swapchain.surface_format.colorSpace == swapchain.available_surface_formats[index].colorSpace
-                ) {
+            if (swapchain.surface_format.format == swapchain.available_surface_formats[index].format &&
+                swapchain.surface_format.colorSpace == swapchain.available_surface_formats[index].colorSpace) {
                 break;
             }
         }
@@ -452,37 +458,37 @@ namespace EWE{
         return false;
     }
 
+    Queue::Type EWEngine::GetQueueType(Queue& queue) {
+        if (queue == engine->renderQueue) {
+            return Queue::Graphics;
+        }
+        else if (queue == engine->computeQueue) {
+            return Queue::Compute;
+        }
+        else if (queue == engine->transferQueue) {
+            return Queue::Transfer;
+        }
+        EWE_UNREACHABLE;
+    }
 
-	Queue::Type EWEngine::GetQueueType(Queue& queue) {
-		if(queue == engine->renderQueue){
-			return Queue::Graphics;
-		}
-		else if (queue == engine->computeQueue){
-			return Queue::Compute;
-		}
-		else if (queue == engine->transferQueue){
-			return Queue::Transfer;
-		}
-		EWE_UNREACHABLE;
-	}
-
-	Queue& EWEngine::GetQueue(Queue::Type type) {
-		switch (type) {
-			case Queue::Graphics: return engine->renderQueue;
-			case Queue::Compute: return engine->computeQueue;
-			case Queue::Transfer: return engine->transferQueue;
-			default: EWE_UNREACHABLE;
-		}
-		EWE_UNREACHABLE;
-	}
+    Queue& EWEngine::GetQueue(Queue::Type type) {
+        switch (type) {
+            case Queue::Graphics:
+                return engine->renderQueue;
+            case Queue::Compute:
+                return engine->computeQueue;
+            case Queue::Transfer:
+                return engine->transferQueue;
+            default:
+                EWE_UNREACHABLE;
+        }
+        EWE_UNREACHABLE;
+    }
 
     lab::vec2 EWEngine::GetCursorWindowPos() {
         lab::vec2d ret;
         glfwGetCursorPos(engine->window.window, &ret.x, &ret.y);
-        return lab::vec2{
-            static_cast<float>(ret.x),
-            static_cast<float>(ret.y)
-        };
+        return lab::vec2{static_cast<float>(ret.x), static_cast<float>(ret.y)};
     }
 
     void EWEngine::Imgui() {
@@ -490,14 +496,22 @@ namespace EWE{
         if (ImGui::Begin("engine")) {
 
             ImGui::Text(logicalDevice.physicalDevice.name.c_str());
-            
+
             switch (glfwGetPlatform()) {
-                case GLFW_PLATFORM_WIN32:   ImGui::Text("glfw platform : Win32\n"); break;
-                case GLFW_PLATFORM_WAYLAND: ImGui::Text("glfw platform : Wayland\n"); break;
-                case GLFW_PLATFORM_X11:     ImGui::Text("glfw platform : X11\n"); break;
-                default:                    ImGui::Text("glfw platform : Unknown\n"); break;
+                case GLFW_PLATFORM_WIN32:
+                    ImGui::Text("glfw platform : Win32\n");
+                    break;
+                case GLFW_PLATFORM_WAYLAND:
+                    ImGui::Text("glfw platform : Wayland\n");
+                    break;
+                case GLFW_PLATFORM_X11:
+                    ImGui::Text("glfw platform : X11\n");
+                    break;
+                default:
+                    ImGui::Text("glfw platform : Unknown\n");
+                    break;
             }
-            if(ImGui::Checkbox("window resizeable", &window.resizeable)) {
+            if (ImGui::Checkbox("window resizeable", &window.resizeable)) {
                 window.SetResizeable(window.resizeable);
             }
 
@@ -508,11 +522,10 @@ namespace EWE{
             ImGui::Text("working directory : %s", std::filesystem::current_path().string().c_str());
             ImGui::Checkbox("draw demo", &draw_demo);
 
-            if(ImGui::Button("print out rendergraph debug")){
+            if (ImGui::Button("print out rendergraph debug")) {
                 EWEException ewe_except{VK_RESULT_MAX_ENUM, "fake error"};
                 Debug_RenderGraph_DEVICE_LOST(*engine->current_renderGraph, ewe_except);
             }
-
         }
         ImGui::End();
         if (draw_demo) {
@@ -521,4 +534,4 @@ namespace EWE{
     }
 #endif
 
-}//namespace EWE
+} // namespace EWE

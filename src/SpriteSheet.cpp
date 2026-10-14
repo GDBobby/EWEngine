@@ -1,22 +1,26 @@
 #include "EWEngine/Graphics/SpriteSheet.h"
 
 #include "EWEngine/Assets/DII.h"
-#include "EWEngine/EWEngine.h"
 #include "EWEngine/Assets/Image/Loader.h"
+#include "EWEngine/EWEngine.h"
 
 #include "ImageProcessor.h"
 
-namespace EWE{
+namespace EWE {
 
-    SpriteSheet::SpriteSheet(std::filesystem::path const& _name, uint16_t _texel_width, uint16_t _texel_height, Sampler& _sampler)
-    : name{_name},
-        imgs{0},
-        sampler{_sampler},
-        diis{0},
-        owningQueue{nullptr},
-        texel_width(_texel_width),
-        texel_height(_texel_height)
-    {
+    SpriteSheet::SpriteSheet(
+        std::filesystem::path const& _name,
+        uint16_t _texel_width,
+        uint16_t _texel_height,
+        Sampler& _sampler
+    )
+        : name{_name},
+          imgs{0},
+          sampler{_sampler},
+          diis{0},
+          owningQueue{nullptr},
+          texel_width(_texel_width),
+          texel_height(_texel_height) {
         InitializeSpriteSheet(*this, Queue::Type::Graphics);
 
         const std::size_t sprite_count = imgs.Size();
@@ -24,27 +28,35 @@ namespace EWE{
         diis.ClearAndResize(sprite_count);
         for (std::size_t i = 0; i < sprite_count; i++) {
             views[i] = Global::assetManager->imageView.Get(*imgs[i]);
-            diis[i] = &Global::assetManager->dii.ConstructInto(sampler, *views[i], DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            diis[i] = &Global::assetManager->dii.ConstructInto(
+                sampler,
+                *views[i],
+                DescriptorType::Combined,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            );
         }
     }
-    
 
-    SpriteSheet::SpriteSheet(std::filesystem::path const& _name, uint16_t _texel_width, uint16_t _texel_height, VkSamplerCreateInfo const& samplerCreateInfo)
-    : SpriteSheet{_name, _texel_width, _texel_height, Global::assetManager->sampler.Get(samplerCreateInfo)}
-    {}
+    SpriteSheet::SpriteSheet(
+        std::filesystem::path const& _name,
+        uint16_t _texel_width,
+        uint16_t _texel_height,
+        VkSamplerCreateInfo const& samplerCreateInfo
+    )
+        : SpriteSheet{_name, _texel_width, _texel_height, Global::assetManager->sampler.Get(samplerCreateInfo)} {}
 
-    SpriteSheet::~SpriteSheet(){
-        for(std::size_t i = 0; i < imgs.Size(); i++){
-            if(diis[i] != nullptr){
+    SpriteSheet::~SpriteSheet() {
+        for (std::size_t i = 0; i < imgs.Size(); i++) {
+            if (diis[i] != nullptr) {
                 Global::assetManager->dii.Destroy(*diis[i]);
             }
-            if(views[i] != nullptr){
+            if (views[i] != nullptr) {
                 Global::assetManager->imageView.Destroy(*views[i]);
             }
-            if(imgs[i] != nullptr){
+            if (imgs[i] != nullptr) {
                 Global::assetManager->image.Destroy(*imgs[i]);
             }
         }
     }
-    
-} //namespace EWE
+
+} // namespace EWE

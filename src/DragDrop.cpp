@@ -2,7 +2,4 @@
 
 #include "EightWinds/Image.h"
 
-
-namespace EWE{
-
-} //namespace EWE
+namespace EWE {} // namespace EWE

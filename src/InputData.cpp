@@ -13,5 +13,5 @@ namespace EWE {
         void Keyboard::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
             keyCallback(key, scancode, action, mods);
         }
-    }
-}
+    } // namespace Input
+} // namespace EWE

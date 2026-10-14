@@ -6,7 +6,6 @@
 
 #include "EightWinds/Command/STC_Helper.h"
 
-
 #include "EightWinds/VulkanHeader.h"
 #include "GLFW/glfw3.h"
 #include "imgui.h"
@@ -19,352 +18,346 @@
 
 #include <array>
 
-namespace EWE{
+namespace EWE {
 
-	std::array<VkFormat, 1> colorFormats{ VK_FORMAT_R8G8B8A8_UNORM };
+    std::array<VkFormat, 1> colorFormats{VK_FORMAT_R8G8B8A8_UNORM};
 
-	PerFlight<Image> CreateColorAttachmentImages(Queue& queue, VkSampleCountFlagBits sampleCount) {
-		PerFlight<Image> ret{ engine->logicalDevice };
+    PerFlight<Image> CreateColorAttachmentImages(Queue& queue, VkSampleCountFlagBits sampleCount) {
+        PerFlight<Image> ret{engine->logicalDevice};
 
-		VmaAllocationCreateInfo vmaAllocCreateInfo{
-			.flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) | static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT),
-			.usage = VMA_MEMORY_USAGE_AUTO
-		};
-		for (auto& cai : ret) {
-			cai.data.arrayLayers = 1;
-			cai.data.extent = { EWE::engine->window.screenDimensions.width, EWE::engine->window.screenDimensions.height, 1 };
-			cai.data.mipLevels = 1;
-			cai.owningQueue = &queue;
-			cai.data.samples = sampleCount;
-			cai.data.tiling = VK_IMAGE_TILING_OPTIMAL;
-			cai.data.type = VK_IMAGE_TYPE_2D;
-			cai.data.format = colorFormats[0];
-			cai.data.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        VmaAllocationCreateInfo vmaAllocCreateInfo{
+            .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) |
+                     static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT),
+            .usage = VMA_MEMORY_USAGE_AUTO
+        };
+        for (auto& cai : ret) {
+            cai.data.arrayLayers = 1;
+            cai.data
+                .extent = {EWE::engine->window.screenDimensions.width, EWE::engine->window.screenDimensions.height, 1};
+            cai.data.mipLevels = 1;
+            cai.owningQueue = &queue;
+            cai.data.samples = sampleCount;
+            cai.data.tiling = VK_IMAGE_TILING_OPTIMAL;
+            cai.data.type = VK_IMAGE_TYPE_2D;
+            cai.data.format = colorFormats[0];
+            cai.data.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-			cai.Create(vmaAllocCreateInfo);
-		}
-		ret[0].SetName("cai imgui 0");
-		ret[1].SetName("cai imgui 1");
-		return ret;
-	}
-
-	//int current_imgui_handler_count = 0;
-
-
-	ImguiHandler::ImguiHandler(
-		Queue& _queue,
-		uint32_t imageCount, VkSampleCountFlagBits sampleCount
-	)
-		: queue{ _queue },
-		//cmdPool{ engine->logicalDevice, queue, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
-		//cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
-		renderInfo{
-			"imgui render info",
-			engine->logicalDevice, queue,
-			AttachmentSetInfo{
-				1,  1,
-				VkRenderingFlags{0},
-				std::array<const AttachmentInfo, 1>{
-					AttachmentInfo{
-						.format = VK_FORMAT_R8G8B8A8_UNORM,
-						.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-						.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-						.clearValue{.color{0.f, 0.f, 0.f, 0.f}}
-
-					}
-				},
-				AttachmentInfo{
-					.format = VK_FORMAT_D16_UNORM,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-					.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.clearValue{.color{0.f, 0.f, 0.f, 0.f}}
-				}
-			},
-			engine->window.screenDimensions.width, engine->window.screenDimensions.height
-		},
-		image_count{imageCount},
-		sample_count{sampleCount}
-    {
-
-		IMGUI_CHECKVERSION();
-		
-		auto& main_vp = viewports.emplace_back();
-		main_vp.context = InitializeContext();
-		ImGui::CreateDragDropContext();
-
-		TakeCallbackControl(engine->window.window);
-
+            cai.Create(vmaAllocCreateInfo);
+        }
+        ret[0].SetName("cai imgui 0");
+        ret[1].SetName("cai imgui 1");
+        return ret;
     }
 
-	ImguiHandler::~ImguiHandler() {
-		//if(current_imgui_handler_count == 1){
-			ImGui_ImplVulkan_Shutdown();
-			ImGui_ImplGlfw_Shutdown();
-		//}
-		//current_imgui_handler_count--;
-		for(auto& vp : viewports){
-			ImGui::DestroyContext(vp.context);
-		}
-	}
+    // int current_imgui_handler_count = 0;
 
-	ImGuiContext* ImguiHandler::InitializeContext(){
+    ImguiHandler::ImguiHandler(Queue& _queue, uint32_t imageCount, VkSampleCountFlagBits sampleCount)
+        : queue{_queue},
+          // cmdPool{ engine->logicalDevice, queue,
+          // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
+          // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
+          // cmdBuffers{cmdPool.AllocateCommandsPerFlight(VK_COMMAND_BUFFER_LEVEL_PRIMARY)},
+          renderInfo{
+              "imgui render info",
+              engine->logicalDevice,
+              queue,
+              AttachmentSetInfo{
+                  1,
+                  1,
+                  VkRenderingFlags{0},
+                  std::array<const AttachmentInfo, 1>{AttachmentInfo{
+                      .format = VK_FORMAT_R8G8B8A8_UNORM,
+                      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                      .clearValue{.color{0.f, 0.f, 0.f, 0.f}}
 
+                  }},
+                  AttachmentInfo{
+                      .format = VK_FORMAT_D16_UNORM,
+                      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                      .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                      .clearValue{.color{0.f, 0.f, 0.f, 0.f}}
+                  }
+              },
+              engine->window.screenDimensions.width,
+              engine->window.screenDimensions.height
+          },
+          image_count{imageCount},
+          sample_count{sampleCount} {
+
+        IMGUI_CHECKVERSION();
+
+        auto& main_vp = viewports.emplace_back();
+        main_vp.context = InitializeContext();
+        ImGui::CreateDragDropContext();
+
+        TakeCallbackControl(engine->window.window);
+    }
+
+    ImguiHandler::~ImguiHandler() {
+        // if(current_imgui_handler_count == 1){
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        //}
+        // current_imgui_handler_count--;
+        for (auto& vp : viewports) {
+            ImGui::DestroyContext(vp.context);
+        }
+    }
+
+    ImGuiContext* ImguiHandler::InitializeContext() {
 
         ImGui_ImplVulkan_InitInfo vulkan_init_info{
-			.logicalDevice = &engine->logicalDevice,
-			.renderQueue = &engine->renderQueue,
-			.ImageCount = image_count,
-			.Allocator = nullptr,
-			.CheckVkResultFn = EWE_VK_RESULT,
-		};
+            .logicalDevice = &engine->logicalDevice,
+            .renderQueue = &engine->renderQueue,
+            .ImageCount = image_count,
+            .Allocator = nullptr,
+            .CheckVkResultFn = EWE_VK_RESULT,
+        };
 
-		ObjectRasterConfig objConfig;
-		objConfig.depthClamp = VK_FALSE;
-		objConfig.rasterizerDiscard = VK_FALSE;
-		objConfig.polygonMode = VK_POLYGON_MODE_FILL;
-		objConfig.cullMode = VK_CULL_MODE_NONE;
-		objConfig.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		objConfig.depthBias.enable = VK_FALSE;
-		objConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		objConfig.primitiveRestart = VK_FALSE;
-		objConfig.blendAttachments.ClearAndResize(1);
-		objConfig.blendConstants[0] = 0.f; objConfig.blendConstants[1] = 0.f;
-		objConfig.blendConstants[2] = 0.f; objConfig.blendConstants[3] = 0.f;
-		objConfig.blendAttachments[0] = VkPipelineColorBlendAttachmentState{
-			.blendEnable = VK_TRUE,
-			.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			.colorBlendOp = VK_BLEND_OP_ADD,
-			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			.alphaBlendOp = VK_BLEND_OP_ADD,
-			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-		};
+        ObjectRasterConfig objConfig;
+        objConfig.depthClamp = VK_FALSE;
+        objConfig.rasterizerDiscard = VK_FALSE;
+        objConfig.polygonMode = VK_POLYGON_MODE_FILL;
+        objConfig.cullMode = VK_CULL_MODE_NONE;
+        objConfig.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        objConfig.depthBias.enable = VK_FALSE;
+        objConfig.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        objConfig.primitiveRestart = VK_FALSE;
+        objConfig.blendAttachments.ClearAndResize(1);
+        objConfig.blendConstants[0] = 0.f;
+        objConfig.blendConstants[1] = 0.f;
+        objConfig.blendConstants[2] = 0.f;
+        objConfig.blendConstants[3] = 0.f;
+        objConfig.blendAttachments[0] = VkPipelineColorBlendAttachmentState{
+            .blendEnable = VK_TRUE,
+            .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+            .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+            .colorBlendOp = VK_BLEND_OP_ADD,
+            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+            .alphaBlendOp = VK_BLEND_OP_ADD,
+            .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+                              VK_COLOR_COMPONENT_A_BIT
+        };
 
-		AttachmentInfo attInfo[1] = {
-			AttachmentInfo{
-				.format = VK_FORMAT_R8G8B8A8_UNORM,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.clearValue{
-					.color{
-						.float32{0.f, 0.f, 0.f, 0.f}
-					}
-				}
-			}
-		};
+        AttachmentInfo attInfo[1] = {AttachmentInfo{
+            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue{.color{.float32{0.f, 0.f, 0.f, 0.f}}}
+        }};
 
-		TaskRasterConfig taskConfig{
-			.viewportCount = 1,
-			.scissorCount = 1,
-			.rastSamples = VK_SAMPLE_COUNT_1_BIT,
-			.enable_sampleShading = false,
-			.minSampleShading = 0.f,
-			.alphaToCoverageEnable = false,
-			.alphaToOneEnable = false,
-			.dynamicState{
-				VK_DYNAMIC_STATE_VIEWPORT,
-				VK_DYNAMIC_STATE_SCISSOR
-			},
-			.depthStencilInfo{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO
-			},
-			.attachment_info{
-				1, 1,
-				VkRenderingFlags{0},
-				attInfo,
-				AttachmentInfo{
-					VK_FORMAT_D16_UNORM,
-					VK_ATTACHMENT_LOAD_OP_CLEAR,
-					VK_ATTACHMENT_STORE_OP_STORE,
-					VkClearValue{
-						.depthStencil{
-							.depth{0.f} // 1 or 0?
-						}
-					}
-				}
-			}
-		};
+        TaskRasterConfig taskConfig{
+            .viewportCount = 1,
+            .scissorCount = 1,
+            .rastSamples = VK_SAMPLE_COUNT_1_BIT,
+            .enable_sampleShading = false,
+            .minSampleShading = 0.f,
+            .alphaToCoverageEnable = false,
+            .alphaToOneEnable = false,
+            .dynamicState{VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR},
+            .depthStencilInfo{.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO},
+            .attachment_info{
+                1,
+                1,
+                VkRenderingFlags{0},
+                attInfo,
+                AttachmentInfo{
+                    VK_FORMAT_D16_UNORM,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VkClearValue{.depthStencil{
+                        .depth{0.f} // 1 or 0?
+                    }}
+                }
+            }
+        };
 
-		std::initializer_list<Shader*> shaders = {
-			Global::assetManager->shader.Get("imgui.vert.spv"),
-			Global::assetManager->shader.Get("imgui.frag.spv")
-		};
-		pipeLayout = new PipeLayout(engine->logicalDevice, shaders);
-		pipe = new GraphicsPipeline(engine->logicalDevice, pipeLayout, taskConfig, objConfig);
+        std::initializer_list<Shader*> shaders = {
+            Global::assetManager->shader.Get("imgui.vert.spv"),
+            Global::assetManager->shader.Get("imgui.frag.spv")
+        };
+        pipeLayout = new PipeLayout(engine->logicalDevice, shaders);
+        pipe = new GraphicsPipeline(engine->logicalDevice, pipeLayout, taskConfig, objConfig);
 
+        auto* prev_context = ImGui::GetCurrentContext();
+        ImGuiContext* ret = ImGui::CreateContext();
+        // if another context is currently set, CreateContext takes the liberty of
+        // returning the context to the previous
+        ImGui::SetCurrentContext(ret);
 
-		auto* prev_context = ImGui::GetCurrentContext();
-		ImGuiContext* ret = ImGui::CreateContext();
-		//if another context is currently set, CreateContext takes the liberty of returning the context to the previous
-		ImGui::SetCurrentContext(ret); 
+        ret->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        ImGui::StyleColorsDark();
 
-		ret->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		ImGui::StyleColorsDark();
-	
-		ImGui_ImplGlfw_InitForVulkan(engine->window.window, false);
-		
-		vulkan_init_info.provided_pipeline = pipe->pipe;
-		vulkan_init_info.provided_pipeLayout = pipe->layout->layout;
+        ImGui_ImplGlfw_InitForVulkan(engine->window.window, false);
 
-		ImGui_ImplVulkan_Init(vulkan_init_info);
+        vulkan_init_info.provided_pipeline = pipe->pipe;
+        vulkan_init_info.provided_pipeLayout = pipe->layout->layout;
 
-		if(prev_context != nullptr){
-			ImGui::SetCurrentContext(prev_context);
-		}
-		return ret;
-	}
+        ImGui_ImplVulkan_Init(vulkan_init_info);
 
-	void ImguiHandler::Render(CommandBuffer& cmdBuf) {
+        if (prev_context != nullptr) {
+            ImGui::SetCurrentContext(prev_context);
+        }
+        return ret;
+    }
 
-		if(viewports.size() > 0){
-			isRendering = true;
+    void ImguiHandler::Render(CommandBuffer& cmdBuf) {
 
-			vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[engine->frameIndex]);
+        if (viewports.size() > 0) {
+            isRendering = true;
 
-			ImGui::NewFrameDD();
-			//im doing a index based approached because i want to allow the creation/removal of viewports from within the exec_func
-			for(std::size_t i = 0; i < viewports.size(); i++) {
-				auto& vp = viewports[i];
-				if(vp.exec_funcs.size() > 0 && vp.currently_drawn){
+            vkCmdBeginRendering(cmdBuf, &renderInfo.render_data.vk_info[engine->frameIndex]);
 
-					std::string label_name = std::string("imgui[") + std::to_string(i) + "]";
-					VkDebugUtilsLabelEXT labelUtil{
-						.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-						.pNext = nullptr,
-						.pLabelName = label_name.c_str(),
-						.color = {0.f, 0.f, 0.f, 1.f}
-					};
-					engine->logicalDevice.BeginLabel(cmdBuf, &labelUtil);
+            ImGui::NewFrameDD();
+            // im doing a index based approached because i want to allow the
+            // creation/removal of viewports from within the exec_func
+            for (std::size_t i = 0; i < viewports.size(); i++) {
+                auto& vp = viewports[i];
+                if (vp.exec_funcs.size() > 0 && vp.currently_drawn) {
 
-					ImGui::SetCurrentContext(vp.context);
-					ImGui_ImplVulkan_NewFrame();
-					ImGui_ImplGlfw_NewFrame();
+                    std::string label_name = std::string("imgui[") + std::to_string(i) + "]";
+                    VkDebugUtilsLabelEXT labelUtil{
+                        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                        .pNext = nullptr,
+                        .pLabelName = label_name.c_str(),
+                        .color = {0.f, 0.f, 0.f, 1.f}
+                    };
+                    engine->logicalDevice.BeginLabel(cmdBuf, &labelUtil);
 
-					vp.context->Viewports[0]->Pos.x = vp.current_viewport.offset.x;
-					vp.context->Viewports[0]->Pos.y = vp.current_viewport.offset.y;
-					//vp.context->Viewports[0]->Size.x = vp.current_viewport.extent.width;
-					//vp.context->Viewports[0]->Size.y = vp.current_viewport.extent.height;
+                    ImGui::SetCurrentContext(vp.context);
+                    ImGui_ImplVulkan_NewFrame();
+                    ImGui_ImplGlfw_NewFrame();
 
-					//displaysize is already capped to window size, so we apply that same cap to the local extent
-					
-					vp.context->IO.DisplaySize.x = lab::Min(vp.context->IO.DisplaySize.x, static_cast<float>(vp.current_viewport.extent.width));
-					vp.context->IO.DisplaySize.y = lab::Min(vp.context->IO.DisplaySize.y, static_cast<float>(vp.current_viewport.extent.height));
-					vp.current_viewport.extent.width = vp.context->IO.DisplaySize.x;
-					vp.current_viewport.extent.height = vp.context->IO.DisplaySize.y;
+                    vp.context->Viewports[0]->Pos.x = vp.current_viewport.offset.x;
+                    vp.context->Viewports[0]->Pos.y = vp.current_viewport.offset.y;
+                    // vp.context->Viewports[0]->Size.x = vp.current_viewport.extent.width;
+                    // vp.context->Viewports[0]->Size.y = vp.current_viewport.extent.height;
 
-					ImGui::NewFrame();
-					
-					bool always_open = true;
-					ImGuiWindowFlags main_flags = ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
-					ImGui::SetNextWindowBgAlpha(0.f);
-					ImGuiViewport* viewport = ImGui::GetMainViewport();
-					if(viewport->Pos.x < 0.f){
-						viewport->Pos.x = 0.f;
-					}
-					if(viewport->Pos.y < 0.f){
-						viewport->Pos.y = 0.f;
-					}
-					if((viewport->Size.x + viewport->Pos.x) > engine->window.screenDimensions.width){
-						viewport->Size.x = engine->window.screenDimensions.width - viewport->Pos.x;
-					}
-					if((viewport->Size.y + viewport->Pos.y) > engine->window.screenDimensions.height){
-						viewport->Size.y = engine->window.screenDimensions.height - viewport->Pos.y;
-					}
+                    // displaysize is already capped to window size, so we apply that same
+                    // cap to the local extent
 
-					ImGui::SetNextWindowPos(viewport->Pos);
-					ImGui::SetNextWindowSize(viewport->Size);
+                    vp.context->IO.DisplaySize.x =
+                        lab::Min(vp.context->IO.DisplaySize.x, static_cast<float>(vp.current_viewport.extent.width));
+                    vp.context->IO.DisplaySize.y =
+                        lab::Min(vp.context->IO.DisplaySize.y, static_cast<float>(vp.current_viewport.extent.height));
+                    vp.current_viewport.extent.width = vp.context->IO.DisplaySize.x;
+                    vp.current_viewport.extent.height = vp.context->IO.DisplaySize.y;
 
-					ImGuiWindow* background_window = nullptr;
-					if(ImGui::Begin("##backgroundwindow", &always_open, main_flags)){
-						background_window = ImGui::GetCurrentWindow();
-						vp.current_viewport.offset.x = ImGui::GetWindowPos().x;
-						vp.current_viewport.offset.y = ImGui::GetWindowPos().y;
+                    ImGui::NewFrame();
 
-						vp.current_viewport.extent.width = ImGui::GetWindowSize().x;
-						vp.current_viewport.extent.height = ImGui::GetWindowSize().y;
-						ImGui::PushID(static_cast<int>(reinterpret_cast<std::size_t>(vp.context)));
-						for(auto& exec : vp.exec_funcs){
-							//vp.exec_func(vp);
-							exec(vp);
-						}
-						ImGui::PopID();
-					}
-					if(background_window != nullptr){
-						ImGui::BringWindowToDisplayBack(background_window);
-					}
-					ImGui::End();
-					ImGui::Render();
-					ImGui::EndFrame();
-					//auto draw_data = ImGui::GetDrawData();
-					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
+                    bool always_open = true;
+                    ImGuiWindowFlags main_flags = ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoTitleBar |
+                                                  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse |
+                                                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
+                    ImGui::SetNextWindowBgAlpha(0.f);
+                    ImGuiViewport* viewport = ImGui::GetMainViewport();
+                    if (viewport->Pos.x < 0.f) {
+                        viewport->Pos.x = 0.f;
+                    }
+                    if (viewport->Pos.y < 0.f) {
+                        viewport->Pos.y = 0.f;
+                    }
+                    if ((viewport->Size.x + viewport->Pos.x) > engine->window.screenDimensions.width) {
+                        viewport->Size.x = engine->window.screenDimensions.width - viewport->Pos.x;
+                    }
+                    if ((viewport->Size.y + viewport->Pos.y) > engine->window.screenDimensions.height) {
+                        viewport->Size.y = engine->window.screenDimensions.height - viewport->Pos.y;
+                    }
 
+                    ImGui::SetNextWindowPos(viewport->Pos);
+                    ImGui::SetNextWindowSize(viewport->Size);
 
-					engine->logicalDevice.EndLabel(cmdBuf);
-				}
-			}
-			ImGui::EndFrameDD();
+                    ImGuiWindow* background_window = nullptr;
+                    if (ImGui::Begin("##backgroundwindow", &always_open, main_flags)) {
+                        background_window = ImGui::GetCurrentWindow();
+                        vp.current_viewport.offset.x = ImGui::GetWindowPos().x;
+                        vp.current_viewport.offset.y = ImGui::GetWindowPos().y;
 
-			isRendering = false;
-			vkCmdEndRendering(cmdBuf);
-		}
-	}
+                        vp.current_viewport.extent.width = ImGui::GetWindowSize().x;
+                        vp.current_viewport.extent.height = ImGui::GetWindowSize().y;
+                        ImGui::PushID(static_cast<int>(reinterpret_cast<std::size_t>(vp.context)));
+                        for (auto& exec : vp.exec_funcs) {
+                            // vp.exec_func(vp);
+                            exec(vp);
+                        }
+                        ImGui::PopID();
+                    }
+                    if (background_window != nullptr) {
+                        ImGui::BringWindowToDisplayBack(background_window);
+                    }
+                    ImGui::End();
+                    ImGui::Render();
+                    ImGui::EndFrame();
+                    // auto draw_data = ImGui::GetDrawData();
+                    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
 
-	void ImguiHandler::Begin(){
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-	}
-	void ImguiHandler::End(){
-		ImGui::EndFrame();
-	}
+                    engine->logicalDevice.EndLabel(cmdBuf);
+                }
+            }
+            ImGui::EndFrameDD();
 
-	ImguiHandler* global_for_callbacks = nullptr;
-	void ImguiHandler::TakeCallbackControl(GLFWwindow* window){
-		global_for_callbacks = this;
-		glfwSetWindowFocusCallback(window, ImguiHandler::WindowFocusCallback);
-		glfwSetCursorEnterCallback(window, ImguiHandler::CursorEnterCallback);
-		glfwSetCursorPosCallback(window, ImguiHandler::CursorPosCallback);
-		glfwSetMouseButtonCallback(window, ImguiHandler::MouseButtonCallback);
-		glfwSetScrollCallback(window, ImguiHandler::ScrollCallback);
-		glfwSetKeyCallback(window, ImguiHandler::KeyCallback);
-		glfwSetCharCallback(window, ImguiHandler::CharCallback);
-	}
+            isRendering = false;
+            vkCmdEndRendering(cmdBuf);
+        }
+    }
 
-	void ImguiHandler::WindowFocusCallback(GLFWwindow* window, int focused){
-		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_WindowFocusCallback_Context(vp.context, window, focused);
-		}
-	}
-	void ImguiHandler::CursorEnterCallback(GLFWwindow* window, int entered){
-		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_CursorEnterCallback_Context(vp.context, window, entered);
-		}
-	}
-	void ImguiHandler::CursorPosCallback(GLFWwindow* window, double x, double y){
-		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_CursorPosCallback_Context(vp.context, window, x, y);
-		}
-	}
-	void ImguiHandler::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods){
-		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_MouseButtonCallback_Context(vp.context, window, button, action, mods);
-		}
-	}
-	void ImguiHandler::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset){
-		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_ScrollCallback_Context(vp.context, window, xoffset, yoffset);
-		}
-	}
-	void ImguiHandler::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
-		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_KeyCallback_Context(vp.context, window, key, scancode, action, mods);
-		}
-	}
-	void ImguiHandler::CharCallback(GLFWwindow* window, unsigned int c){
-		for(auto& vp : global_for_callbacks->viewports){
-			ImGui_ImplGlfw_CharCallback_Context(vp.context, window, c);
-		}
-	}
+    void ImguiHandler::Begin() {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+    }
+    void ImguiHandler::End() {
+        ImGui::EndFrame();
+    }
 
-} //namespace EWE
+    ImguiHandler* global_for_callbacks = nullptr;
+    void ImguiHandler::TakeCallbackControl(GLFWwindow* window) {
+        global_for_callbacks = this;
+        glfwSetWindowFocusCallback(window, ImguiHandler::WindowFocusCallback);
+        glfwSetCursorEnterCallback(window, ImguiHandler::CursorEnterCallback);
+        glfwSetCursorPosCallback(window, ImguiHandler::CursorPosCallback);
+        glfwSetMouseButtonCallback(window, ImguiHandler::MouseButtonCallback);
+        glfwSetScrollCallback(window, ImguiHandler::ScrollCallback);
+        glfwSetKeyCallback(window, ImguiHandler::KeyCallback);
+        glfwSetCharCallback(window, ImguiHandler::CharCallback);
+    }
+
+    void ImguiHandler::WindowFocusCallback(GLFWwindow* window, int focused) {
+        for (auto& vp : global_for_callbacks->viewports) {
+            ImGui_ImplGlfw_WindowFocusCallback_Context(vp.context, window, focused);
+        }
+    }
+    void ImguiHandler::CursorEnterCallback(GLFWwindow* window, int entered) {
+        for (auto& vp : global_for_callbacks->viewports) {
+            ImGui_ImplGlfw_CursorEnterCallback_Context(vp.context, window, entered);
+        }
+    }
+    void ImguiHandler::CursorPosCallback(GLFWwindow* window, double x, double y) {
+        for (auto& vp : global_for_callbacks->viewports) {
+            ImGui_ImplGlfw_CursorPosCallback_Context(vp.context, window, x, y);
+        }
+    }
+    void ImguiHandler::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+        for (auto& vp : global_for_callbacks->viewports) {
+            ImGui_ImplGlfw_MouseButtonCallback_Context(vp.context, window, button, action, mods);
+        }
+    }
+    void ImguiHandler::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+        for (auto& vp : global_for_callbacks->viewports) {
+            ImGui_ImplGlfw_ScrollCallback_Context(vp.context, window, xoffset, yoffset);
+        }
+    }
+    void ImguiHandler::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+        for (auto& vp : global_for_callbacks->viewports) {
+            ImGui_ImplGlfw_KeyCallback_Context(vp.context, window, key, scancode, action, mods);
+        }
+    }
+    void ImguiHandler::CharCallback(GLFWwindow* window, unsigned int c) {
+        for (auto& vp : global_for_callbacks->viewports) {
+            ImGui_ImplGlfw_CharCallback_Context(vp.context, window, c);
+        }
+    }
+
+} // namespace EWE

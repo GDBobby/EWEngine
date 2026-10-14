@@ -2,339 +2,347 @@
 
 #include "EWEngine/Assets/Extensions.h"
 #include "EWEngine/Assets/Hash.h"
-#include "EWEngine/Imgui/Objects.h"
 #include "EWEngine/Imgui/DragDrop.h"
+#include "EWEngine/Imgui/Objects.h"
 
 #include "EWEngine/EWEngine.h"
 
-#include "EightWinds/Reflect/Enum.h"
-#include "EightWinds/DescriptorImageInfo.h"
-#include "EightWinds/Sampler.h"
 #include "EightWinds/Data/StreamHelper.h"
+#include "EightWinds/DescriptorImageInfo.h"
+#include "EightWinds/Reflect/Enum.h"
+#include "EightWinds/Sampler.h"
 
 #if EWE_IMGUI
-    #include "imgui.h"
-    #include "backends/imgui_impl_vulkan.h"
+#include "backends/imgui_impl_vulkan.h"
+#include "imgui.h"
 #endif
 
-namespace EWE{
-namespace Asset{
+namespace EWE {
+    namespace Asset {
 
-    
-    
 #if EWE_IMGUI
 
-    bool CanAttemptImguiRef(DescriptorImageInfo const& dii){
+        bool CanAttemptImguiRef(DescriptorImageInfo const& dii) {
 
-        if(!dii.view.image.owningQueue){
-            return false;
-        }
-        if(*dii.view.image.owningQueue != engine->GetQueue(Queue::Graphics)){
-            return false;
-        }
-        if(dii.type != DescriptorType::Combined){
-            return false;
-        }
-        if(dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_GENERAL){
-            return true;
-        }
-        return false;
-    }
-#endif
-
-
-    void Manager<DescriptorImageInfo>::Destroy(AssetHash hash){
-        DescriptorImageInfo* res = Get(hash);
-        if(res == nullptr){
-            Log::Warning("attempting to delete non-existing object\n");
-            return;
-        }
-        data_arena.DestroyElement(res);
-        association_container.Remove(hash);
-    }
-    void Manager<DescriptorImageInfo>::Destroy(DescriptorImageInfo& dii){
-        //by routing it to hash, the object is looked up, ensuring it exists
-        AssetHash hash = GetHash(dii); 
-        Destroy(hash);
-    }
-
-    Manager<DescriptorImageInfo>::Manager(
-        std::filesystem::path const& root_path
-    )
-    : files{}
-    {
-        files.emplace_back(root_path, acceptable_extensions<DescriptorImageInfo>);
-    }
-
-    DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(AssetHash hash){
-        std::unique_lock<std::mutex> lock{mut};
-        for(auto kvp : association_container){
-            if(kvp.key == hash){
-                return kvp.value;
-            }
-        }
-        //wasnt found, break into the file system
-        for(auto& file_pack : files){
-            auto found_file = file_pack.hashed_path.find(hash);
-            if(found_file == file_pack.hashed_path.end()){
-                continue;
-            }
-            auto* ret = data_arena.GetCell();
-            if(LoadAssetFromFile(ret, file_pack.root_directory, found_file->value)){
-                ret->name = found_file->value;
-                association_container.push_back(found_file->key, ret);
-            }
-            else{
-                data_arena.ReturnCell(ret);
-            }
-            return ret;
-        }
-        return nullptr;
-    }
-    DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(std::filesystem::path const& name){
-        auto hash = CrossPlatformPathHash(name);
-        return Get(hash);
-    }
-
-    DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(DiiCreation const& params){
-        //search for a match, potentially, and return the existing one
-        DescriptorImageInfo* ret = nullptr;
-        std::unique_lock<std::mutex> lock{mut};
-        if(params.sampler){
-            ret = &data_arena.AddElement(*params.sampler, *params.view, params.type, params.layout);
-            ret->name = params.view->image.name / std::to_string(Sampler::Condense(params.sampler->info)) / ".dii";
-        }
-        else{
-            ret = &data_arena.AddElement(*params.view, params.type, params.layout);
-            ret->name = params.view->image.name / ".dii";
-        }
-        association_container.push_back(CrossPlatformPathHash(ret->name), ret);
-        
-        return *ret;
-    }
-
-    AssetHash Manager<DescriptorImageInfo>::ConvertTextureIndexToHash(TextureIndex index) const{
-        //std::unique_lock<std::mutex> lock{mut};
-        for(auto& kvp : association_container){
-            if(kvp.value->index == index){
-                return kvp.key;
-            }
-        }
-#if !EWE_DEBUG_BOOL
-        EWE_UNREACHABLE;
-#endif
-        return INVALID_HASH;
-    }
-    DescriptorImageInfo const& Manager<DescriptorImageInfo>::RevertIndex(TextureIndex index) const{
-        for(auto& kvp : association_container){
-            if(kvp.value->index == index){
-                return *kvp.value;
-            }
-        }
-        EWE_UNREACHABLE;
-    }
-
-#ifdef EWE_IMGUI
-    void Manager<DescriptorImageInfo>::Imgui(){
-        //filesystem.Imgui();
-        std::unique_lock<std::mutex> lock{mut};
-        ImGui::Checkbox("show creation", &showCreation);
-        if(showCreation){
-            if(creation_params.sampler != nullptr){
-                ImGui::Text("sampler : %zu", Sampler::Condense(creation_params.sampler->info));
-            }
-            else{
-                ImGui::Text("no sampler");
-            }
-            if(DragDropPtr::Target(creation_params.sampler)){
-                auto rehashed = Sampler::Condense(creation_params.sampler->info);
-                auto found = Global::assetManager->sampler.association_container.find(rehashed);
-                if(found == Global::assetManager->sampler.association_container.end()){
-                    Global::assetManager->sampler.association_container.push_back(rehashed, creation_params.sampler);
-                }
-            }
-
-            if(creation_params.view != nullptr){
-                ImGui::Text("image view : %s", creation_params.view->image.name.c_str());
-            }
-            else{
-                ImGui::Text("no image view");
-            }
-            DragDropPtr::Target(creation_params.view);
-
-            Image* img_target = nullptr;
-            if(DragDropPtr::Target(img_target)){
-                AssetHash img_hash = Asset::INVALID_HASH;
-                for(auto& img_kvp : Global::assetManager->image.association_container){
-                    if(img_kvp.value == img_target){
-                        img_hash = img_kvp.key;
-                        break;
-                    }
-                }
-                EWE_ASSERT(img_hash != Asset::INVALID_HASH);
-                creation_params.view = Global::assetManager->imageView.Get(img_hash);
-            }
-
-            Reflect::Enum::Imgui_Combo_Selectable("descriptor type", creation_params.type);
-            Reflect::Enum::Imgui_Combo_Selectable("layout", creation_params.layout);
-
-            if(creation_params.view != nullptr){
-                if(ImGui::Button("create")){
-                    Get(creation_params);
-                }
-            }
-        }
-
-        if(association_container.size() > 0){
-            ImGui::Separator();
-        }
-
-        for(auto& file_pack : files) {
-            for(auto& kvp : file_pack.hashed_path){
-                if(association_container.find(kvp.key) == association_container.end()){
-                    if(ImGui::Button(kvp.value.string().c_str())){
-                        Get(kvp.value.string());
-                        Log::Debug("created dii : %s\n", kvp.value.string().c_str());
-                    }
-                }
-            }
-        }
-
-        for(auto& kvp : association_container){
-            ImGui::PushID(kvp.key);
-            if(ImGui::TreeNode(kvp.value->name.string().c_str())){
-                DragDropPtr::Source(*kvp.value);
-
-                if(kvp.value->view.image.data.layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && kvp.value->sampler != nullptr){
-                    ImVec2 image_size{
-                        static_cast<float>(kvp.value->view.image.data.extent.width),
-                        static_cast<float>(kvp.value->view.image.data.extent.height)
-                    };
-                    ImGui::Image(kvp.value->index, image_size);
-                }
-
-                if(kvp.value->sampler != nullptr){
-                    if(ImGui::TreeNode("sampler")){
-                        VkSamplerCreateInfo samplerInfo = kvp.value->sampler->info;
-                        ImguiExtension::Imgui(samplerInfo);
-                        ImGui::TreePop();
-                    }
-                }
-                else{
-                    ImGui::Text("no sampler");
-                }
-                if(ImGui::TreeNode("image view")){
-                    ImguiExtension::Imgui(kvp.value->view);
-                    ImGui::TreePop();
-                }
-                ImGui::Text("descriptor type : %s", Reflect::Enum::ToString(kvp.value->type).data());
-                ImGui::Text("layout : %s", Reflect::Enum::ToString(kvp.value->imageInfo.imageLayout).data());
-                
-                for(auto& file_pack : files){
-                    std::string folder_name = "write file to folder[";
-                    folder_name += file_pack.root_directory.string() + ']';
-                    if(ImGui::Button(folder_name.c_str())) {
-                        WriteAssetToFile(*kvp.value, file_pack.root_directory, kvp.value->name);
-                        Log::Debug("wrote [%s] to file[%s]\n", kvp.value->name.c_str(), file_pack.root_directory.string().c_str());
-                    }
-                }
-                
-                ImGui::TreePop();
-            }
-            else{
-                DragDropPtr::Source(*kvp.value);
-            }
-            ImGui::PopID();
-        }
-    }
-#endif
-
-
-
-    static constexpr std::size_t dii_version = 0;
-
-    template<>
-    bool LoadAssetFromFile(DescriptorImageInfo* ptr_to_raw_mem, std::filesystem::path const& root_directory, std::filesystem::path const& file_name){
-
-        std::ifstream stream{root_directory / file_name, std::ios::binary};
-        if(!stream.is_open()){
-            return false;
-        }
-
-        Stream::Operator streamHandler{stream};
-
-        std::size_t buffer;
-        streamHandler.Process(buffer);
-        EWE_ASSERT(buffer == dii_version);
-        //this assumes that only the default view can be used
-        //otherwise, i would need to store a handle for the view
-        AssetHash view_hash;
-        streamHandler.Process(view_hash);
-
-        ImageView* view = Global::assetManager->imageView.Get(view_hash);
-
-        Sampler* sampler = nullptr;
-        uint8_t temp_buffer;
-        streamHandler.Process(temp_buffer);
-        if(temp_buffer == 1){
-            //if we're here, and it's nullptr, we're reading. otherwise, writing
-            uint64_t sampler_condensed;
-            streamHandler.Process(sampler_condensed);
-            sampler = &Global::assetManager->sampler.Get(sampler_condensed);
-        }
-
-        DescriptorType type;
-        streamHandler.Process(type);
-
-        VkImageLayout layout;
-        streamHandler.Process(layout);
-
-        if(sampler != nullptr){
-            std::construct_at(ptr_to_raw_mem, *sampler, *view, type, layout);
-        }
-        else{
-            std::construct_at(ptr_to_raw_mem, *view, type, layout);
-        }
-        return true;
-    }
-
-    template<>
-    bool WriteAssetToFile(DescriptorImageInfo const& dii, std::filesystem::path const& root_directory, std::filesystem::path const& file_name){
-
-        std::ofstream stream{root_directory / file_name, std::ios::binary};
-        if(!stream.is_open()){
-            stream.open(root_directory / file_name);
-            if(!stream.is_open()){
+            if (!dii.view.image.owningQueue) {
                 return false;
             }
-        }
-
-        Stream::Operator streamHandler{stream};
-
-        std::size_t buffer = dii_version;
-        streamHandler.Process(buffer);
-        if(buffer != dii_version){
+            if (*dii.view.image.owningQueue != engine->GetQueue(Queue::Graphics)) {
+                return false;
+            }
+            if (dii.type != DescriptorType::Combined) {
+                return false;
+            }
+            if (dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+                dii.imageInfo.imageLayout == VK_IMAGE_LAYOUT_GENERAL) {
+                return true;
+            }
             return false;
         }
+#endif
 
-        //this assumes that only the default view can be used
-        //otherwise, i would need to store a handle for the view
-        auto hash = GetHash(dii.view);
-        streamHandler.Process(hash);
-
-        uint8_t temp_buffer = dii.sampler != nullptr;
-        streamHandler.Process(temp_buffer);
-        if(dii.sampler != nullptr){
-            uint64_t sample_condensed = Sampler::Condense(dii.sampler->info);
-            streamHandler.Process(sample_condensed);
+        void Manager<DescriptorImageInfo>::Destroy(AssetHash hash) {
+            DescriptorImageInfo* res = Get(hash);
+            if (res == nullptr) {
+                Log::Warning("attempting to delete non-existing object\n");
+                return;
+            }
+            data_arena.DestroyElement(res);
+            association_container.Remove(hash);
+        }
+        void Manager<DescriptorImageInfo>::Destroy(DescriptorImageInfo& dii) {
+            // by routing it to hash, the object is looked up, ensuring it exists
+            AssetHash hash = GetHash(dii);
+            Destroy(hash);
         }
 
-        streamHandler.Process(dii.type);
-        streamHandler.Process(dii.imageInfo.imageLayout);
+        Manager<DescriptorImageInfo>::Manager(std::filesystem::path const& root_path) : files{} {
+            files.emplace_back(root_path, acceptable_extensions<DescriptorImageInfo>);
+        }
 
-        stream.close();
-        return true;
-    }
+        DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(AssetHash hash) {
+            std::unique_lock<std::mutex> lock{mut};
+            for (auto kvp : association_container) {
+                if (kvp.key == hash) {
+                    return kvp.value;
+                }
+            }
+            // wasnt found, break into the file system
+            for (auto& file_pack : files) {
+                auto found_file = file_pack.hashed_path.find(hash);
+                if (found_file == file_pack.hashed_path.end()) {
+                    continue;
+                }
+                auto* ret = data_arena.GetCell();
+                if (LoadAssetFromFile(ret, file_pack.root_directory, found_file->value)) {
+                    ret->name = found_file->value;
+                    association_container.push_back(found_file->key, ret);
+                }
+                else {
+                    data_arena.ReturnCell(ret);
+                }
+                return ret;
+            }
+            return nullptr;
+        }
+        DescriptorImageInfo* Manager<DescriptorImageInfo>::Get(std::filesystem::path const& name) {
+            auto hash = CrossPlatformPathHash(name);
+            return Get(hash);
+        }
 
-} //namespace Asset
-} //namespace EWE
+        DescriptorImageInfo& Manager<DescriptorImageInfo>::Get(DiiCreation const& params) {
+            // search for a match, potentially, and return the existing one
+            DescriptorImageInfo* ret = nullptr;
+            std::unique_lock<std::mutex> lock{mut};
+            if (params.sampler) {
+                ret = &data_arena.AddElement(*params.sampler, *params.view, params.type, params.layout);
+                ret->name = params.view->image.name / std::to_string(Sampler::Condense(params.sampler->info)) / ".dii";
+            }
+            else {
+                ret = &data_arena.AddElement(*params.view, params.type, params.layout);
+                ret->name = params.view->image.name / ".dii";
+            }
+            association_container.push_back(CrossPlatformPathHash(ret->name), ret);
+
+            return *ret;
+        }
+
+        AssetHash Manager<DescriptorImageInfo>::ConvertTextureIndexToHash(TextureIndex index) const {
+            // std::unique_lock<std::mutex> lock{mut};
+            for (auto& kvp : association_container) {
+                if (kvp.value->index == index) {
+                    return kvp.key;
+                }
+            }
+#if !EWE_DEBUG_BOOL
+            EWE_UNREACHABLE;
+#endif
+            return INVALID_HASH;
+        }
+        DescriptorImageInfo const& Manager<DescriptorImageInfo>::RevertIndex(TextureIndex index) const {
+            for (auto& kvp : association_container) {
+                if (kvp.value->index == index) {
+                    return *kvp.value;
+                }
+            }
+            EWE_UNREACHABLE;
+        }
+
+#ifdef EWE_IMGUI
+        void Manager<DescriptorImageInfo>::Imgui() {
+            // filesystem.Imgui();
+            std::unique_lock<std::mutex> lock{mut};
+            ImGui::Checkbox("show creation", &showCreation);
+            if (showCreation) {
+                if (creation_params.sampler != nullptr) {
+                    ImGui::Text("sampler : %zu", Sampler::Condense(creation_params.sampler->info));
+                }
+                else {
+                    ImGui::Text("no sampler");
+                }
+                if (DragDropPtr::Target(creation_params.sampler)) {
+                    auto rehashed = Sampler::Condense(creation_params.sampler->info);
+                    auto found = Global::assetManager->sampler.association_container.find(rehashed);
+                    if (found == Global::assetManager->sampler.association_container.end()) {
+                        Global::assetManager->sampler.association_container.push_back(
+                            rehashed,
+                            creation_params.sampler
+                        );
+                    }
+                }
+
+                if (creation_params.view != nullptr) {
+                    ImGui::Text("image view : %s", creation_params.view->image.name.c_str());
+                }
+                else {
+                    ImGui::Text("no image view");
+                }
+                DragDropPtr::Target(creation_params.view);
+
+                Image* img_target = nullptr;
+                if (DragDropPtr::Target(img_target)) {
+                    AssetHash img_hash = Asset::INVALID_HASH;
+                    for (auto& img_kvp : Global::assetManager->image.association_container) {
+                        if (img_kvp.value == img_target) {
+                            img_hash = img_kvp.key;
+                            break;
+                        }
+                    }
+                    EWE_ASSERT(img_hash != Asset::INVALID_HASH);
+                    creation_params.view = Global::assetManager->imageView.Get(img_hash);
+                }
+
+                Reflect::Enum::Imgui_Combo_Selectable("descriptor type", creation_params.type);
+                Reflect::Enum::Imgui_Combo_Selectable("layout", creation_params.layout);
+
+                if (creation_params.view != nullptr) {
+                    if (ImGui::Button("create")) {
+                        Get(creation_params);
+                    }
+                }
+            }
+
+            if (association_container.size() > 0) {
+                ImGui::Separator();
+            }
+
+            for (auto& file_pack : files) {
+                for (auto& kvp : file_pack.hashed_path) {
+                    if (association_container.find(kvp.key) == association_container.end()) {
+                        if (ImGui::Button(kvp.value.string().c_str())) {
+                            Get(kvp.value.string());
+                            Log::Debug("created dii : %s\n", kvp.value.string().c_str());
+                        }
+                    }
+                }
+            }
+
+            for (auto& kvp : association_container) {
+                ImGui::PushID(kvp.key);
+                if (ImGui::TreeNode(kvp.value->name.string().c_str())) {
+                    DragDropPtr::Source(*kvp.value);
+
+                    if (kvp.value->view.image.data.layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+                        kvp.value->sampler != nullptr) {
+                        ImVec2 image_size{
+                            static_cast<float>(kvp.value->view.image.data.extent.width),
+                            static_cast<float>(kvp.value->view.image.data.extent.height)
+                        };
+                        ImGui::Image(kvp.value->index, image_size);
+                    }
+
+                    if (kvp.value->sampler != nullptr) {
+                        if (ImGui::TreeNode("sampler")) {
+                            VkSamplerCreateInfo samplerInfo = kvp.value->sampler->info;
+                            ImguiExtension::Imgui(samplerInfo);
+                            ImGui::TreePop();
+                        }
+                    }
+                    else {
+                        ImGui::Text("no sampler");
+                    }
+                    if (ImGui::TreeNode("image view")) {
+                        ImguiExtension::Imgui(kvp.value->view);
+                        ImGui::TreePop();
+                    }
+                    ImGui::Text("descriptor type : %s", Reflect::Enum::ToString(kvp.value->type).data());
+                    ImGui::Text("layout : %s", Reflect::Enum::ToString(kvp.value->imageInfo.imageLayout).data());
+
+                    for (auto& file_pack : files) {
+                        std::string folder_name = "write file to folder[";
+                        folder_name += file_pack.root_directory.string() + ']';
+                        if (ImGui::Button(folder_name.c_str())) {
+                            WriteAssetToFile(*kvp.value, file_pack.root_directory, kvp.value->name);
+                            Log::Debug(
+                                "wrote [%s] to file[%s]\n",
+                                kvp.value->name.c_str(),
+                                file_pack.root_directory.string().c_str()
+                            );
+                        }
+                    }
+
+                    ImGui::TreePop();
+                }
+                else {
+                    DragDropPtr::Source(*kvp.value);
+                }
+                ImGui::PopID();
+            }
+        }
+#endif
+
+        static constexpr std::size_t dii_version = 0;
+
+        template<>
+        bool LoadAssetFromFile(
+            DescriptorImageInfo* ptr_to_raw_mem,
+            std::filesystem::path const& root_directory,
+            std::filesystem::path const& file_name
+        ) {
+
+            std::ifstream stream{root_directory / file_name, std::ios::binary};
+            if (!stream.is_open()) {
+                return false;
+            }
+
+            Stream::Operator streamHandler{stream};
+
+            std::size_t buffer;
+            streamHandler.Process(buffer);
+            EWE_ASSERT(buffer == dii_version);
+            // this assumes that only the default view can be used
+            // otherwise, i would need to store a handle for the view
+            AssetHash view_hash;
+            streamHandler.Process(view_hash);
+
+            ImageView* view = Global::assetManager->imageView.Get(view_hash);
+
+            Sampler* sampler = nullptr;
+            uint8_t temp_buffer;
+            streamHandler.Process(temp_buffer);
+            if (temp_buffer == 1) {
+                // if we're here, and it's nullptr, we're reading. otherwise, writing
+                uint64_t sampler_condensed;
+                streamHandler.Process(sampler_condensed);
+                sampler = &Global::assetManager->sampler.Get(sampler_condensed);
+            }
+
+            DescriptorType type;
+            streamHandler.Process(type);
+
+            VkImageLayout layout;
+            streamHandler.Process(layout);
+
+            if (sampler != nullptr) {
+                std::construct_at(ptr_to_raw_mem, *sampler, *view, type, layout);
+            }
+            else {
+                std::construct_at(ptr_to_raw_mem, *view, type, layout);
+            }
+            return true;
+        }
+
+        template<>
+        bool WriteAssetToFile(
+            DescriptorImageInfo const& dii,
+            std::filesystem::path const& root_directory,
+            std::filesystem::path const& file_name
+        ) {
+
+            std::ofstream stream{root_directory / file_name, std::ios::binary};
+            if (!stream.is_open()) {
+                stream.open(root_directory / file_name);
+                if (!stream.is_open()) {
+                    return false;
+                }
+            }
+
+            Stream::Operator streamHandler{stream};
+
+            std::size_t buffer = dii_version;
+            streamHandler.Process(buffer);
+            if (buffer != dii_version) {
+                return false;
+            }
+
+            // this assumes that only the default view can be used
+            // otherwise, i would need to store a handle for the view
+            auto hash = GetHash(dii.view);
+            streamHandler.Process(hash);
+
+            uint8_t temp_buffer = dii.sampler != nullptr;
+            streamHandler.Process(temp_buffer);
+            if (dii.sampler != nullptr) {
+                uint64_t sample_condensed = Sampler::Condense(dii.sampler->info);
+                streamHandler.Process(sample_condensed);
+            }
+
+            streamHandler.Process(dii.type);
+            streamHandler.Process(dii.imageInfo.imageLayout);
+
+            stream.close();
+            return true;
+        }
+
+    } // namespace Asset
+} // namespace EWE

@@ -4,202 +4,196 @@
 
 #include "imgui.h"
 
-namespace EWE{
-namespace Asset{
-    /*
-        Manager<Buffer> buffer;
-        Manager<GPUTask> gpuTask;
-        Manager<Image> image;
-        Manager<ImageView> imageView;
-        Manager<Command::InstructionPackage> instPkg;
-        Manager<Command::PackageRecord> pkgRecord;
-        Manager<RasterPackage> rasterTask;
-        Manager<Sampler> sampler;
-        Manager<DescriptorImageInfo> dii;
-        Manager<SubmissionTask> subTask;
-    */
+namespace EWE {
+    namespace Asset {
+        /*
+    Manager<Buffer> buffer;
+    Manager<GPUTask> gpuTask;
+    Manager<Image> image;
+    Manager<ImageView> imageView;
+    Manager<Command::InstructionPackage> instPkg;
+    Manager<Command::PackageRecord> pkgRecord;
+    Manager<RasterPackage> rasterTask;
+    Manager<Sampler> sampler;
+    Manager<DescriptorImageInfo> dii;
+    Manager<SubmissionTask> subTask;
+*/
 
-    AttachmentSetInfo GetDefaultSetInfo(){
+        AttachmentSetInfo GetDefaultSetInfo() {
 
-        AttachmentInfo colorInfo[1] = {
-            AttachmentInfo{
+            AttachmentInfo colorInfo[1] = {AttachmentInfo{
                 .format = VK_FORMAT_R8G8B8A8_UNORM,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp =  VK_ATTACHMENT_STORE_OP_STORE,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                 .clearValue = {0.f, 0.f, 0.f, 0.f}
-            }
-        };
+            }};
 
-        return AttachmentSetInfo{
-            1, 1,
-            VkRenderingFlags{0},
-            colorInfo
-        };
-    }
+            return AttachmentSetInfo{1, 1, VkRenderingFlags{0}, colorInfo};
+        }
 
-    Manager<AssetHash>::Manager(
-        std::filesystem::path const& asset_directory,
-        LogicalDevice& _logicalDevice, Queue& renderQueue
-    )
-    : root_directory{asset_directory},
-        buffer{asset_directory},
-        gpuTask{asset_directory},
-        image{asset_directory},
-        imageView{asset_directory, image},
-        instPkg{asset_directory},
-        objPkg{asset_directory},
-        pkgRecord{asset_directory},
-        rasterTask{asset_directory},
-        sampler{},
-        dii{asset_directory},
-        subTask{asset_directory},
-        shader{asset_directory / "shaders/"},
-        renderGraph{asset_directory},
-        attachment_info{asset_directory}
-    {
-    }
+        Manager<AssetHash>::Manager(
+            std::filesystem::path const& asset_directory,
+            LogicalDevice& _logicalDevice,
+            Queue& renderQueue
+        )
+            : root_directory{asset_directory},
+              buffer{asset_directory},
+              gpuTask{asset_directory},
+              image{asset_directory},
+              imageView{asset_directory, image},
+              instPkg{asset_directory},
+              objPkg{asset_directory},
+              pkgRecord{asset_directory},
+              rasterTask{asset_directory},
+              sampler{},
+              dii{asset_directory},
+              subTask{asset_directory},
+              shader{asset_directory / "shaders/"},
+              renderGraph{asset_directory},
+              attachment_info{asset_directory} {}
 
 #ifdef EWE_IMGUI
-    void Manager<AssetHash>::Imgui(){
-        if(ImGui::TreeNode("shaders")){
-            shader.Imgui();
-            ImGui::TreePop();
+        void Manager<AssetHash>::Imgui() {
+            if (ImGui::TreeNode("shaders")) {
+                shader.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("dii")) {
+                dii.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("images")) {
+                image.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("samplers")) {
+                sampler.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("buffers")) {
+                buffer.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("inst pkgs")) {
+                instPkg.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("obj pkgs")) {
+                objPkg.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("pkg records")) {
+                pkgRecord.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("raster tasks")) {
+                rasterTask.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("submission tasks")) {
+                subTask.Imgui();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("attachment infos")) {
+                attachment_info.Imgui();
+                ImGui::TreePop();
+            }
         }
-        if(ImGui::TreeNode("dii")){
-            dii.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("images")){
-            image.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("samplers")){
-            sampler.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("buffers")){
-            buffer.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("inst pkgs")){
-            instPkg.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("obj pkgs")){
-            objPkg.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("pkg records")){
-            pkgRecord.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("raster tasks")){
-            rasterTask.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("submission tasks")){
-            subTask.Imgui();
-            ImGui::TreePop();
-        }
-        if(ImGui::TreeNode("attachment infos")){
-            attachment_info.Imgui();
-            ImGui::TreePop();
-        }
-    }
 #endif
 
-    template<typename T>
-    std::string_view GetTypeName_Please(){
-        return Reflect::GetName<^^T>();
-    }
+        template<typename T>
+        std::string_view GetTypeName_Please() {
+            return Reflect::GetName<^^T>();
+        }
 
-    template<typename T>
-    bool CheckExtension(T& container, std::filesystem::path const& dropped_ext, std::filesystem::path const& path){
-        if constexpr(requires{container.files;}){
-            for(auto& file_pack : container.files){
-                auto const& extensions = file_pack.acceptable_extensions;
-                for(auto const& ext : extensions){
-                    if(dropped_ext == ext){
-                        auto* temp = container.Get(path);
-                        /*
-                            if constexpr(std::meta::has_template_arguments(^^T)){
-                                static constexpr auto template_args = Reflect::GetMetaSpan<^^T, std::meta::template_arguments_of, false, std::meta::has_template_arguments(^^T)>();
+        template<typename T>
+        bool CheckExtension(T& container, std::filesystem::path const& dropped_ext, std::filesystem::path const& path) {
+            if constexpr (requires { container.files; }) {
+                for (auto& file_pack : container.files) {
+                    auto const& extensions = file_pack.acceptable_extensions;
+                    for (auto const& ext : extensions) {
+                        if (dropped_ext == ext) {
+                            auto* temp = container.Get(path);
+                            /*
+              if constexpr(std::meta::has_template_arguments(^^T)){
+                  static constexpr auto template_args =
+             Reflect::GetMetaSpan<^^T, std::meta::template_arguments_of, false,
+             std::meta::has_template_arguments(^^T)>();
 
-                                Log::Debug("template arg : %s", Reflect::GetName(template_args.at(0)).data());
+                  Log::Debug("template arg : %s",
+             Reflect::GetName(template_args.at(0)).data());
+              }
+          */
+
+                            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
+                                std::size_t reint_ptr = reinterpret_cast<std::size_t>(temp);
+
+                                auto temp_name = GetTypeName_Please<std::decay_t<decltype(*temp)>>();
+
+                                ImGui::SetDragDropPayload(temp_name.data(), &reint_ptr, sizeof(std::size_t));
+
+                                ImGui::EndDragDropSource();
                             }
-                        */
 
-                        if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)){
-                            std::size_t reint_ptr = reinterpret_cast<std::size_t>(temp);
-
-
-                            auto temp_name = GetTypeName_Please<std::decay_t<decltype(*temp)>>();
-
-                            ImGui::SetDragDropPayload(temp_name.data(), &reint_ptr, sizeof(std::size_t));
-                        
-                            ImGui::EndDragDropSource();
+                            return true;
                         }
-                        
-                        return true;
                     }
                 }
             }
+            return false;
         }
-        return false;
-    }
 
-    void Manager<AssetHash>::ApplyGLFWDrops(){
+        void Manager<AssetHash>::ApplyGLFWDrops() {
 
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^Manager<AssetHash>, std::meta::access_context::current()));
+            static constexpr auto members = std::define_static_array(
+                std::meta::nonstatic_data_members_of(^^Manager<AssetHash>, std::meta::access_context::current())
+            );
 
-        for(auto const& proximate : glfw_drops){
-            auto dropped_ext = proximate.extension();
-
+            for (auto const& proximate : glfw_drops) {
+                auto dropped_ext = proximate.extension();
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
-            template for(constexpr auto mem : members){
-                if(CheckExtension(this->[:mem:], dropped_ext, proximate)){
-                    glfw_drops.clear();
-                    return;
+                template for (constexpr auto mem : members) {
+                    if (CheckExtension(this->[:mem:], dropped_ext, proximate)) {
+                        glfw_drops.clear();
+                        return;
+                    }
                 }
-            }
 #pragma GCC diagnostic pop
-        
-        }
-        glfw_drops.clear();
-    }
-
-    bool CheckWithinRootDir(std::filesystem::path const& proximate){
-        return (!proximate.empty()) && (proximate.native()[0] != '.') && (proximate.string().find("..") == std::string::npos);
-    }
-
-    void Manager<AssetHash>::DropCallback(std::filesystem::path const& path){
-        Log::Debug("droppe a file : %s\n", path.string().c_str());
-
-        const auto proximate = std::filesystem::proximate(path, root_directory);
-        if(!CheckWithinRootDir(proximate)){
-            Log::Warning("attempted to drop a file from outside the asset directory\n");
-            return;
+            }
+            glfw_drops.clear();
         }
 
-        if(path.has_extension()){
-            glfw_drops.push_back(proximate);
+        bool CheckWithinRootDir(std::filesystem::path const& proximate) {
+            return (!proximate.empty()) && (proximate.native()[0] != '.') &&
+                   (proximate.string().find("..") == std::string::npos);
         }
 
-        Log::Debug("failed to find a match\n");
-    }
+        void Manager<AssetHash>::DropCallback(std::filesystem::path const& path) {
+            Log::Debug("droppe a file : %s\n", path.string().c_str());
 
-}//namespace Asset
+            const auto proximate = std::filesystem::proximate(path, root_directory);
+            if (!CheckWithinRootDir(proximate)) {
+                Log::Warning("attempted to drop a file from outside the asset directory\n");
+                return;
+            }
 
+            if (path.has_extension()) {
+                glfw_drops.push_back(proximate);
+            }
 
-    void GLFW_Drop_Callback(GLFWwindow* window, int count, const char** paths){
+            Log::Debug("failed to find a match\n");
+        }
 
-        for(int i = 0; i < count; i++){
+    } // namespace Asset
+
+    void GLFW_Drop_Callback(GLFWwindow* window, int count, const char** paths) {
+
+        for (int i = 0; i < count; i++) {
             std::filesystem::path drop_path{paths[i]};
             Global::assetManager->DropCallback(drop_path);
         }
     }
 
-
-} //namespace EWE
+} // namespace EWE

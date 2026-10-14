@@ -2,9 +2,9 @@
 #include "EWEngine/Global.h"
 #include "EightWinds/Data/ForwardArgConstructionHelper.h"
 
-namespace EWE{
+namespace EWE {
 
-    Sampler& GetImguiAttachmentSampler(){
+    Sampler& GetImguiAttachmentSampler() {
         VkSamplerCreateInfo samplerCreateInfo{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .pNext = nullptr,
@@ -30,19 +30,20 @@ namespace EWE{
     }
 
     ImguiTask::ImguiTask()
-    : gpuTask{"imgui", engine->logicalDevice, engine->renderQueue, Command::ParamPool{}},
-        subTask{"imgui", engine->logicalDevice, engine->renderQueue},
-        attachment_diis{
-            ArgumentPack_ConstructionHelper<4>{},
-            GetImguiAttachmentSampler(),
-            *EWE::Global::imguiHandler->renderInfo.full.color_views[0][0],
-            EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        
-            GetImguiAttachmentSampler(),
-            *EWE::Global::imguiHandler->renderInfo.full.color_views[0][1],
-            EWE::DescriptorType::Combined, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        }
-    {
+        : gpuTask{"imgui", engine->logicalDevice, engine->renderQueue, Command::ParamPool{}},
+          subTask{"imgui", engine->logicalDevice, engine->renderQueue},
+          attachment_diis{
+              ArgumentPack_ConstructionHelper<4>{},
+              GetImguiAttachmentSampler(),
+              *EWE::Global::imguiHandler->renderInfo.full.color_views[0][0],
+              EWE::DescriptorType::Combined,
+              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+              GetImguiAttachmentSampler(),
+              *EWE::Global::imguiHandler->renderInfo.full.color_views[0][1],
+              EWE::DescriptorType::Combined,
+              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+          } {
         EWE_ASSERT(Global::imguiTask == nullptr);
         Global::imguiTask = this;
 
@@ -56,21 +57,19 @@ namespace EWE{
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
         };
         gpuTask.resources.AddResource(temp_att_res, initial_acquire_usage);
-        
+
         subTask.specializedSubmission = true;
 
-        subTask.packaged_tasks.push_back(
-            [&](CommandBuffer& cmdBuf, uint8_t frameIndex) {
-                gpuTask.prefix.Execute(cmdBuf, frameIndex);
-                Global::imguiHandler->Render(cmdBuf);
-                return true;
-            }
-        );
+        subTask.packaged_tasks.push_back([&](CommandBuffer& cmdBuf, uint8_t frameIndex) {
+            gpuTask.prefix.Execute(cmdBuf, frameIndex);
+            Global::imguiHandler->Render(cmdBuf);
+            return true;
+        });
     }
 
-    void ImguiTask::AddToRenderGraph(RenderGraph& renderGraph){
-        //anything necessary here?
+    void ImguiTask::AddToRenderGraph(RenderGraph& renderGraph) {
+        // anything necessary here?
         renderGraph.syncManager.AddAcquisition<Image>(gpuTask, color_attachment_index);
         renderGraph.tasks.push_back(&gpuTask);
     }
-} //namespace EWE
+} // namespace EWE
