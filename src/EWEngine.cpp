@@ -361,7 +361,13 @@ namespace EWE {
         : root_directory{_root_directory},
           scheduler{PointlessFunctionJustToSetTheGlobalVariable(this)},
           instance{application_wide_vk_version, GetGLFWExtensions(), optionalExtensions},
-          window{instance, 1920, 1080, application_name},
+          window{
+              instance,
+              EngineSettings::settingsData.screenDimensions.width,
+              EngineSettings::settingsData.screenDimensions.height,
+              application_name,
+              EngineSettings::settingsData.windowMode == EngineSettings::WindowMode::windowed
+          },
           logicalDevice{CreateLogicalDevice(instance, window)},
           renderQueue{GetPresentQueue(logicalDevice)},
           computeQueue{GetComputeQueue(logicalDevice, renderQueue)},
@@ -375,6 +381,14 @@ namespace EWE {
           leafSystem{"models/leaf.obj"} {
 
         EWE_ASSERT(std::filesystem::is_directory(root_directory));
+
+        EngineSettings::ScreenDimensions& saved = EngineSettings::settingsData.screenDimensions;
+        if (saved.width != window.screenDimensions.width || saved.height != window.screenDimensions.height) {
+            saved.width = window.screenDimensions.width;
+            saved.height = window.screenDimensions.height;
+            EngineSettings::tempSettings.screenDimensions = saved;
+            EngineSettings::SaveToJsonFile();
+        }
 
         graphics_stc_task.specializedSubmission = true;
         compute_stc_task.specializedSubmission = true;
@@ -489,6 +503,19 @@ namespace EWE {
         lab::vec2d ret;
         glfwGetCursorPos(engine->window.window, &ret.x, &ret.y);
         return lab::vec2{static_cast<float>(ret.x), static_cast<float>(ret.y)};
+    }
+    lab::vec2 EWEngine::GetCursorVulkanPos() {
+        const lab::vec2 screenPos = GetCursorWindowPos();
+
+        const lab::vec2 half_screen_extent{
+            static_cast<float>(engine->window.screenDimensions.width) / 2.f,
+            static_cast<float>(engine->window.screenDimensions.height) / 2.f
+        };
+
+        return lab::vec2{
+            (screenPos.x - half_screen_extent.x) / half_screen_extent.x,
+            -(screenPos.y - half_screen_extent.y) / half_screen_extent.y,
+        };
     }
 
     void EWEngine::Imgui() {

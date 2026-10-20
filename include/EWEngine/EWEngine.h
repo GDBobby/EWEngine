@@ -17,13 +17,14 @@
 
 #include "EWEngine/Data/Timing.h"
 
-#include "marl/scheduler.h""
+#include "marl/scheduler.h"
+
 
 #include "LAB/Vector.h"
 
 #include <string_view>
 
-namespace EWE{
+namespace EWE {
 
     static constexpr uint32_t application_wide_vk_version = VK_MAKE_API_VERSION(0, 1, 4, 0);
     static constexpr uint32_t rounded_down_vulkan_version = EWE::RoundDownVkVersion(application_wide_vk_version);
@@ -32,7 +33,7 @@ namespace EWE{
     bool CheckMainThread();
 
 
-    struct EWEngine{
+    struct EWEngine {
         std::filesystem::path root_directory;
         marl::Scheduler scheduler;
         LoopTimer render_loop_timer;
@@ -65,6 +66,7 @@ namespace EWE{
         static Queue& GetQueue(Queue::Type type);
 
         static lab::vec2 GetCursorWindowPos();
+        static lab::vec2 GetCursorVulkanPos();
 
 #if EWE_IMGUI
         void Imgui();
