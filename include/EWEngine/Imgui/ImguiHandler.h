@@ -21,28 +21,23 @@
 
 #include <cstdint>
 
-namespace EWE{
+namespace EWE {
     struct CommandBuffer;
 
 
-    struct ImguiViewport{
-        VkRect2D current_viewport{
-            .offset{0, 0},
-            .extent{
-                UINT32_MAX, UINT32_MAX
-            }
-        };
+    struct ImguiViewport {
+        VkRect2D current_viewport{.offset{0, 0}, .extent{UINT32_MAX, UINT32_MAX}};
         ImGuiContext* context;
 
         bool currently_drawn = true;
 
         //push any amount of arbitrary functionality
-        //potentially do another vector without the viewport data? 
+        //potentially do another vector without the viewport data?
         //  it's only useful if the viewport will be adjusted internally
-        std::vector<std::function<void(EWE::ImguiViewport& vp)>> exec_funcs{}; 
-    };  
+        std::vector<std::function<void(EWE::ImguiViewport& vp)>> exec_funcs{};
+    };
 
-    struct ImguiHandler{
+    struct ImguiHandler {
         Queue& queue;
         FullRenderInfo renderInfo;
         const uint32_t image_count;
@@ -50,10 +45,7 @@ namespace EWE{
 
         std::vector<ImguiViewport> viewports{};
 
-        [[nodiscard]] explicit ImguiHandler(
-            Queue& queue, 
-            uint32_t imageCount, VkSampleCountFlagBits sampleCount
-        );
+        [[nodiscard]] explicit ImguiHandler(Queue& queue, uint32_t imageCount, VkSampleCountFlagBits sampleCount);
         ~ImguiHandler();
 
         ImGuiContext* InitializeContext();
@@ -72,14 +64,13 @@ namespace EWE{
         GraphicsPipeline* pipe;
 
         void TakeCallbackControl(GLFWwindow* window);
-        static void WindowFocusCallback(GLFWwindow* window, int focused);        // Since 1.84
-        static void CursorEnterCallback(GLFWwindow* window, int entered);        // Since 1.84
-        static void CursorPosCallback(GLFWwindow* window, double x, double y);   // Since 1.87
+        static void WindowFocusCallback(GLFWwindow* window, int focused); // Since 1.84
+        static void CursorEnterCallback(GLFWwindow* window, int entered); // Since 1.84
+        static void CursorPosCallback(GLFWwindow* window, double x, double y); // Since 1.87
         static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
         static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
         static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
         static void CharCallback(GLFWwindow* window, unsigned int c);
         //static void MonitorCallback(GLFWmonitor* monitor, int event);
-
     };
 }

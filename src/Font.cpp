@@ -7,6 +7,9 @@
 
 namespace EWE {
 
+    static_assert(sizeof(Font::Vert) == sizeof(FontObject::Vert));
+    static_assert(sizeof(Font::Vert) == 32);
+
     void AsyncLoadFont(Font& font, std::filesystem::path const& _path_ab, int pxSize) {
 
         auto font_load = [&, path_copy = _path_ab] {
@@ -126,7 +129,15 @@ namespace EWE {
         }
     }
 
-    Font::~Font() {}
+    Font::~Font() {
+        if (graphicsPkg.constructed) {
+            std::destroy_at(&graphicsPkg.GetRef().dii);
+            std::destroy_at(&graphicsPkg.GetRef().view);
+            graphicsPkg.constructed = false;
+        }
+        delete font;
+        font = nullptr;
+    }
 
     void Font::EndRenderUpdate() {
         // ifPack.GetRef(engine->frameIndex).enabled = char_instance_count > 0;

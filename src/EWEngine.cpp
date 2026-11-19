@@ -406,6 +406,22 @@ namespace EWE {
         }
     }
 
+    EWEngine::~EWEngine() {
+        if (marl::Scheduler::get() == &scheduler) {
+            marl::Scheduler::unbind();
+        }
+        //Finish worker tasks while the device and globals are still alive, then leave an
+        //empty scheduler for the member destructor.
+        scheduler.~Scheduler();
+        std::construct_at(&scheduler, marl::Scheduler::Config{});
+
+        if (logicalDevice.device != VK_NULL_HANDLE) {
+            vkDeviceWaitIdle(logicalDevice.device);
+        }
+        Global::ShutdownEngineGlobal();
+        glfwTerminate();
+    }
+
 #if EWE_IMGUI
 
     bool DrawPresentModes(Swapchain& swapchain) {

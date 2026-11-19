@@ -2,6 +2,9 @@
 
 #include "EWEngine/EWEngine.h"
 
+#include <memory>
+#include <functional>
+
 #include "../include/EWEngine/Graphics/TextOverlay.h"
 #include "EightWinds/Data/Address.h"
 
@@ -29,6 +32,37 @@ namespace EWE {
 
         MergeTask* mergeTask = nullptr;
         ImguiTask* imguiTask = nullptr;
+
+        std::function<void()> OnShutdown = nullptr;
+
+        void ShutdownEngineGlobal() {
+            GlobalEngineObj& gref = globalObj.GetRef();
+
+            std::destroy_at(&gref.sceneManager);
+            sceneManager = nullptr;
+
+            if (OnShutdown) {
+                std::function<void()> callback = std::move(OnShutdown);
+                OnShutdown = nullptr;
+                callback();
+            }
+            else {
+                Log::Debug("shutting down but shutdown callback is nullptr\n");
+            }
+
+            std::destroy_at(&gref.imguiTask);
+            imguiTask = nullptr;
+            std::destroy_at(&gref.mergeTask);
+            mergeTask = nullptr;
+            std::destroy_at(&gref.textOverlay);
+            textOverlay = nullptr;
+            std::destroy_at(&gref.imguiHandler);
+            imguiHandler = nullptr;
+            std::destroy_at(&gref.assetManager);
+            assetManager = nullptr;
+            std::destroy_at(&gref.soundEngine);
+            soundEngine = nullptr;
+        }
 
         void InitEngineGlobal(std::filesystem::path const& root_directory) {
             GlobalEngineObj& gref = globalObj.GetRef();

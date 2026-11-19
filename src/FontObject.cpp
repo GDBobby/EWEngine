@@ -25,6 +25,21 @@ namespace EWE {
         PrebakeASCII();
     }
 
+    FontObject::~FontObject() {
+        if (hbFont != nullptr) {
+            hb_font_destroy(hbFont);
+            hbFont = nullptr;
+        }
+        if (face != nullptr) {
+            FT_Done_Face(face);
+            face = nullptr;
+        }
+        if (ft != nullptr) {
+            FT_Done_FreeType(ft);
+            ft = nullptr;
+        }
+    }
+
     void FontObject::AddGlyph(uint32_t cp) {
 
         FT_UInt idx = FT_Get_Char_Index(face, cp);
@@ -147,15 +162,19 @@ namespace EWE {
             const float top = y_starting + half_height;
 
             out[vertIndex].data.position = lab::vec3{left, bottom, ts.pos.z};
+            out[vertIndex].data.color = ts.color;
             out[vertIndex].data.uv = lab::vec2{g.uv0.x, g.uv0.y};
             vertIndex++;
             out[vertIndex].data.position = lab::vec3{right, bottom, ts.pos.z};
+            out[vertIndex].data.color = ts.color;
             out[vertIndex].data.uv = lab::vec2{g.uv1.x, g.uv0.y};
             vertIndex++;
             out[vertIndex].data.position = lab::vec3{left, top, ts.pos.z};
+            out[vertIndex].data.color = ts.color;
             out[vertIndex].data.uv = lab::vec2{g.uv0.x, g.uv1.y};
             vertIndex++;
             out[vertIndex].data.position = lab::vec3{right, top, ts.pos.z};
+            out[vertIndex].data.color = ts.color;
             out[vertIndex].data.uv = lab::vec2{g.uv1.x, g.uv1.y};
             vertIndex++;
 

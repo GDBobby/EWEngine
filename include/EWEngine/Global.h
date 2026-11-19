@@ -13,22 +13,28 @@
 
 #include "LAB/Vector.h"
 
-namespace EWE{
+#include <functional>
 
-namespace Global{
-    extern AssetManager* assetManager;
-    extern TextOverlay* textOverlay;
-    extern SoundEngine* soundEngine;
-    extern SceneManager* sceneManager;
-    extern ImguiHandler* imguiHandler;
+namespace EWE {
 
-    extern MergeTask* mergeTask;
-    extern ImguiTask* imguiTask;
+    namespace Global {
+        extern AssetManager* assetManager;
+        extern TextOverlay* textOverlay;
+        extern SoundEngine* soundEngine;
+        extern SceneManager* sceneManager;
+        extern ImguiHandler* imguiHandler;
 
-    void InitEngineGlobal(std::filesystem::path const& path);
+        extern MergeTask* mergeTask;
+        extern ImguiTask* imguiTask;
 
-    constexpr float DefaultHeight_PixelRatio(uint32_t pixel){
-        return (0.5f - (static_cast<float>(pixel) / 1080.f)) * 2.f;
-    }
-} //namespace Global
+        void InitEngineGlobal(std::filesystem::path const& path);
+        void ShutdownEngineGlobal();
+
+        //Runs after scenes are destroyed and before engine assets are released.
+        extern std::function<void()> OnShutdown;
+
+        constexpr float DefaultHeight_PixelRatio(uint32_t pixel) {
+            return (0.5f - (static_cast<float>(pixel) / 1080.f)) * 2.f;
+        }
+    } //namespace Global
 } //namepsace EWE

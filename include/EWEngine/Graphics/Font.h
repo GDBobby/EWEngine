@@ -15,6 +15,7 @@ namespace EWE {
 
     static constexpr VertexProperty FontVertexProperty2{
         .position = 3,
+        .color = 3,
         .uv = true
     };
     //i dont think i want to put these items in the asset manager?

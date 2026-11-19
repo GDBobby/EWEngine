@@ -16,6 +16,7 @@ namespace EWE {
         float scale{ 1.f };
 
         Font& font; //use the key or use a Font* ptr?
+        lab::vec3 color{1.f, 1.f, 1.f};
         //void AddText(); //could move this here, but not rn at least
 
         [[nodiscard]] TextStruct(std::string_view string, lab::vec3 pos, TextAlign align, float scale, FontKey fontKey);

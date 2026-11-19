@@ -59,11 +59,21 @@ namespace EWE {
         }
     }
     SoundEngine::~SoundEngine() {
-        for (auto& effectEngine : effects) {
-            for (auto iter2 = effectEngine.begin(); iter2 != effectEngine.end(); iter2++) {
-                ma_sound_uninit(&iter2->second);
+        auto uninitSounds = [](std::vector<std::unordered_map<uint16_t, ma_sound>>& groups) {
+            for (auto& group : groups) {
+                for (auto& sound : group) {
+                    ma_sound_uninit(&sound.second);
+                }
+                group.clear();
             }
-        }
+        };
+        uninitSounds(effects);
+        uninitSounds(music);
+        uninitSounds(voices);
+
+        ma_sound_stop(&hwSound);
+        ma_sound_uninit(&hwSound);
+        ma_decoder_uninit(&hwDecoder);
 
         for (auto& s_engine : engines) {
             ma_engine_uninit(&s_engine);
@@ -71,9 +81,8 @@ namespace EWE {
         for (auto& device : devices) {
             ma_device_uninit(&device);
         }
-        ma_context_uninit(&context);
-
         ma_resource_manager_uninit(&resourceManager);
+        ma_context_uninit(&context);
     }
 
     void SoundEngine::SwitchDevices(uint16_t deviceIterator) {
@@ -155,12 +164,13 @@ namespace EWE {
     }
     void SoundEngine::PlayEffect(uint16_t whichEffect, bool looping) {
 
-        if (selectedEngine > effects.size()) {
+        if (selectedEngine >= effects.size()) {
             Log::Warning("selected engine is out of range \n");
             return;
         }
-        if (whichEffect > effects.at(selectedEngine).size()) {
-            Log::Warning("selected effect is out of range \n");
+        auto effect = effects[selectedEngine].find(whichEffect);
+        if (effect == effects[selectedEngine].end()) {
+            Log::Warning("effect %u is not loaded\n", whichEffect);
             return;
         }
 
@@ -175,8 +185,8 @@ namespace EWE {
         // ma_sound_get_volume(&effects.at(selectedEngine).at(whichEffect)));
 #endif
         // ma_sound
-        ma_result result = ma_sound_start(&effects.at(selectedEngine).at(whichEffect));
-        ma_sound_set_looping(&effects.at(selectedEngine).at(whichEffect), looping);
+        ma_result result = ma_sound_start(&effect->second);
+        ma_sound_set_looping(&effect->second, looping);
         if (result != MA_SUCCESS) {
             Log::Warning("Failed to start sound \"%d\"", whichEffect);
             return;

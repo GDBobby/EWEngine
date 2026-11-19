@@ -95,14 +95,24 @@ namespace EWE {
     }
 
     ImguiHandler::~ImguiHandler() {
-        // if(current_imgui_handler_count == 1){
+        if (!viewports.empty() && viewports.front().context != nullptr) {
+            ImGui::SetCurrentContext(viewports.front().context);
+        }
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
-        //}
-        // current_imgui_handler_count--;
+
         for (auto& vp : viewports) {
-            ImGui::DestroyContext(vp.context);
+            if (vp.context != nullptr) {
+                ImGui::DestroyContext(vp.context);
+                vp.context = nullptr;
+            }
+            else {
+                Log::Debug("vp context was ALREADY nullptr when deconstructing\n");
+            }
         }
+        delete pipe;
+        pipe = nullptr;
+        pipeLayout = nullptr;
     }
 
     ImGuiContext* ImguiHandler::InitializeContext() {

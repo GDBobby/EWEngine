@@ -35,6 +35,12 @@ namespace EWE {
 
     struct EWEngine {
         std::filesystem::path root_directory;
+
+        struct GlfwLifetime {
+            bool initialized = false;
+            ~GlfwLifetime();
+        } glfwLifetime;
+
         marl::Scheduler scheduler;
         LoopTimer render_loop_timer;
         LoopTimer physics_loop_timer;
@@ -61,6 +67,7 @@ namespace EWE {
         uint64_t totalFramesSubmitted = 0;
 
         [[nodiscard]] explicit EWEngine(std::string_view application_name, std::filesystem::path const& root_directory);
+        ~EWEngine();
 
         static Queue::Type GetQueueType(Queue& queue);
         static Queue& GetQueue(Queue::Type type);

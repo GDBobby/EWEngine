@@ -72,18 +72,21 @@ namespace EWE {
           pos{copySrc.pos},
           align{copySrc.align},
           scale{copySrc.scale},
-          font{copySrc.font} {}
+          font{copySrc.font},
+          color{copySrc.color} {}
     TextStruct::TextStruct(TextStruct&& moveSrc)
         : string{moveSrc.string},
           pos{moveSrc.pos},
           align{moveSrc.align},
           scale{moveSrc.scale},
-          font{moveSrc.font} {}
+          font{moveSrc.font},
+          color{moveSrc.color} {}
     TextStruct& TextStruct::operator=(TextStruct const& copySrc) {
         string = copySrc.string;
         pos = copySrc.pos;
         align = copySrc.align;
         scale = copySrc.scale;
+        color = copySrc.color;
         // assert the font? or let it be?
         return *this;
     }
@@ -92,6 +95,7 @@ namespace EWE {
         pos = moveSrc.pos;
         align = moveSrc.align;
         scale = moveSrc.scale;
+        color = moveSrc.color;
         // assert the font? or let it be?
         return *this;
     }
